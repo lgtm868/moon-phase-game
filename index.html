@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="おつきさま">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#15213a">
+  <title>おつきさまのかたち</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --sky: #15213a;
+      --sky-2: #26374f;
+      --sun: #ffd568;
+      --sun-deep: #ff9c45;
+      --earth: #68c7c2;
+      --land: #7dd77b;
+      --moon: #f5f0dc;
+      --moon-dark: #354052;
+      --ink: #fff8df;
+      --panel: rgba(255, 248, 223, 0.1);
+      --line: rgba(255, 248, 223, 0.24);
+      --button: #fff2b7;
+      --button-ink: #283047;
+      --button-shadow: rgba(0, 0, 0, 0.24);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      background: var(--sky);
+      color: var(--ink);
+      overflow-x: hidden;
+    }
+
+    body {
+      min-height: 100svh;
+      display: flex;
+      justify-content: center;
+      padding: max(12px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom));
+      background:
+        radial-gradient(circle at 18% 14%, rgba(255, 213, 104, 0.18), transparent 22%),
+        linear-gradient(180deg, var(--sky) 0%, var(--sky-2) 100%);
+    }
+
+    main {
+      width: min(100%, 460px);
+      min-height: calc(100svh - 26px);
+      display: grid;
+      grid-template-rows: auto minmax(280px, 1fr) auto auto auto;
+      gap: 10px;
+    }
+
+    header {
+      display: grid;
+      gap: 4px;
+      padding: 2px 4px 0;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(25px, 7vw, 34px);
+      line-height: 1.22;
+      letter-spacing: 0;
+      color: #fff5c7;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+    }
+
+    .hint {
+      margin: 0;
+      font-size: clamp(14px, 4vw, 18px);
+      line-height: 1.35;
+      color: rgba(255, 248, 223, 0.9);
+    }
+
+    .scene {
+      position: relative;
+      min-height: 280px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 68% 22%, rgba(255, 248, 223, 0.1) 0 1px, transparent 2px),
+        radial-gradient(circle at 28% 66%, rgba(255, 248, 223, 0.11) 0 1px, transparent 2px),
+        radial-gradient(circle at 78% 72%, rgba(255, 248, 223, 0.1) 0 1px, transparent 2px),
+        rgba(8, 15, 31, 0.34);
+      box-shadow: inset 0 0 42px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+
+    #space {
+      width: 100%;
+      height: 100%;
+      min-height: 280px;
+      display: block;
+    }
+
+    .phase-strip {
+      display: grid;
+      grid-template-columns: minmax(92px, 120px) minmax(0, 1fr);
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    #phaseMoon {
+      width: 100%;
+      aspect-ratio: 1;
+      display: block;
+      filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.32));
+    }
+
+    .phase-copy {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .small-label {
+      font-size: clamp(13px, 3.7vw, 16px);
+      color: rgba(255, 248, 223, 0.82);
+      line-height: 1.25;
+    }
+
+    .phase-name {
+      min-height: 40px;
+      font-size: clamp(28px, 8vw, 42px);
+      line-height: 1.05;
+      font-weight: 800;
+      color: #fff1a9;
+      text-wrap: balance;
+    }
+
+    .phase-message {
+      min-height: 42px;
+      font-size: clamp(15px, 4.2vw, 19px);
+      line-height: 1.35;
+      color: rgba(255, 248, 223, 0.95);
+    }
+
+    .phase-picker {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .phase-choice {
+      min-height: 38px;
+      padding: 5px 3px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 248, 223, 0.1);
+      color: rgba(255, 248, 223, 0.92);
+      font-size: clamp(12px, 3.1vw, 14px);
+      font-weight: 800;
+      line-height: 1.05;
+      box-shadow: none;
+    }
+
+    .phase-choice:active {
+      transform: none;
+      box-shadow: none;
+      background: rgba(255, 242, 183, 0.22);
+    }
+
+    .phase-choice.is-active {
+      background: var(--button);
+      color: var(--button-ink);
+      border-color: transparent;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding-bottom: 2px;
+    }
+
+    button {
+      appearance: none;
+      width: 100%;
+      min-height: 64px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--button);
+      color: var(--button-ink);
+      font: inherit;
+      font-weight: 800;
+      font-size: clamp(15px, 4.1vw, 18px);
+      line-height: 1.1;
+      box-shadow: 0 5px 0 #e2b85d, 0 10px 18px var(--button-shadow);
+      cursor: pointer;
+    }
+
+    button:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 #e2b85d, 0 5px 12px var(--button-shadow);
+    }
+
+    .button-icon {
+      display: block;
+      font-size: 23px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    @media (max-height: 680px) {
+      body {
+        padding-top: max(8px, env(safe-area-inset-top));
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+      }
+
+      main {
+        gap: 7px;
+      }
+
+      .scene,
+      #space {
+        min-height: 238px;
+      }
+
+      .phase-strip {
+        grid-template-columns: 86px minmax(0, 1fr);
+        padding: 8px;
+      }
+
+      .phase-picker {
+        gap: 5px;
+      }
+
+      .phase-choice {
+        min-height: 34px;
+      }
+
+      button {
+        min-height: 56px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main aria-label="月の満ち欠けをみるゲーム">
+    <header>
+      <h1>おつきさまのかたち</h1>
+      <p class="hint">つきが うごくと、みえる かたちが かわるよ</p>
+    </header>
+
+    <section class="scene" aria-label="太陽、地球、月の動き">
+      <canvas id="space"></canvas>
+    </section>
+
+    <section class="phase-strip" aria-live="polite">
+      <canvas id="phaseMoon" width="240" height="240" aria-label="地球から見える月"></canvas>
+      <div class="phase-copy">
+        <div class="small-label">つきの なまえ</div>
+        <div class="phase-name" id="phaseName">しんげつ</div>
+        <div class="phase-message" id="phaseMessage">おつきさまが みえにくいよ</div>
+      </div>
+    </section>
+
+    <section class="phase-picker" id="phaseList" aria-label="月の名前から選ぶ"></section>
+
+    <nav class="controls" aria-label="ゲームのそうさ">
+      <button id="playButton" type="button" aria-label="再生する">
+        <span class="button-icon" aria-hidden="true">▶</span>
+        うごく
+      </button>
+      <button id="stepButton" type="button" aria-label="ひとつ進む">
+        <span class="button-icon" aria-hidden="true">➜</span>
+        すすむ
+      </button>
+      <button id="resetButton" type="button" aria-label="最初に戻る">
+        <span class="button-icon" aria-hidden="true">↺</span>
+        もどる
+      </button>
+      <button id="shareButton" type="button" aria-label="LINEやメールで送る">
+        <span class="button-icon" aria-hidden="true">↗</span>
+        おくる
+      </button>
+    </nav>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const space = document.getElementById("space");
+      const phaseMoon = document.getElementById("phaseMoon");
+      const phaseName = document.getElementById("phaseName");
+      const phaseMessage = document.getElementById("phaseMessage");
+      const playButton = document.getElementById("playButton");
+      const stepButton = document.getElementById("stepButton");
+      const resetButton = document.getElementById("resetButton");
+      const shareButton = document.getElementById("shareButton");
+      const phaseList = document.getElementById("phaseList");
+      const scene = document.querySelector(".scene");
+
+      const spaceCtx = space.getContext("2d");
+      const phaseCtx = phaseMoon.getContext("2d");
+      const TAU = Math.PI * 2;
+      const STEP = TAU / 16;
+
+      let phase = 0;
+      let playing = false;
+      let lastTime = 0;
+      let animationId = 0;
+      let audioContext = null;
+
+      const phaseLabels = [
+        { name: "しんげつ", message: "おつきさまが みえにくいよ" },
+        { name: "ふつかづき", message: "とても ほそい おつきさまだよ" },
+        { name: "みかづき", message: "ほそい おつきさまだよ" },
+        { name: "よっかづき", message: "すこし ふくらんできたよ" },
+        { name: "じょうげん", message: "はんぶんの おつきさまだよ" },
+        { name: "とおかんや", message: "まんまるに ちかづくよ" },
+        { name: "じゅうさんや", message: "まんまるに ちかづくよ" },
+        { name: "こもちづき", message: "もうすぐ まんげつだよ" },
+        { name: "まんげつ", message: "まんまるの おつきさまだよ" },
+        { name: "いざよい", message: "すこしずつ かけていくよ" },
+        { name: "たちまちづき", message: "よるに のぼる おつきさまだよ" },
+        { name: "いまちづき", message: "ゆっくり でてくる おつきさまだよ" },
+        { name: "ねまちづき", message: "ねるころに でてくるよ" },
+        { name: "ふけまちづき", message: "よるふけの おつきさまだよ" },
+        { name: "かげん", message: "はんぶんの おつきさまだよ" },
+        { name: "ありあけ", message: "あさに みえることがあるよ" }
+      ];
+
+      function resizeCanvas(canvas, context, cssWidth, cssHeight) {
+        const ratio = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+        const pixelWidth = Math.round(cssWidth * ratio);
+        const pixelHeight = Math.round(cssHeight * ratio);
+        if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+          canvas.width = pixelWidth;
+          canvas.height = pixelHeight;
+        }
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      }
+
+      function resize() {
+        const bounds = scene.getBoundingClientRect();
+        resizeCanvas(space, spaceCtx, bounds.width, bounds.height);
+        draw();
+      }
+
+      function normalizedPhase() {
+        return ((phase % TAU) + TAU) % TAU;
+      }
+
+      function currentIndex() {
+        return Math.round(normalizedPhase() / STEP) % phaseLabels.length;
+      }
+
+      function playTone() {
+        try {
+          audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+          const now = audioContext.currentTime;
+          const oscillator = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          oscillator.type = "sine";
+          oscillator.frequency.setValueAtTime(520 + currentIndex() * 32, now);
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.exponentialRampToValueAtTime(0.08, now + 0.012);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+          oscillator.connect(gain).connect(audioContext.destination);
+          oscillator.start(now);
+          oscillator.stop(now + 0.18);
+        } catch (error) {
+          // Audio is optional; the game remains fully usable without it.
+        }
+      }
+
+      const moonMarks = [
+        { x: -0.34, y: -0.22, r: 0.18, type: "mare" },
+        { x: 0.12, y: -0.28, r: 0.22, type: "mare" },
+        { x: 0.32, y: 0.16, r: 0.19, type: "mare" },
+        { x: -0.08, y: 0.34, r: 0.15, type: "mare" },
+        { x: -0.42, y: 0.18, r: 0.08, type: "crater" },
+        { x: -0.15, y: -0.48, r: 0.07, type: "crater" },
+        { x: 0.03, y: 0.08, r: 0.09, type: "crater" },
+        { x: 0.38, y: -0.12, r: 0.07, type: "crater" },
+        { x: 0.16, y: 0.46, r: 0.06, type: "crater" },
+        { x: -0.24, y: 0.48, r: 0.05, type: "crater" }
+      ];
+
+      function moonTexture(nx, ny) {
+        let value = 0.74;
+        value += Math.sin((nx * 14.1 + ny * 7.4) * Math.PI) * 0.035;
+        value += Math.sin((nx * 29.7 - ny * 18.2) * Math.PI) * 0.022;
+        value += Math.sin((nx * 53.3 + ny * 41.9) * Math.PI) * 0.012;
+
+        for (const mark of moonMarks) {
+          const dx = nx - mark.x;
+          const dy = ny - mark.y;
+          const d = Math.hypot(dx, dy);
+          if (d >= mark.r) continue;
+          const falloff = 1 - d / mark.r;
+          if (mark.type === "mare") {
+            value -= 0.16 * falloff;
+          } else {
+            value -= 0.18 * Math.max(0, 1 - d / (mark.r * 0.72));
+            value += 0.08 * Math.max(0, 1 - Math.abs(d - mark.r * 0.72) / (mark.r * 0.22));
+          }
+        }
+
+        return Math.max(0.38, Math.min(0.92, value));
+      }
+
+      function drawLitMoon(ctx, cx, cy, radius, lightX, lightY, lightZ) {
+        const diameter = radius * 2;
+        const moonBuffer = document.createElement("canvas");
+        moonBuffer.width = diameter;
+        moonBuffer.height = diameter;
+        const moonBufferCtx = moonBuffer.getContext("2d");
+        const image = moonBufferCtx.createImageData(diameter, diameter);
+        const data = image.data;
+        const lightLength = Math.hypot(lightX, lightY, lightZ) || 1;
+        const lx = lightX / lightLength;
+        const ly = lightY / lightLength;
+        const lz = lightZ / lightLength;
+
+        for (let py = 0; py < diameter; py += 1) {
+          for (let px = 0; px < diameter; px += 1) {
+            const nx = (px + 0.5 - radius) / radius;
+            const ny = (py + 0.5 - radius) / radius;
+            const distance = nx * nx + ny * ny;
+            const offset = (py * diameter + px) * 4;
+            if (distance > 1) {
+              data[offset + 3] = 0;
+              continue;
+            }
+
+            const nz = Math.sqrt(1 - distance);
+            const light = nx * lx + ny * ly + nz * lz;
+            const rim = 1 - Math.sqrt(distance);
+            const shade = Math.max(0, light);
+            const surface = moonTexture(nx, ny);
+
+            if (shade > 0) {
+              const glow = 0.42 + 0.68 * shade + 0.08 * rim;
+              data[offset] = Math.round(214 * surface * glow + 42);
+              data[offset + 1] = Math.round(207 * surface * glow + 39);
+              data[offset + 2] = Math.round(187 * surface * glow + 34);
+              data[offset + 3] = 255;
+            } else {
+              data[offset] = Math.round(28 + 28 * surface * rim);
+              data[offset + 1] = Math.round(32 + 28 * surface * rim);
+              data[offset + 2] = Math.round(43 + 34 * surface * rim);
+              data[offset + 3] = 255;
+            }
+          }
+        }
+
+        moonBufferCtx.putImageData(image, 0, 0);
+        ctx.save();
+        ctx.drawImage(moonBuffer, cx - radius, cy - radius, diameter, diameter);
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, TAU);
+        ctx.strokeStyle = "rgba(255, 248, 223, 0.3)";
+        ctx.lineWidth = Math.max(1, radius * 0.025);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawMoonPhase(ctx, cx, cy, radius, phaseValue, scaleForCraters) {
+        drawLitMoon(
+          ctx,
+          cx,
+          cy,
+          radius,
+          Math.sin(phaseValue),
+          0,
+          -Math.cos(phaseValue)
+        );
+      }
+
+      function drawMoonFromAbove(ctx, cx, cy, radius) {
+        drawLitMoon(ctx, cx, cy, radius, -1, 0, 0.08);
+      }
+
+      function drawSprunkiOnEarth(ctx, earthX, earthY, earthRadius) {
+        const scale = earthRadius * 1.3;
+        const headR = scale * 0.34;
+        const headX = earthX;
+        const headY = earthY - scale * 0.1;
+        const neckTop = headY + headR * 0.74;
+        const bodyBottom = earthY + earthRadius * 0.78;
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.lineWidth = Math.max(2, earthRadius * 0.06);
+
+        ctx.fillStyle = "#ff7100";
+        ctx.strokeStyle = "#111111";
+        ctx.beginPath();
+        ctx.moveTo(headX - scale * 0.15, neckTop);
+        ctx.lineTo(headX + scale * 0.15, neckTop);
+        ctx.lineTo(headX + scale * 0.25, bodyBottom);
+        ctx.lineTo(headX - scale * 0.25, bodyBottom);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(180, 69, 0, 0.22)";
+        ctx.beginPath();
+        ctx.ellipse(headX, neckTop + scale * 0.08, scale * 0.18, scale * 0.06, 0, 0, TAU);
+        ctx.fill();
+
+        ctx.strokeStyle = "#111111";
+        ctx.lineWidth = Math.max(2.2, earthRadius * 0.065);
+        ctx.beginPath();
+        ctx.arc(headX, headY, headR, 0, TAU);
+        ctx.fillStyle = "#ff7900";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.strokeStyle = "#111111";
+        ctx.lineWidth = Math.max(2.6, earthRadius * 0.075);
+        ctx.beginPath();
+        ctx.arc(headX, headY - headR * 0.06, headR * 1.28, Math.PI * 1.08, Math.PI * 1.92);
+        ctx.stroke();
+        ctx.strokeStyle = "#ffc28d";
+        ctx.lineWidth = Math.max(1.6, earthRadius * 0.045);
+        ctx.beginPath();
+        ctx.arc(headX, headY - headR * 0.06, headR * 1.28, Math.PI * 1.08, Math.PI * 1.92);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#111111";
+        ctx.fillStyle = "#ffb37b";
+        ctx.lineWidth = Math.max(2, earthRadius * 0.055);
+        ctx.beginPath();
+        ctx.rect(headX - headR * 1.1, headY - headR * 0.35, headR * 0.32, headR * 0.72);
+        ctx.rect(headX + headR * 0.78, headY - headR * 0.35, headR * 0.32, headR * 0.72);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#ff7900";
+        ctx.beginPath();
+        ctx.arc(headX - headR * 1.18, headY, headR * 0.31, -Math.PI / 2, Math.PI / 2);
+        ctx.arc(headX + headR * 1.18, headY, headR * 0.31, Math.PI / 2, Math.PI * 1.5);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.strokeStyle = "#111111";
+        ctx.lineWidth = Math.max(1.5, earthRadius * 0.038);
+        ctx.beginPath();
+        ctx.moveTo(headX - headR * 0.28, headY - headR * 0.75);
+        ctx.lineTo(headX - headR * 0.08, headY - headR * 0.43);
+        ctx.lineTo(headX + headR * 0.06, headY - headR * 0.72);
+        ctx.lineTo(headX + headR * 0.25, headY - headR * 0.38);
+        ctx.lineTo(headX + headR * 0.23, headY - headR * 0.78);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#111111";
+        ctx.lineWidth = Math.max(1.25, earthRadius * 0.032);
+        ctx.beginPath();
+        ctx.arc(headX - headR * 0.35, headY - headR * 0.24, headR * 0.23, Math.PI * 1.15, Math.PI * 1.85);
+        ctx.arc(headX + headR * 0.35, headY - headR * 0.24, headR * 0.23, Math.PI * 1.15, Math.PI * 1.85);
+        ctx.stroke();
+
+        function sleepyEye(x) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.ellipse(x, headY + headR * 0.02, headR * 0.27, headR * 0.19, 0, 0, TAU);
+          ctx.clip();
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(x - headR * 0.32, headY - headR * 0.04, headR * 0.64, headR * 0.32);
+          ctx.fillStyle = "#050505";
+          ctx.fillRect(x - headR * 0.22, headY + headR * 0.06, headR * 0.44, headR * 0.23);
+          ctx.restore();
+          ctx.strokeStyle = "#111111";
+          ctx.lineWidth = Math.max(1.6, earthRadius * 0.04);
+          ctx.beginPath();
+          ctx.ellipse(x, headY + headR * 0.02, headR * 0.27, headR * 0.19, 0, 0, TAU);
+          ctx.stroke();
+          ctx.fillStyle = "#ff7900";
+          ctx.fillRect(x - headR * 0.31, headY - headR * 0.2, headR * 0.62, headR * 0.18);
+          ctx.strokeStyle = "#111111";
+          ctx.lineWidth = Math.max(1.2, earthRadius * 0.03);
+          ctx.beginPath();
+          ctx.moveTo(x - headR * 0.28, headY - headR * 0.01);
+          ctx.lineTo(x + headR * 0.28, headY - headR * 0.01);
+          ctx.stroke();
+        }
+
+        sleepyEye(headX - headR * 0.34);
+        sleepyEye(headX + headR * 0.34);
+
+        ctx.strokeStyle = "#111111";
+        ctx.lineWidth = Math.max(1.3, earthRadius * 0.033);
+        ctx.beginPath();
+        ctx.moveTo(headX - headR * 0.17, headY + headR * 0.42);
+        ctx.quadraticCurveTo(headX, headY + headR * 0.54, headX + headR * 0.17, headY + headR * 0.42);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawScene() {
+        const w = space.clientWidth;
+        const h = space.clientHeight;
+        const ctx = spaceCtx;
+        ctx.clearRect(0, 0, w, h);
+
+        const centerX = w * 0.58;
+        const centerY = h * 0.52;
+        const orbitRadius = Math.min(w * 0.26, h * 0.32);
+        const earthRadius = Math.max(24, Math.min(w, h) * 0.085);
+        const moonRadius = Math.max(14, Math.min(w, h) * 0.052);
+        const sunX = Math.max(42, w * 0.11);
+        const sunY = centerY;
+        const sunRadius = Math.max(22, Math.min(w, h) * 0.075);
+        const p = normalizedPhase();
+        const moonX = centerX - Math.cos(p) * orbitRadius;
+        const moonY = centerY - Math.sin(p) * orbitRadius;
+
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        for (let i = 0; i < 20; i += 1) {
+          const x = (i * 83 + 31) % w;
+          const y = (i * 47 + 23) % h;
+          ctx.beginPath();
+          ctx.arc(x, y, i % 4 === 0 ? 1.4 : 0.9, 0, TAU);
+          ctx.fillStyle = "rgba(255, 248, 223, 0.54)";
+          ctx.fill();
+        }
+        ctx.restore();
+
+        const sunGradient = ctx.createRadialGradient(sunX, sunY, 4, sunX, sunY, sunRadius * 1.55);
+        sunGradient.addColorStop(0, "#fff4a6");
+        sunGradient.addColorStop(0.58, "#ffd568");
+        sunGradient.addColorStop(1, "rgba(255, 156, 69, 0)");
+        ctx.fillStyle = sunGradient;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, sunRadius * 1.55, 0, TAU);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, sunRadius, 0, TAU);
+        ctx.fillStyle = "#ffd568";
+        ctx.fill();
+
+        ctx.font = `700 ${Math.max(14, w * 0.042)}px sans-serif`;
+        ctx.fillStyle = "rgba(255, 248, 223, 0.94)";
+        ctx.textAlign = "center";
+        ctx.fillText("たいよう", sunX, sunY + sunRadius + 24);
+
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 248, 223, 0.28)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([7, 8]);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, orbitRadius, 0, TAU);
+        ctx.stroke();
+        ctx.restore();
+
+        const earthGradient = ctx.createRadialGradient(centerX - earthRadius * 0.35, centerY - earthRadius * 0.45, 2, centerX, centerY, earthRadius);
+        earthGradient.addColorStop(0, "#b3f4f0");
+        earthGradient.addColorStop(0.72, "#68c7c2");
+        earthGradient.addColorStop(1, "#3e879f");
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, earthRadius, 0, TAU);
+        ctx.fillStyle = earthGradient;
+        ctx.fill();
+        ctx.save();
+        ctx.clip();
+        ctx.fillStyle = "#7dd77b";
+        ctx.beginPath();
+        ctx.ellipse(centerX - earthRadius * 0.18, centerY - earthRadius * 0.08, earthRadius * 0.32, earthRadius * 0.2, -0.5, 0, TAU);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(centerX + earthRadius * 0.24, centerY + earthRadius * 0.18, earthRadius * 0.28, earthRadius * 0.16, 0.35, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, earthRadius, 0, TAU);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.36)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        drawSprunkiOnEarth(ctx, centerX, centerY, earthRadius);
+
+        ctx.font = `700 ${Math.max(14, w * 0.042)}px sans-serif`;
+        ctx.fillStyle = "rgba(255, 248, 223, 0.94)";
+        ctx.textAlign = "center";
+        ctx.fillText("ちきゅう", centerX, centerY + earthRadius + 25);
+
+        drawMoonFromAbove(ctx, moonX, moonY, Math.round(moonRadius));
+        ctx.beginPath();
+        ctx.arc(moonX, moonY, moonRadius + 6, 0, TAU);
+        ctx.strokeStyle = "rgba(255, 248, 223, 0.18)";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.font = `700 ${Math.max(14, w * 0.04)}px sans-serif`;
+        ctx.fillStyle = "rgba(255, 248, 223, 0.94)";
+        ctx.textAlign = "center";
+        const labelY = moonY < 42 ? moonY + moonRadius + 22 : moonY - moonRadius - 12;
+        ctx.fillText("つき", moonX, labelY);
+      }
+
+      function drawLargePhase() {
+        const rect = phaseMoon.getBoundingClientRect();
+        const cssSize = Math.max(96, rect.width || 120);
+        resizeCanvas(phaseMoon, phaseCtx, cssSize, cssSize);
+        phaseCtx.clearRect(0, 0, cssSize, cssSize);
+        drawMoonPhase(phaseCtx, cssSize / 2, cssSize / 2, Math.round(cssSize * 0.42), normalizedPhase(), 1.4);
+      }
+
+      function updateText() {
+        const index = currentIndex();
+        const label = phaseLabels[index];
+        phaseName.textContent = label.name;
+        phaseMessage.textContent = label.message;
+        phaseList.querySelectorAll(".phase-choice").forEach((button, buttonIndex) => {
+          button.classList.toggle("is-active", buttonIndex === index);
+          button.setAttribute("aria-pressed", buttonIndex === index ? "true" : "false");
+        });
+      }
+
+      function buildPhasePicker() {
+        phaseList.innerHTML = "";
+        phaseLabels.forEach((label, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "phase-choice";
+          button.textContent = label.name;
+          button.setAttribute("aria-label", `${label.name}を表示`);
+          button.addEventListener("click", () => {
+            playTone();
+            setPlaying(false);
+            snapPhase(index * STEP);
+            draw();
+          });
+          phaseList.appendChild(button);
+        });
+      }
+
+      function draw() {
+        drawScene();
+        drawLargePhase();
+        updateText();
+      }
+
+      function setPlaying(next) {
+        playing = next;
+        playButton.innerHTML = playing
+          ? '<span class="button-icon" aria-hidden="true">⏸</span>とまる'
+          : '<span class="button-icon" aria-hidden="true">▶</span>うごく';
+        playButton.setAttribute("aria-label", playing ? "停止する" : "再生する");
+        if (playing) {
+          lastTime = performance.now();
+          animationId = requestAnimationFrame(tick);
+        } else {
+          cancelAnimationFrame(animationId);
+        }
+      }
+
+      function tick(time) {
+        const delta = Math.min(48, time - lastTime);
+        lastTime = time;
+        phase += delta * 0.00055;
+        draw();
+        if (playing) {
+          animationId = requestAnimationFrame(tick);
+        }
+      }
+
+      function snapPhase(value) {
+        phase = ((value % TAU) + TAU) % TAU;
+      }
+
+      playButton.addEventListener("click", () => {
+        playTone();
+        setPlaying(!playing);
+      });
+
+      stepButton.addEventListener("click", () => {
+        playTone();
+        setPlaying(false);
+        snapPhase(Math.round((phase + STEP) / STEP) * STEP);
+        draw();
+      });
+
+      resetButton.addEventListener("click", () => {
+        playTone();
+        setPlaying(false);
+        snapPhase(0);
+        draw();
+      });
+
+      shareButton.addEventListener("click", async () => {
+        playTone();
+        setPlaying(false);
+        const message = [
+          "月の満ち欠けゲーム「おつきさまのかたち」",
+          "",
+          "LINEで送るときは moon-phase-game.zip を添付してね。受け取ったらZIPを開いて moon-phase-game.html をタップすると遊べるよ。"
+        ].join("\n");
+
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: "おつきさまのかたち",
+              text: message
+            });
+            return;
+          } catch (error) {
+            if (error && error.name === "AbortError") return;
+          }
+        }
+
+        alert(message);
+      });
+
+      window.addEventListener("resize", resize, { passive: true });
+      window.addEventListener("orientationchange", () => setTimeout(resize, 150), { passive: true });
+
+      buildPhasePicker();
+      resize();
+    })();
+  </script>
+</body>
+</html>

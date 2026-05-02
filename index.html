@@ -184,12 +184,17 @@
     }
 
     .sprunki-picker {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      display: flex;
       gap: 6px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 3px;
+      scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
     }
 
     .sprunki-choice {
+      flex: 0 0 68px;
       min-height: 50px;
       padding: 4px 2px;
       border: 1px solid var(--line);
@@ -200,6 +205,7 @@
       font-weight: 800;
       line-height: 1.05;
       box-shadow: none;
+      scroll-snap-align: start;
     }
 
     .sprunki-choice:active {
@@ -366,21 +372,17 @@
       const TAU = Math.PI * 2;
       const STEP = TAU / 16;
       const sprunkiCharacters = [
-        { id: "oren", name: "オレン", file: "oren-sprite.png", color: "#ff7900" },
-        { id: "raddy", name: "ラディ", file: "sprunki-raddy.png", color: "#f51414" },
-        { id: "clukr", name: "クルーカー", file: "sprunki-clukr.png", color: "#b9bec4" },
-        { id: "funbot", name: "ファンボット", file: "sprunki-funbot.png", color: "#ffd33d" },
-        { id: "vineria", name: "ヴィネリア", file: "sprunki-vineria.png", color: "#58d947" }
+        { id: "oren", name: "Oren", file: "sprunki-oren.png", color: "#ff7900", music: "kick" },
+        { id: "raddy", name: "Raddy", file: "sprunki-raddy.png", color: "#f51414", music: "snare" },
+        { id: "clukr", name: "Clukr", file: "sprunki-clukr.png", color: "#b9bec4", music: "rideTaiko" },
+        { id: "funbot", name: "Fun Bot", file: "sprunki-funbot.png", color: "#ffd33d", music: "amen" },
+        { id: "vineria", name: "Vineria", file: "sprunki-vineria.png", color: "#58d947", music: "shaker" },
+        { id: "gray", name: "Gray", file: "sprunki-gray.png", color: "#6f737a", music: "bassPulse" },
+        { id: "brud", name: "brud", file: "sprunki-brud.png", color: "#8b5f33", music: "tomPulse" },
+        { id: "garnold", name: "Garnold", file: "sprunki-garnold.png", color: "#d4aa28", music: "synthBell" },
+        { id: "owakcx", name: "OWAKCX", file: "sprunki-owakcx.png", color: "#78d946", music: "tinyArp" },
+        { id: "sky", name: "Sky", file: "sprunki-sky.png", color: "#71c9ff", music: "softClave" }
       ];
-      [
-        { name: "Oren", music: "kick" },
-        { name: "Raddy", music: "snare" },
-        { name: "Clukr", music: "rideTaiko" },
-        { name: "Fun Bot", music: "amen" },
-        { name: "Vineria", music: "shaker" }
-      ].forEach((profile, index) => {
-        Object.assign(sprunkiCharacters[index], profile);
-      });
       let selectedSprunki = 0;
       sprunkiCharacters.forEach((character) => {
         character.image = new Image();
@@ -548,6 +550,21 @@
           if (beat === 7) playPercussion(context, now, "ride", 0.08);
         } else if (character.music === "shaker") {
           playPercussion(context, now, beat % 2 === 0 ? "hat" : "ride", beat % 2 === 0 ? 0.07 : 0.04);
+        } else if (character.music === "bassPulse") {
+          const bass = [73.42, 73.42, 92.5, 73.42, 110, 92.5, 73.42, 55];
+          playNote(context, now, bass[beat], 0.18, "sawtooth", 0.07);
+        } else if (character.music === "tomPulse") {
+          if (beat === 0 || beat === 3 || beat === 6) playNote(context, now, beat === 3 ? 196 : 146.83, 0.12, "sine", 0.09);
+          if (beat === 4) playPercussion(context, now, "kick", 0.08);
+        } else if (character.music === "synthBell") {
+          const bell = [523.25, 659.25, 783.99, 659.25, 880, 783.99, 659.25, 587.33];
+          if (beat % 2 === 0) playNote(context, now, bell[beat], 0.16, "triangle", 0.075);
+        } else if (character.music === "tinyArp") {
+          const arp = [440, 554.37, 659.25, 830.61, 659.25, 554.37, 493.88, 369.99];
+          playNote(context, now, arp[beat], 0.09, "square", 0.045);
+        } else if (character.music === "softClave") {
+          if (beat === 0 || beat === 2 || beat === 5 || beat === 7) playNote(context, now, 1174.66, 0.045, "triangle", 0.06);
+          if (beat === 4) playNote(context, now, 880, 0.06, "triangle", 0.05);
         }
       }
 

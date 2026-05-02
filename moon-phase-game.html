@@ -437,11 +437,14 @@
       let audioContext = null;
       const sprunkiSynthTimers = new Map();
       const sprunkiAudioBuffers = new Map();
+      const sprunkiLoopInfos = new Map();
       const activeSprunkiSources = new Map();
       let sprunkiMusicToken = 0;
+      let sprunkiSchedulerTimer = 0;
       // Most Phase 1 Sprunki loops cluster around this bar length; all character loops lock to this grid.
       const SPRUNKI_BAR_SECONDS = 4.8125;
       const SPRUNKI_START_DELAY = 0.06;
+      const SPRUNKI_SCHEDULE_AHEAD = 0.18;
       let sceneHitAreas = null;
       const tapEffects = {
         sun: 0,
@@ -522,15 +525,19 @@
 
       function stopSprunkiMusic() {
         sprunkiMusicToken += 1;
+        clearTimeout(sprunkiSchedulerTimer);
+        sprunkiSchedulerTimer = 0;
         sprunkiSynthTimers.forEach((timer) => clearInterval(timer));
         sprunkiSynthTimers.clear();
-        activeSprunkiSources.forEach(({ source }) => {
-          source.onended = null;
-          try {
-            source.stop(0);
-          } catch (error) {
-            // A source can only be stopped once.
-          }
+        activeSprunkiSources.forEach((sources) => {
+          sources.forEach((source) => {
+            source.onended = null;
+            try {
+              source.stop(0);
+            } catch (error) {
+              // A source can only be stopped once.
+            }
+          });
         });
         activeSprunkiSources.clear();
       }
@@ -641,34 +648,90 @@
         if (!character.audio) return null;
         if (sprunkiAudioBuffers.has(character.id)) return sprunkiAudioBuffers.get(character.id);
         const context = getAudioContext();
-        const response = await fetch(character.audio);
-        if (!response.ok) throw new Error(`Could not load ${character.audio}`);
-        const data = await response.arrayBuffer();
-        const buffer = await context.decodeAudioData(data);
-        sprunkiAudioBuffers.set(character.id, buffer);
-        return buffer;
+        const loading = fetch(character.audio)
+          .then((response) => {
+            if (!response.ok) throw new Error(`Could not load ${character.audio}`);
+            return response.arrayBuffer();
+          })
+          .then((data) => context.decodeAudioData(data))
+          .catch((error) => {
+            sprunkiAudioBuffers.delete(character.id);
+            throw error;
+          });
+        sprunkiAudioBuffers.set(character.id, loading);
+        return loading;
+      }
+
+      function getSprunkiLoopInfo(character, buffer) {
+        if (sprunkiLoopInfos.has(character.id)) return sprunkiLoopInfos.get(character.id);
+        const sampleRate = buffer.sampleRate;
+        const windowSize = Math.max(64, Math.floor(sampleRate * 0.012));
+        const channels = Array.from({ length: buffer.numberOfChannels }, (_, index) => buffer.getChannelData(index));
+        const levels = [];
+        for (let start = 0; start < buffer.length; start += windowSize) {
+          let sum = 0;
+          let count = 0;
+          const end = Math.min(buffer.length, start + windowSize);
+          for (let i = start; i < end; i += 1) {
+            channels.forEach((channel) => {
+              const value = channel[i] || 0;
+              sum += value * value;
+              count += 1;
+            });
+          }
+          levels.push(Math.sqrt(sum / Math.max(1, count)));
+        }
+        const peak = Math.max(...levels, 0.0001);
+        const threshold = peak * 0.025;
+        const activeLast = levels.reduce((last, level, index) => (level >= threshold ? index : last), 0);
+        const loopEnd = Math.min(
+          buffer.duration,
+          Math.max(SPRUNKI_BAR_SECONDS * 0.72, ((activeLast + 1) * windowSize) / sampleRate + 0.06)
+        );
+        const playbackRate = loopEnd / SPRUNKI_BAR_SECONDS;
+        const info = {
+          offset: 0,
+          duration: loopEnd,
+          playbackRate
+        };
+        sprunkiLoopInfos.set(character.id, info);
+        return info;
+      }
+
+      function rememberSprunkiSource(character, source) {
+        if (!activeSprunkiSources.has(character.id)) activeSprunkiSources.set(character.id, new Set());
+        const sources = activeSprunkiSources.get(character.id);
+        sources.add(source);
+        source.onended = () => {
+          sources.delete(source);
+          if (!sources.size) activeSprunkiSources.delete(character.id);
+        };
       }
 
       function startSyncedSprunkiSource(character, buffer, startAt) {
         const context = getAudioContext();
+        const info = getSprunkiLoopInfo(character, buffer);
         const source = context.createBufferSource();
         const gain = context.createGain();
-        const cycleBars = Math.max(1, Math.round(buffer.duration / SPRUNKI_BAR_SECONDS));
-        const targetDuration = cycleBars * SPRUNKI_BAR_SECONDS;
-        const playbackRate = buffer.duration / targetDuration;
         source.buffer = buffer;
-        source.loop = true;
-        source.loopStart = 0;
-        source.loopEnd = buffer.duration;
-        source.playbackRate.setValueAtTime(playbackRate, startAt);
+        source.playbackRate.setValueAtTime(info.playbackRate, startAt);
         gain.gain.setValueAtTime(0.82, startAt);
         source.connect(gain).connect(context.destination);
-        source.onended = () => {
-          const active = activeSprunkiSources.get(character.id);
-          if (active?.source === source) activeSprunkiSources.delete(character.id);
-        };
-        activeSprunkiSources.set(character.id, { source, gain });
-        source.start(startAt);
+        rememberSprunkiSource(character, source);
+        source.start(startAt, info.offset, info.duration);
+        source.stop(startAt + SPRUNKI_BAR_SECONDS + 0.03);
+      }
+
+      function scheduleSprunkiCycle(entries, token, cycleStart) {
+        if (!musicEnabled || token !== sprunkiMusicToken) return;
+        const context = getAudioContext();
+        let startAt = cycleStart;
+        while (startAt < context.currentTime + 0.035) startAt += SPRUNKI_BAR_SECONDS;
+        entries.forEach(({ character, buffer }) => startSyncedSprunkiSource(character, buffer, startAt));
+        const nextStart = startAt + SPRUNKI_BAR_SECONDS;
+        const wait = Math.max(40, (nextStart - context.currentTime - SPRUNKI_SCHEDULE_AHEAD) * 1000);
+        clearTimeout(sprunkiSchedulerTimer);
+        sprunkiSchedulerTimer = setTimeout(() => scheduleSprunkiCycle(entries, token, nextStart), wait);
       }
 
       async function loadSelectedSprunkiMusic(token) {
@@ -683,13 +746,10 @@
         if (!musicEnabled || token !== sprunkiMusicToken) return;
         const context = getAudioContext();
         const startAt = context.currentTime + SPRUNKI_START_DELAY;
-        entries.forEach(({ character, buffer }) => {
-          if (buffer) {
-            startSyncedSprunkiSource(character, buffer, startAt);
-          } else {
-            playSynthSprunkiMusic(character);
-          }
-        });
+        const audioEntries = entries.filter(({ buffer }) => buffer);
+        const synthEntries = entries.filter(({ buffer }) => !buffer);
+        if (audioEntries.length) scheduleSprunkiCycle(audioEntries, token, startAt);
+        synthEntries.forEach(({ character }) => playSynthSprunkiMusic(character));
       }
 
       function restartSelectedSprunkiMusic() {

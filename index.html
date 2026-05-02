@@ -1134,6 +1134,7 @@
           button.addEventListener("click", () => {
             selectedSprunki = index;
             playSprunkiMusic(index);
+            speakJapanese(character.name);
             triggerTapEffect("earth");
             updateSprunkiPicker();
             draw();

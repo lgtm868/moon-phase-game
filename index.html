@@ -428,12 +428,6 @@
         character.image = new Image();
         character.image.src = character.file;
         character.image.addEventListener("load", () => draw());
-        if (character.audio) {
-          character.audioElement = new Audio(character.audio);
-          character.audioElement.loop = true;
-          character.audioElement.preload = "metadata";
-          character.audioElement.volume = 0.82;
-        }
       });
 
       let phase = 0;
@@ -442,7 +436,12 @@
       let animationId = 0;
       let audioContext = null;
       const sprunkiSynthTimers = new Map();
-      const activeSprunkiAudios = new Map();
+      const sprunkiAudioBuffers = new Map();
+      const activeSprunkiSources = new Map();
+      let sprunkiMusicToken = 0;
+      // Most Phase 1 Sprunki loops cluster around this bar length; all character loops lock to this grid.
+      const SPRUNKI_BAR_SECONDS = 4.8125;
+      const SPRUNKI_START_DELAY = 0.06;
       let sceneHitAreas = null;
       const tapEffects = {
         sun: 0,
@@ -522,13 +521,18 @@
       }
 
       function stopSprunkiMusic() {
+        sprunkiMusicToken += 1;
         sprunkiSynthTimers.forEach((timer) => clearInterval(timer));
         sprunkiSynthTimers.clear();
-        activeSprunkiAudios.forEach((audio) => {
-          audio.pause();
-          audio.currentTime = 0;
+        activeSprunkiSources.forEach(({ source }) => {
+          source.onended = null;
+          try {
+            source.stop(0);
+          } catch (error) {
+            // A source can only be stopped once.
+          }
         });
-        activeSprunkiAudios.clear();
+        activeSprunkiSources.clear();
       }
 
       function makeNoiseBuffer(context, duration = 0.08) {
@@ -633,31 +637,67 @@
         }
       }
 
-      function playSprunkiMusic(index) {
-        if (!musicEnabled) return;
-        try {
+      async function loadSprunkiAudioBuffer(character) {
+        if (!character.audio) return null;
+        if (sprunkiAudioBuffers.has(character.id)) return sprunkiAudioBuffers.get(character.id);
+        const context = getAudioContext();
+        const response = await fetch(character.audio);
+        if (!response.ok) throw new Error(`Could not load ${character.audio}`);
+        const data = await response.arrayBuffer();
+        const buffer = await context.decodeAudioData(data);
+        sprunkiAudioBuffers.set(character.id, buffer);
+        return buffer;
+      }
+
+      function startSyncedSprunkiSource(character, buffer, startAt) {
+        const context = getAudioContext();
+        const source = context.createBufferSource();
+        const gain = context.createGain();
+        const cycleBars = Math.max(1, Math.round(buffer.duration / SPRUNKI_BAR_SECONDS));
+        const targetDuration = cycleBars * SPRUNKI_BAR_SECONDS;
+        const playbackRate = buffer.duration / targetDuration;
+        source.buffer = buffer;
+        source.loop = true;
+        source.loopStart = 0;
+        source.loopEnd = buffer.duration;
+        source.playbackRate.setValueAtTime(playbackRate, startAt);
+        gain.gain.setValueAtTime(0.82, startAt);
+        source.connect(gain).connect(context.destination);
+        source.onended = () => {
+          const active = activeSprunkiSources.get(character.id);
+          if (active?.source === source) activeSprunkiSources.delete(character.id);
+        };
+        activeSprunkiSources.set(character.id, { source, gain });
+        source.start(startAt);
+      }
+
+      async function loadSelectedSprunkiMusic(token) {
+        const entries = await Promise.all(selectedSprunkiIndexes.map(async (index) => {
           const character = sprunkiCharacters[index];
-          if (character.audioElement) {
-            const audio = character.audioElement;
-            if (activeSprunkiAudios.has(character.id)) {
-              audio.currentTime = 0;
-              return;
-            }
-            audio.currentTime = 0;
-            activeSprunkiAudios.set(character.id, audio);
-            const playPromise = audio.play();
-            if (playPromise && typeof playPromise.catch === "function") {
-              playPromise.catch(() => {
-                activeSprunkiAudios.delete(character.id);
-                playSynthSprunkiMusic(character);
-              });
-            }
-            return;
+          try {
+            return { character, buffer: await loadSprunkiAudioBuffer(character) };
+          } catch (error) {
+            return { character, buffer: null };
           }
-          playSynthSprunkiMusic(character);
-        } catch (error) {
-          // Character music is optional; all visual play still works without audio.
-        }
+        }));
+        if (!musicEnabled || token !== sprunkiMusicToken) return;
+        const context = getAudioContext();
+        const startAt = context.currentTime + SPRUNKI_START_DELAY;
+        entries.forEach(({ character, buffer }) => {
+          if (buffer) {
+            startSyncedSprunkiSource(character, buffer, startAt);
+          } else {
+            playSynthSprunkiMusic(character);
+          }
+        });
+      }
+
+      function restartSelectedSprunkiMusic() {
+        if (!musicEnabled) return;
+        stopSprunkiMusic();
+        const token = sprunkiMusicToken + 1;
+        sprunkiMusicToken = token;
+        loadSelectedSprunkiMusic(token);
       }
 
       function playSynthSprunkiMusic(character) {
@@ -674,26 +714,6 @@
         } catch (error) {
           // Character music is optional; all visual play still works without audio.
         }
-      }
-
-      function stopOneSprunkiMusic(character) {
-        const timer = sprunkiSynthTimers.get(character.id);
-        if (timer) {
-          clearInterval(timer);
-          sprunkiSynthTimers.delete(character.id);
-        }
-        const audio = activeSprunkiAudios.get(character.id);
-        if (audio) {
-          audio.pause();
-          audio.currentTime = 0;
-          activeSprunkiAudios.delete(character.id);
-        }
-      }
-
-      function restartSelectedSprunkiMusic() {
-        if (!musicEnabled) return;
-        stopSprunkiMusic();
-        selectedSprunkiIndexes.forEach((index) => playSprunkiMusic(index));
       }
 
       function updateMusicButton() {
@@ -1290,13 +1310,10 @@
             const selectedPosition = selectedSprunkiIndexes.indexOf(index);
             if (selectedPosition >= 0 && selectedSprunkiIndexes.length > 1) {
               selectedSprunkiIndexes.splice(selectedPosition, 1);
-              stopOneSprunkiMusic(character);
             } else if (selectedPosition < 0) {
               selectedSprunkiIndexes.push(index);
-              playSprunkiMusic(index);
-            } else {
-              playSprunkiMusic(index);
             }
+            restartSelectedSprunkiMusic();
             speakEnglish(character.name);
             triggerTapEffect("earth");
             updateSprunkiPicker();

@@ -663,6 +663,37 @@
         ctx.fillText("たいよう", sunX, sunY + sunRadius + 24);
 
         ctx.save();
+        const beamStart = sunX + sunRadius * 0.78;
+        const beamEnd = centerX + earthRadius * 1.25;
+        const beamTop = centerY - earthRadius * 0.92;
+        const beamBottom = centerY + earthRadius * 0.92;
+        const beamGradient = ctx.createLinearGradient(beamStart, centerY, beamEnd, centerY);
+        beamGradient.addColorStop(0, "rgba(255, 226, 121, 0.28)");
+        beamGradient.addColorStop(0.55, "rgba(255, 226, 121, 0.16)");
+        beamGradient.addColorStop(1, "rgba(255, 226, 121, 0.03)");
+        ctx.fillStyle = beamGradient;
+        ctx.beginPath();
+        ctx.moveTo(beamStart, beamTop);
+        ctx.lineTo(beamEnd, centerY - earthRadius * 0.56);
+        ctx.lineTo(beamEnd, centerY + earthRadius * 0.56);
+        ctx.lineTo(beamStart, beamBottom);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(255, 226, 121, 0.42)";
+        ctx.lineWidth = Math.max(1.5, earthRadius * 0.045);
+        ctx.setLineDash([10, 9]);
+        ctx.beginPath();
+        ctx.moveTo(beamStart, centerY - earthRadius * 0.55);
+        ctx.lineTo(beamEnd, centerY - earthRadius * 0.33);
+        ctx.moveTo(beamStart, centerY);
+        ctx.lineTo(beamEnd, centerY);
+        ctx.moveTo(beamStart, centerY + earthRadius * 0.55);
+        ctx.lineTo(beamEnd, centerY + earthRadius * 0.33);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
         ctx.strokeStyle = "rgba(255, 248, 223, 0.28)";
         ctx.lineWidth = 2;
         ctx.setLineDash([7, 8]);

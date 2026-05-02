@@ -41,14 +41,14 @@
       margin: 0;
       background: var(--sky);
       color: var(--ink);
-      overflow-x: hidden;
+      overflow: hidden;
     }
 
     body {
       min-height: 100svh;
       display: flex;
       justify-content: center;
-      padding: max(12px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom));
+      padding: max(8px, env(safe-area-inset-top)) 12px max(8px, env(safe-area-inset-bottom));
       background:
         radial-gradient(circle at 18% 14%, rgba(255, 213, 104, 0.18), transparent 22%),
         linear-gradient(180deg, var(--sky) 0%, var(--sky-2) 100%);
@@ -56,14 +56,14 @@
 
     main {
       width: min(100%, 460px);
-      min-height: calc(100svh - 26px);
+      min-height: calc(100svh - 16px);
       display: grid;
-      grid-template-rows: auto minmax(280px, 1fr) auto auto auto auto;
-      gap: 10px;
+      grid-template-rows: minmax(238px, 1fr) auto auto auto auto;
+      gap: 6px;
     }
 
     header {
-      display: grid;
+      display: none;
       gap: 0;
       padding: 2px 4px 0;
       text-align: center;
@@ -87,7 +87,7 @@
 
     .scene {
       position: relative;
-      min-height: 280px;
+      min-height: 238px;
       border: 1px solid var(--line);
       border-radius: 8px;
       background:
@@ -102,7 +102,7 @@
     #space {
       width: 100%;
       height: 100%;
-      min-height: 280px;
+      min-height: 238px;
       display: block;
     }
 
@@ -111,7 +111,7 @@
       grid-template-columns: minmax(92px, 120px) minmax(0, 1fr);
       align-items: center;
       gap: 12px;
-      padding: 10px;
+      padding: 8px;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--panel);
@@ -159,7 +159,7 @@
     }
 
     .phase-choice {
-      min-height: 38px;
+      min-height: 34px;
       padding: 5px 3px;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -184,18 +184,13 @@
     }
 
     .sprunki-picker {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding-bottom: 3px;
-      scroll-snap-type: x proximity;
-      -webkit-overflow-scrolling: touch;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 5px;
     }
 
     .sprunki-choice {
-      flex: 0 0 68px;
-      min-height: 50px;
+      min-height: 42px;
       padding: 4px 2px;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -205,7 +200,6 @@
       font-weight: 800;
       line-height: 1.05;
       box-shadow: none;
-      scroll-snap-align: start;
     }
 
     .sprunki-choice:active {
@@ -222,9 +216,9 @@
 
     .sprunki-dot {
       display: block;
-      width: 22px;
-      height: 22px;
-      margin: 0 auto 4px;
+      width: 17px;
+      height: 17px;
+      margin: 0 auto 3px;
       border: 2px solid rgba(0, 0, 0, 0.35);
       border-radius: 50%;
       box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.28);
@@ -240,7 +234,7 @@
     button {
       appearance: none;
       width: 100%;
-      min-height: 64px;
+      min-height: 58px;
       border: 0;
       border-radius: 8px;
       background: var(--button);
@@ -267,42 +261,76 @@
 
     @media (max-height: 680px) {
       body {
-        padding-top: max(8px, env(safe-area-inset-top));
-        padding-bottom: max(8px, env(safe-area-inset-bottom));
+        padding-top: max(2px, env(safe-area-inset-top));
+        padding-bottom: max(2px, env(safe-area-inset-bottom));
       }
 
       main {
-        gap: 7px;
+        min-height: calc(100svh - 4px);
+        grid-template-rows: minmax(170px, 1fr) auto auto auto auto;
+        gap: 4px;
       }
 
       .scene,
       #space {
-        min-height: 238px;
+        min-height: 170px;
       }
 
       .phase-strip {
-        grid-template-columns: 86px minmax(0, 1fr);
-        padding: 8px;
+        grid-template-columns: 74px minmax(0, 1fr);
+        gap: 8px;
+        padding: 5px;
+      }
+
+      .small-label {
+        font-size: 12px;
+      }
+
+      .phase-name {
+        min-height: 28px;
+        font-size: 24px;
+      }
+
+      .phase-message {
+        min-height: 24px;
+        font-size: 13px;
+        line-height: 1.2;
       }
 
       .phase-picker {
-        gap: 5px;
+        gap: 4px;
       }
 
       .phase-choice {
-        min-height: 34px;
+        min-height: 25px;
+        padding: 3px 2px;
+        font-size: 10px;
       }
 
       .sprunki-picker {
-        gap: 5px;
+        gap: 4px;
       }
 
       .sprunki-choice {
-        min-height: 42px;
+        min-height: 30px;
+        padding: 3px 1px;
+        font-size: 9px;
+      }
+
+      .sprunki-dot {
+        width: 13px;
+        height: 13px;
+        margin-bottom: 2px;
       }
 
       button {
-        min-height: 56px;
+        min-height: 38px;
+        font-size: 13px;
+      }
+
+      .button-icon {
+        font-size: 17px;
+        margin-bottom: 2px;
       }
     }
 
@@ -315,10 +343,6 @@
 </head>
 <body>
   <main aria-label="月の満ち欠けをみるゲーム">
-    <header>
-      <h1>おつきさまのかたち</h1>
-    </header>
-
     <section class="scene" aria-label="太陽、地球、月の動き">
       <canvas id="space"></canvas>
     </section>
@@ -372,16 +396,21 @@
       const TAU = Math.PI * 2;
       const STEP = TAU / 16;
       const sprunkiCharacters = [
-        { id: "oren", name: "Oren", file: "sprunki-oren.png", color: "#ff7900", music: "kick" },
-        { id: "raddy", name: "Raddy", file: "sprunki-raddy.png", color: "#f51414", music: "snare" },
-        { id: "clukr", name: "Clukr", file: "sprunki-clukr.png", color: "#b9bec4", music: "rideTaiko" },
-        { id: "funbot", name: "Fun Bot", file: "sprunki-funbot.png", color: "#ffd33d", music: "amen" },
-        { id: "vineria", name: "Vineria", file: "sprunki-vineria.png", color: "#58d947", music: "shaker" },
-        { id: "gray", name: "Gray", file: "sprunki-gray.png", color: "#6f737a", music: "bassPulse" },
-        { id: "brud", name: "brud", file: "sprunki-brud.png", color: "#8b5f33", music: "tomPulse" },
-        { id: "garnold", name: "Garnold", file: "sprunki-garnold.png", color: "#d4aa28", music: "synthBell" },
-        { id: "owakcx", name: "OWAKCX", file: "sprunki-owakcx.png", color: "#78d946", music: "tinyArp" },
-        { id: "sky", name: "Sky", file: "sprunki-sky.png", color: "#71c9ff", music: "softClave" }
+        { id: "oren", name: "Oren", spokenName: "オレン", file: "sprunki-oren.png", color: "#ff7900", music: "kick" },
+        { id: "raddy", name: "Raddy", spokenName: "ラディ", file: "sprunki-raddy.png", color: "#f51414", music: "snare" },
+        { id: "clukr", name: "Clukr", spokenName: "クルーカー", file: "sprunki-clukr.png", color: "#b9bec4", music: "rideTaiko" },
+        { id: "funbot", name: "Fun Bot", spokenName: "ファンボット", file: "sprunki-funbot.png", color: "#ffd33d", music: "amen" },
+        { id: "vineria", name: "Vineria", spokenName: "ヴィネリア", file: "sprunki-vineria.png", color: "#58d947", music: "shaker" },
+        { id: "gray", name: "Gray", spokenName: "グレー", file: "sprunki-gray.png", color: "#6f737a", music: "bassPulse" },
+        { id: "brud", name: "brud", spokenName: "ブラッド", file: "sprunki-brud.png", color: "#8b5f33", music: "tomPulse" },
+        { id: "garnold", name: "Garnold", spokenName: "ガーノルド", file: "sprunki-garnold.png", color: "#d4aa28", music: "synthBell" },
+        { id: "owakcx", name: "OWAKCX", spokenName: "オワックス", file: "sprunki-owakcx.png", color: "#78d946", music: "tinyArp" },
+        { id: "sky", name: "Sky", spokenName: "スカイ", file: "sprunki-sky.png", color: "#71c9ff", music: "softClave" },
+        { id: "mrsun", name: "Mr. Sun", spokenName: "ミスターサン", file: "sprunki-mrsun.png", color: "#ffd94a", music: "sunPiano" },
+        { id: "durple", name: "Durple", spokenName: "ダープル", file: "sprunki-durple.svg", color: "#a649ff", music: "hornPulse" },
+        { id: "mrtree", name: "Mr. Tree", spokenName: "ミスターツリー", file: "sprunki-mrtree.png", color: "#4aa352", music: "treeChord" },
+        { id: "simon", name: "Simon", spokenName: "サイモン", file: "sprunki-simon.svg", color: "#ffe054", music: "brightLead" },
+        { id: "tunner", name: "Tunner", spokenName: "タナー", file: "sprunki-tunner.svg", color: "#b89464", music: "whistle" }
       ];
       let selectedSprunki = 0;
       sprunkiCharacters.forEach((character) => {
@@ -565,6 +594,23 @@
         } else if (character.music === "softClave") {
           if (beat === 0 || beat === 2 || beat === 5 || beat === 7) playNote(context, now, 1174.66, 0.045, "triangle", 0.06);
           if (beat === 4) playNote(context, now, 880, 0.06, "triangle", 0.05);
+        } else if (character.music === "sunPiano") {
+          const chord = [523.25, 659.25, 783.99, 1046.5];
+          if (beat % 2 === 0) playNote(context, now, chord[(beat / 2) % chord.length], 0.18, "triangle", 0.07);
+        } else if (character.music === "hornPulse") {
+          if (beat === 0 || beat === 4) playNote(context, now, 196, 0.2, "sawtooth", 0.075);
+          if (beat === 2 || beat === 6) playNote(context, now, 246.94, 0.14, "sawtooth", 0.055);
+        } else if (character.music === "treeChord") {
+          if (beat === 0 || beat === 4) {
+            playNote(context, now, 261.63, 0.2, "triangle", 0.04);
+            playNote(context, now, 329.63, 0.2, "triangle", 0.035);
+          }
+        } else if (character.music === "brightLead") {
+          const lead = [659.25, 783.99, 987.77, 783.99, 880, 987.77, 783.99, 659.25];
+          playNote(context, now, lead[beat], 0.1, "square", 0.045);
+        } else if (character.music === "whistle") {
+          if (beat === 1 || beat === 5) playNote(context, now, 1318.51, 0.16, "sine", 0.055);
+          if (beat === 3 || beat === 7) playNote(context, now, 1174.66, 0.12, "sine", 0.045);
         }
       }
 
@@ -720,7 +766,7 @@
           cx,
           cy,
           radius,
-          -Math.sin(phaseValue),
+          Math.sin(phaseValue),
           0,
           -Math.cos(phaseValue)
         );
@@ -1134,7 +1180,7 @@
           button.addEventListener("click", () => {
             selectedSprunki = index;
             playSprunkiMusic(index);
-            speakJapanese(character.name);
+            speakJapanese(character.spokenName);
             triggerTapEffect("earth");
             updateSprunkiPicker();
             draw();

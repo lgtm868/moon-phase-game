@@ -367,11 +367,20 @@
       const STEP = TAU / 16;
       const sprunkiCharacters = [
         { id: "oren", name: "オレン", file: "oren-sprite.png", color: "#ff7900" },
-        { id: "raddy", name: "ラディ", file: "sprunki-red.png", color: "#f51414" },
-        { id: "clukr", name: "クルーカー", file: "sprunki-gray.png", color: "#b9bec4" },
+        { id: "raddy", name: "ラディ", file: "sprunki-raddy.png", color: "#f51414" },
+        { id: "clukr", name: "クルーカー", file: "sprunki-clukr.png", color: "#b9bec4" },
         { id: "funbot", name: "ファンボット", file: "sprunki-funbot.png", color: "#ffd33d" },
         { id: "vineria", name: "ヴィネリア", file: "sprunki-vineria.png", color: "#58d947" }
       ];
+      [
+        { name: "Oren", music: "kick" },
+        { name: "Raddy", music: "snare" },
+        { name: "Clukr", music: "rideTaiko" },
+        { name: "Fun Bot", music: "amen" },
+        { name: "Vineria", music: "shaker" }
+      ].forEach((profile, index) => {
+        Object.assign(sprunkiCharacters[index], profile);
+      });
       let selectedSprunki = 0;
       sprunkiCharacters.forEach((character) => {
         character.image = new Image();
@@ -384,6 +393,8 @@
       let lastTime = 0;
       let animationId = 0;
       let audioContext = null;
+      let sprunkiMusicTimer = null;
+      let activeSprunkiMusic = null;
       let sceneHitAreas = null;
       const tapEffects = {
         sun: 0,
@@ -435,22 +446,126 @@
         return Math.round(normalizedPhase() / STEP) % phaseLabels.length;
       }
 
+      function getAudioContext() {
+        audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === "suspended") {
+          audioContext.resume();
+        }
+        return audioContext;
+      }
+
       function playTone() {
         try {
-          audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
-          const now = audioContext.currentTime;
-          const oscillator = audioContext.createOscillator();
-          const gain = audioContext.createGain();
+          const context = getAudioContext();
+          const now = context.currentTime;
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
           oscillator.type = "sine";
           oscillator.frequency.setValueAtTime(520 + currentIndex() * 32, now);
           gain.gain.setValueAtTime(0.0001, now);
           gain.gain.exponentialRampToValueAtTime(0.08, now + 0.012);
           gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
-          oscillator.connect(gain).connect(audioContext.destination);
+          oscillator.connect(gain).connect(context.destination);
           oscillator.start(now);
           oscillator.stop(now + 0.18);
         } catch (error) {
           // Audio is optional; the game remains fully usable without it.
+        }
+      }
+
+      function stopSprunkiMusic() {
+        if (sprunkiMusicTimer) {
+          clearInterval(sprunkiMusicTimer);
+          sprunkiMusicTimer = null;
+        }
+        activeSprunkiMusic = null;
+      }
+
+      function makeNoiseBuffer(context, duration = 0.08) {
+        const buffer = context.createBuffer(1, Math.max(1, Math.floor(context.sampleRate * duration)), context.sampleRate);
+        const output = buffer.getChannelData(0);
+        for (let i = 0; i < output.length; i += 1) {
+          output[i] = Math.random() * 2 - 1;
+        }
+        return buffer;
+      }
+
+      function playPercussion(context, time, kind, volume = 0.12) {
+        const gain = context.createGain();
+        gain.gain.setValueAtTime(0.0001, time);
+        gain.gain.exponentialRampToValueAtTime(volume, time + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.0001, time + (kind === "kick" ? 0.18 : 0.08));
+        gain.connect(context.destination);
+
+        if (kind === "kick") {
+          const oscillator = context.createOscillator();
+          oscillator.type = "sine";
+          oscillator.frequency.setValueAtTime(150, time);
+          oscillator.frequency.exponentialRampToValueAtTime(50, time + 0.16);
+          oscillator.connect(gain);
+          oscillator.start(time);
+          oscillator.stop(time + 0.2);
+          return;
+        }
+
+        const source = context.createBufferSource();
+        const filter = context.createBiquadFilter();
+        source.buffer = makeNoiseBuffer(context, kind === "ride" ? 0.12 : 0.07);
+        filter.type = "highpass";
+        filter.frequency.setValueAtTime(kind === "ride" ? 5200 : 1200, time);
+        source.connect(filter).connect(gain);
+        source.start(time);
+        source.stop(time + (kind === "ride" ? 0.13 : 0.08));
+      }
+
+      function playNote(context, time, frequency, duration, type, volume) {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, time);
+        gain.gain.setValueAtTime(0.0001, time);
+        gain.gain.exponentialRampToValueAtTime(volume, time + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+        oscillator.connect(gain).connect(context.destination);
+        oscillator.start(time);
+        oscillator.stop(time + duration + 0.03);
+      }
+
+      function playSprunkiBar(context, character, step) {
+        const now = context.currentTime + 0.015;
+        const beat = step % 8;
+        if (character.music === "kick") {
+          if (beat === 0 || beat === 2 || beat === 4 || beat === 6) playPercussion(context, now, "kick", 0.15);
+        } else if (character.music === "snare") {
+          if (beat === 1 || beat === 3 || beat === 5 || beat === 7) playPercussion(context, now, "hat", 0.13);
+          if (beat === 2 || beat === 6) playPercussion(context, now + 0.035, "hat", 0.08);
+        } else if (character.music === "rideTaiko") {
+          playPercussion(context, now, "ride", beat % 2 === 0 ? 0.075 : 0.045);
+          if (beat === 0 || beat === 4) playNote(context, now, 164.81, 0.12, "sine", 0.075);
+        } else if (character.music === "amen") {
+          if (beat === 0 || beat === 3 || beat === 5) playPercussion(context, now, "kick", 0.11);
+          if (beat === 2 || beat === 6) playPercussion(context, now, "hat", 0.12);
+          if (beat === 7) playPercussion(context, now, "ride", 0.08);
+        } else if (character.music === "shaker") {
+          playPercussion(context, now, beat % 2 === 0 ? "hat" : "ride", beat % 2 === 0 ? 0.07 : 0.04);
+        }
+      }
+
+      function playSprunkiMusic(index) {
+        try {
+          const context = getAudioContext();
+          const character = sprunkiCharacters[index];
+          stopSprunkiMusic();
+          activeSprunkiMusic = character.id;
+          let step = 0;
+          playSprunkiBar(context, character, step);
+          sprunkiMusicTimer = setInterval(() => {
+            if (activeSprunkiMusic !== character.id) return;
+            step += 1;
+            playSprunkiBar(context, character, step);
+          }, 240);
+        } catch (error) {
+          // Character music is optional; all visual play still works without audio.
         }
       }
 
@@ -1000,8 +1115,8 @@
           label.textContent = character.name;
           button.append(dot, label);
           button.addEventListener("click", () => {
-            playTone();
             selectedSprunki = index;
+            playSprunkiMusic(index);
             triggerTapEffect("earth");
             updateSprunkiPicker();
             draw();
@@ -1083,6 +1198,8 @@
           setPlaying(false);
           snapPhase(Math.round((phase + STEP) / STEP) * STEP);
           speakJapanese(phaseLabels[currentIndex()].name);
+        } else if (hit === "earth") {
+          playSprunkiMusic(selectedSprunki);
         }
         triggerTapEffect(hit);
         draw();

@@ -664,6 +664,36 @@
         }
       }
 
+      function speakEnglish(text) {
+        if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
+        try {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = "en-US";
+          utterance.rate = 0.78;
+          utterance.pitch = 1.08;
+          utterance.volume = 0.95;
+          const voices = window.speechSynthesis.getVoices();
+          const englishVoices = voices.filter((voice) => voice.lang && voice.lang.toLowerCase().startsWith("en"));
+          const preferredVoiceNames = [
+            "samantha",
+            "karen",
+            "victoria",
+            "google us english",
+            "google uk english female",
+            "english"
+          ];
+          const preferredVoice = englishVoices.find((voice) => {
+            const name = voice.name.toLowerCase();
+            return preferredVoiceNames.some((candidate) => name.includes(candidate));
+          });
+          if (preferredVoice || englishVoices[0]) utterance.voice = preferredVoice || englishVoices[0];
+          window.speechSynthesis.speak(utterance);
+        } catch (error) {
+          // Speech is optional; tapping and visuals still work without it.
+        }
+      }
+
       if ("speechSynthesis" in window) {
         window.speechSynthesis.addEventListener?.("voiceschanged", () => {});
       }
@@ -1180,7 +1210,7 @@
           button.addEventListener("click", () => {
             selectedSprunki = index;
             playSprunkiMusic(index);
-            speakJapanese(character.spokenName);
+            speakEnglish(character.name);
             triggerTapEffect("earth");
             updateSprunkiPicker();
             draw();

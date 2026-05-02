@@ -460,11 +460,26 @@
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = "ja-JP";
-          utterance.rate = 0.82;
-          utterance.pitch = 1.08;
+          utterance.rate = 0.72;
+          utterance.pitch = 1.22;
+          utterance.volume = 0.95;
           const voices = window.speechSynthesis.getVoices();
-          const japaneseVoice = voices.find((voice) => voice.lang && voice.lang.toLowerCase().startsWith("ja"));
-          if (japaneseVoice) utterance.voice = japaneseVoice;
+          const japaneseVoices = voices.filter((voice) => voice.lang && voice.lang.toLowerCase().startsWith("ja"));
+          const gentleVoiceNames = [
+            "kyoko",
+            "haruka",
+            "nanami",
+            "female",
+            "woman",
+            "google 日本語",
+            "google japanese",
+            "samantha"
+          ];
+          const gentleVoice = japaneseVoices.find((voice) => {
+            const name = voice.name.toLowerCase();
+            return gentleVoiceNames.some((candidate) => name.includes(candidate));
+          });
+          if (gentleVoice || japaneseVoices[0]) utterance.voice = gentleVoice || japaneseVoices[0];
           window.speechSynthesis.speak(utterance);
         } catch (error) {
           // Speech is optional; tapping and visuals still work without it.

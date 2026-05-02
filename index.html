@@ -417,7 +417,7 @@
         { id: "jevin", name: "Jevin", spokenName: "ジェヴィン", file: "sprunki-jevin.png", color: "#2867c8", music: "hornPulse", audio: "sounds/jevin.wav" },
         { id: "black", name: "Black", spokenName: "ブラック", file: "sprunki-black.png", color: "#111111", music: "bassPulse", audio: "sounds/black.mp3" }
       ];
-      let selectedSprunki = 0;
+      let selectedSprunkiIndexes = [0];
       sprunkiCharacters.forEach((character) => {
         character.image = new Image();
         character.image.src = character.file;
@@ -435,9 +435,8 @@
       let lastTime = 0;
       let animationId = 0;
       let audioContext = null;
-      let sprunkiMusicTimer = null;
-      let activeSprunkiAudio = null;
-      let activeSprunkiMusic = null;
+      const sprunkiSynthTimers = new Map();
+      const activeSprunkiAudios = new Map();
       let sceneHitAreas = null;
       const tapEffects = {
         sun: 0,
@@ -517,16 +516,13 @@
       }
 
       function stopSprunkiMusic() {
-        if (sprunkiMusicTimer) {
-          clearInterval(sprunkiMusicTimer);
-          sprunkiMusicTimer = null;
-        }
-        if (activeSprunkiAudio) {
-          activeSprunkiAudio.pause();
-          activeSprunkiAudio.currentTime = 0;
-          activeSprunkiAudio = null;
-        }
-        activeSprunkiMusic = null;
+        sprunkiSynthTimers.forEach((timer) => clearInterval(timer));
+        sprunkiSynthTimers.clear();
+        activeSprunkiAudios.forEach((audio) => {
+          audio.pause();
+          audio.currentTime = 0;
+        });
+        activeSprunkiAudios.clear();
       }
 
       function makeNoiseBuffer(context, duration = 0.08) {
@@ -634,15 +630,18 @@
       function playSprunkiMusic(index) {
         try {
           const character = sprunkiCharacters[index];
-          stopSprunkiMusic();
           if (character.audioElement) {
-            activeSprunkiAudio = character.audioElement;
-            activeSprunkiAudio.currentTime = 0;
-            const audio = activeSprunkiAudio;
+            const audio = character.audioElement;
+            if (activeSprunkiAudios.has(character.id)) {
+              audio.currentTime = 0;
+              return;
+            }
+            audio.currentTime = 0;
+            activeSprunkiAudios.set(character.id, audio);
             const playPromise = audio.play();
             if (playPromise && typeof playPromise.catch === "function") {
               playPromise.catch(() => {
-                if (activeSprunkiAudio === audio) activeSprunkiAudio = null;
+                activeSprunkiAudios.delete(character.id);
                 playSynthSprunkiMusic(character);
               });
             }
@@ -656,18 +655,37 @@
 
       function playSynthSprunkiMusic(character) {
         try {
+          if (sprunkiSynthTimers.has(character.id)) return;
           const context = getAudioContext();
-          activeSprunkiMusic = character.id;
           let step = 0;
           playSprunkiBar(context, character, step);
-          sprunkiMusicTimer = setInterval(() => {
-            if (activeSprunkiMusic !== character.id) return;
+          const timer = setInterval(() => {
             step += 1;
             playSprunkiBar(context, character, step);
           }, 240);
+          sprunkiSynthTimers.set(character.id, timer);
         } catch (error) {
           // Character music is optional; all visual play still works without audio.
         }
+      }
+
+      function stopOneSprunkiMusic(character) {
+        const timer = sprunkiSynthTimers.get(character.id);
+        if (timer) {
+          clearInterval(timer);
+          sprunkiSynthTimers.delete(character.id);
+        }
+        const audio = activeSprunkiAudios.get(character.id);
+        if (audio) {
+          audio.pause();
+          audio.currentTime = 0;
+          activeSprunkiAudios.delete(character.id);
+        }
+      }
+
+      function restartSelectedSprunkiMusic() {
+        stopSprunkiMusic();
+        selectedSprunkiIndexes.forEach((index) => playSprunkiMusic(index));
       }
 
       function speakJapanese(text) {
@@ -845,19 +863,24 @@
       }
 
       function drawSprunkiSpriteOnEarth(ctx, earthX, earthY, earthRadius) {
-        const sprite = sprunkiCharacters[selectedSprunki].image;
-        if (!sprite.complete || !sprite.naturalWidth) {
+        const dance = tapEffects.earth;
+        const bob = dance > 0 ? Math.sin(performance.now() * 0.026) * earthRadius * 0.08 * dance : 0;
+        const selected = selectedSprunkiIndexes
+          .map((index) => sprunkiCharacters[index])
+          .filter((character) => character.image.complete && character.image.naturalWidth);
+
+        if (!selected.length) {
           drawSprunkiOnEarth(ctx, earthX, earthY, earthRadius);
           return;
         }
 
-        const dance = tapEffects.earth;
-        const bob = dance > 0 ? Math.sin(performance.now() * 0.026) * earthRadius * 0.08 * dance : 0;
-        const imageRatio = sprite.naturalWidth / sprite.naturalHeight;
-        const spriteHeight = earthRadius * 2.72;
-        const spriteWidth = spriteHeight * imageRatio;
-        const x = earthX - spriteWidth / 2;
-        const y = earthY - spriteHeight * 0.55 + bob;
+        const count = selected.length;
+        const columns = Math.min(count, count <= 2 ? count : 4);
+        const rows = Math.ceil(count / columns);
+        const spriteHeight = earthRadius * Math.max(0.92, Math.min(2.45, 3.0 / Math.max(columns, rows)));
+        const gap = earthRadius * 0.12;
+        const rowHeight = spriteHeight * 0.58;
+        const startY = earthY - earthRadius * (0.78 + Math.max(0, rows - 1) * 0.14) + bob;
 
         ctx.save();
         if (dance > 0) {
@@ -874,7 +897,19 @@
           ctx.lineTo(earthX + earthRadius * 0.78, earthY - earthRadius * 1.04);
           ctx.stroke();
         }
-        ctx.drawImage(sprite, x, y, spriteWidth, spriteHeight);
+        selected.forEach((character, order) => {
+          const sprite = character.image;
+          const row = Math.floor(order / columns);
+          const col = order % columns;
+          const itemsInRow = row === rows - 1 ? count - row * columns : columns;
+          const imageRatio = sprite.naturalWidth / sprite.naturalHeight;
+          const spriteWidth = spriteHeight * imageRatio;
+          const totalRowWidth = itemsInRow * spriteHeight * 0.52 + Math.max(0, itemsInRow - 1) * gap;
+          const centerOffset = (col - (itemsInRow - 1) / 2) * (totalRowWidth / Math.max(1, itemsInRow));
+          const x = earthX + centerOffset - spriteWidth / 2;
+          const y = startY + row * rowHeight - spriteHeight * 0.54;
+          ctx.drawImage(sprite, x, y, spriteWidth, spriteHeight);
+        });
         ctx.restore();
       }
 
@@ -1231,8 +1266,16 @@
           label.textContent = character.displayName || character.name;
           button.append(dot, label);
           button.addEventListener("click", () => {
-            selectedSprunki = index;
-            playSprunkiMusic(index);
+            const selectedPosition = selectedSprunkiIndexes.indexOf(index);
+            if (selectedPosition >= 0 && selectedSprunkiIndexes.length > 1) {
+              selectedSprunkiIndexes.splice(selectedPosition, 1);
+              stopOneSprunkiMusic(character);
+            } else if (selectedPosition < 0) {
+              selectedSprunkiIndexes.push(index);
+              playSprunkiMusic(index);
+            } else {
+              playSprunkiMusic(index);
+            }
             speakEnglish(character.name);
             triggerTapEffect("earth");
             updateSprunkiPicker();
@@ -1245,8 +1288,9 @@
 
       function updateSprunkiPicker() {
         sprunkiList.querySelectorAll(".sprunki-choice").forEach((button, index) => {
-          button.classList.toggle("is-active", index === selectedSprunki);
-          button.setAttribute("aria-pressed", index === selectedSprunki ? "true" : "false");
+          const isActive = selectedSprunkiIndexes.includes(index);
+          button.classList.toggle("is-active", isActive);
+          button.setAttribute("aria-pressed", isActive ? "true" : "false");
         });
       }
 
@@ -1316,7 +1360,7 @@
           snapPhase(Math.round((phase + STEP) / STEP) * STEP);
           speakJapanese(phaseLabels[currentIndex()].name);
         } else if (hit === "earth") {
-          playSprunkiMusic(selectedSprunki);
+          restartSelectedSprunkiMusic();
         }
         triggerTapEffect(hit);
         draw();

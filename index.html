@@ -313,6 +313,9 @@
       const phaseCtx = phaseMoon.getContext("2d");
       const TAU = Math.PI * 2;
       const STEP = TAU / 16;
+      const orenSprite = new Image();
+      orenSprite.src = "oren-sprite.png";
+      orenSprite.addEventListener("load", () => draw());
 
       let phase = 0;
       let playing = false;
@@ -495,6 +498,39 @@
 
       function drawMoonFromAbove(ctx, cx, cy, radius) {
         drawLitMoon(ctx, cx, cy, radius, -1, 0, 0.08);
+      }
+
+      function drawOrenSpriteOnEarth(ctx, earthX, earthY, earthRadius) {
+        if (!orenSprite.complete || !orenSprite.naturalWidth) {
+          drawSprunkiOnEarth(ctx, earthX, earthY, earthRadius);
+          return;
+        }
+
+        const dance = tapEffects.earth;
+        const bob = dance > 0 ? Math.sin(performance.now() * 0.026) * earthRadius * 0.08 * dance : 0;
+        const imageRatio = orenSprite.naturalWidth / orenSprite.naturalHeight;
+        const spriteHeight = earthRadius * 2.72;
+        const spriteWidth = spriteHeight * imageRatio;
+        const x = earthX - spriteWidth / 2;
+        const y = earthY - spriteHeight * 0.55 + bob;
+
+        ctx.save();
+        if (dance > 0) {
+          ctx.strokeStyle = `rgba(255, 241, 120, ${0.62 * dance})`;
+          ctx.lineWidth = Math.max(1.2, earthRadius * 0.035);
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          ctx.moveTo(earthX - earthRadius * 0.78, earthY - earthRadius * 0.62);
+          ctx.lineTo(earthX - earthRadius * 0.98, earthY - earthRadius * 0.84);
+          ctx.lineTo(earthX - earthRadius * 0.78, earthY - earthRadius * 1.04);
+          ctx.moveTo(earthX + earthRadius * 0.78, earthY - earthRadius * 0.62);
+          ctx.lineTo(earthX + earthRadius * 0.98, earthY - earthRadius * 0.84);
+          ctx.lineTo(earthX + earthRadius * 0.78, earthY - earthRadius * 1.04);
+          ctx.stroke();
+        }
+        ctx.drawImage(orenSprite, x, y, spriteWidth, spriteHeight);
+        ctx.restore();
       }
 
       function drawSprunkiOnEarth(ctx, earthX, earthY, earthRadius) {
@@ -775,7 +811,7 @@
         ctx.strokeStyle = "rgba(255, 255, 255, 0.36)";
         ctx.lineWidth = 2;
         ctx.stroke();
-        drawSprunkiOnEarth(ctx, centerX, centerY, earthRadius);
+        drawOrenSpriteOnEarth(ctx, centerX, centerY, earthRadius);
 
         ctx.font = `700 ${Math.max(14, w * 0.042)}px sans-serif`;
         ctx.fillStyle = "rgba(255, 248, 223, 0.94)";

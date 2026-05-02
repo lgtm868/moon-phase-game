@@ -498,135 +498,145 @@
       }
 
       function drawSprunkiOnEarth(ctx, earthX, earthY, earthRadius) {
-        const scale = earthRadius * 1.42;
-        const headR = scale * 0.42;
-        const headX = earthX;
         const dance = tapEffects.earth;
-        const wiggle = dance > 0 ? Math.sin(performance.now() * 0.026) * earthRadius * 0.08 * dance : 0;
-        const headY = earthY - scale * 0.16 + wiggle;
-        const neckTop = headY + headR * 0.72;
-        const bodyBottom = earthY + earthRadius * 0.84 + wiggle * 0.35;
+        const bob = dance > 0 ? Math.sin(performance.now() * 0.026) * earthRadius * 0.07 * dance : 0;
+        const headX = earthX;
+        const headY = earthY - earthRadius * 0.26 + bob;
+        const headR = earthRadius * 0.58;
+        const outline = Math.max(2.2, earthRadius * 0.065);
+        const orange = "#ff7900";
+        const darkOrange = "#d95a00";
+        const peach = "#ffc08b";
+        const black = "#101010";
+
         ctx.save();
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        ctx.lineWidth = Math.max(2, earthRadius * 0.06);
 
         if (dance > 0) {
           ctx.save();
           ctx.strokeStyle = `rgba(255, 241, 120, ${0.62 * dance})`;
           ctx.lineWidth = Math.max(1.2, earthRadius * 0.035);
           ctx.beginPath();
-          ctx.moveTo(earthX - earthRadius * 0.74, earthY - earthRadius * 0.6);
-          ctx.lineTo(earthX - earthRadius * 0.96, earthY - earthRadius * 0.82);
-          ctx.lineTo(earthX - earthRadius * 0.78, earthY - earthRadius * 1.02);
-          ctx.moveTo(earthX + earthRadius * 0.74, earthY - earthRadius * 0.6);
-          ctx.lineTo(earthX + earthRadius * 0.98, earthY - earthRadius * 0.82);
-          ctx.lineTo(earthX + earthRadius * 0.78, earthY - earthRadius * 1.02);
+          ctx.moveTo(earthX - earthRadius * 0.78, earthY - earthRadius * 0.62);
+          ctx.lineTo(earthX - earthRadius * 0.98, earthY - earthRadius * 0.84);
+          ctx.lineTo(earthX - earthRadius * 0.78, earthY - earthRadius * 1.04);
+          ctx.moveTo(earthX + earthRadius * 0.78, earthY - earthRadius * 0.62);
+          ctx.lineTo(earthX + earthRadius * 0.98, earthY - earthRadius * 0.84);
+          ctx.lineTo(earthX + earthRadius * 0.78, earthY - earthRadius * 1.04);
           ctx.stroke();
           ctx.restore();
         }
 
-        ctx.fillStyle = "#ff7100";
-        ctx.strokeStyle = "#111111";
+        ctx.strokeStyle = black;
+        ctx.fillStyle = orange;
+        ctx.lineWidth = outline;
+
         ctx.beginPath();
-        ctx.moveTo(headX - scale * 0.11, neckTop);
-        ctx.lineTo(headX + scale * 0.11, neckTop);
-        ctx.lineTo(headX + scale * 0.19, bodyBottom);
-        ctx.lineTo(headX - scale * 0.19, bodyBottom);
+        ctx.moveTo(headX - headR * 0.26, headY + headR * 0.72);
+        ctx.lineTo(headX + headR * 0.26, headY + headR * 0.72);
+        ctx.lineTo(headX + headR * 0.34, earthY + earthRadius * 0.88 + bob * 0.25);
+        ctx.lineTo(headX - headR * 0.34, earthY + earthRadius * 0.88 + bob * 0.25);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = "rgba(180, 69, 0, 0.22)";
+        ctx.fillStyle = "rgba(172, 61, 0, 0.28)";
         ctx.beginPath();
-        ctx.ellipse(headX, neckTop + scale * 0.08, scale * 0.18, scale * 0.06, 0, 0, TAU);
+        ctx.ellipse(headX, headY + headR * 0.78, headR * 0.34, headR * 0.11, 0, 0, TAU);
         ctx.fill();
 
-        ctx.strokeStyle = "#111111";
-        ctx.lineWidth = Math.max(2.5, earthRadius * 0.072);
+        ctx.fillStyle = orange;
+        ctx.beginPath();
+        ctx.arc(headX - headR * 1.12, headY - headR * 0.02, headR * 0.33, 0, TAU);
+        ctx.arc(headX + headR * 1.12, headY - headR * 0.02, headR * 0.33, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = orange;
         ctx.beginPath();
         ctx.arc(headX, headY, headR, 0, TAU);
-        ctx.fillStyle = "#ff7900";
         ctx.fill();
         ctx.stroke();
 
-        ctx.strokeStyle = "#111111";
-        ctx.lineWidth = Math.max(3.3, earthRadius * 0.095);
+        ctx.strokeStyle = black;
+        ctx.lineWidth = Math.max(3.4, earthRadius * 0.1);
         ctx.beginPath();
-        ctx.arc(headX, headY - headR * 0.03, headR * 1.22, Math.PI * 1.05, Math.PI * 1.95);
+        ctx.arc(headX, headY - headR * 0.02, headR * 1.28, Math.PI * 1.06, Math.PI * 1.94);
         ctx.stroke();
-        ctx.strokeStyle = "#ffc28d";
-        ctx.lineWidth = Math.max(1.7, earthRadius * 0.05);
+        ctx.strokeStyle = peach;
+        ctx.lineWidth = Math.max(1.9, earthRadius * 0.055);
         ctx.beginPath();
-        ctx.arc(headX, headY - headR * 0.03, headR * 1.22, Math.PI * 1.05, Math.PI * 1.95);
+        ctx.arc(headX, headY - headR * 0.02, headR * 1.28, Math.PI * 1.06, Math.PI * 1.94);
         ctx.stroke();
 
-        ctx.strokeStyle = "#111111";
-        ctx.fillStyle = "#ffb37b";
-        ctx.lineWidth = Math.max(2.3, earthRadius * 0.064);
+        ctx.strokeStyle = black;
+        ctx.fillStyle = peach;
+        ctx.lineWidth = Math.max(2.1, earthRadius * 0.06);
+        const padW = headR * 0.36;
+        const padH = headR * 0.86;
         ctx.beginPath();
-        ctx.rect(headX - headR * 1.08, headY - headR * 0.43, headR * 0.31, headR * 0.86);
-        ctx.rect(headX + headR * 0.77, headY - headR * 0.43, headR * 0.31, headR * 0.86);
+        ctx.rect(headX - headR * 1.08, headY - padH * 0.5, padW, padH);
+        ctx.rect(headX + headR * 0.72, headY - padH * 0.5, padW, padH);
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = "#ff7900";
+        ctx.fillStyle = orange;
         ctx.beginPath();
-        ctx.arc(headX - headR * 1.12, headY, headR * 0.38, -Math.PI / 2, Math.PI / 2);
-        ctx.arc(headX + headR * 1.12, headY, headR * 0.38, Math.PI / 2, Math.PI * 1.5);
+        ctx.ellipse(headX - headR * 1.22, headY, headR * 0.25, headR * 0.43, 0, -Math.PI / 2, Math.PI / 2);
+        ctx.ellipse(headX + headR * 1.22, headY, headR * 0.25, headR * 0.43, 0, Math.PI / 2, Math.PI * 1.5);
         ctx.fill();
         ctx.stroke();
 
-        ctx.strokeStyle = "#111111";
-        ctx.lineWidth = Math.max(1.7, earthRadius * 0.043);
+        ctx.strokeStyle = black;
+        ctx.lineWidth = Math.max(1.7, earthRadius * 0.045);
         ctx.beginPath();
-        ctx.moveTo(headX - headR * 0.38, headY - headR * 0.76);
-        ctx.lineTo(headX - headR * 0.08, headY - headR * 0.42);
-        ctx.lineTo(headX + headR * 0.05, headY - headR * 0.76);
-        ctx.lineTo(headX + headR * 0.28, headY - headR * 0.39);
-        ctx.lineTo(headX + headR * 0.25, headY - headR * 0.77);
+        ctx.moveTo(headX - headR * 0.34, headY - headR * 0.78);
+        ctx.lineTo(headX - headR * 0.07, headY - headR * 0.45);
+        ctx.lineTo(headX + headR * 0.06, headY - headR * 0.78);
+        ctx.lineTo(headX + headR * 0.31, headY - headR * 0.41);
+        ctx.lineTo(headX + headR * 0.28, headY - headR * 0.76);
         ctx.stroke();
 
-        ctx.strokeStyle = "#111111";
-        ctx.lineWidth = Math.max(1.25, earthRadius * 0.032);
+        ctx.lineWidth = Math.max(1.15, earthRadius * 0.033);
         ctx.beginPath();
-        ctx.arc(headX - headR * 0.35, headY - headR * 0.24, headR * 0.23, Math.PI * 1.15, Math.PI * 1.85);
-        ctx.arc(headX + headR * 0.35, headY - headR * 0.24, headR * 0.23, Math.PI * 1.15, Math.PI * 1.85);
+        ctx.arc(headX - headR * 0.35, headY - headR * 0.27, headR * 0.24, Math.PI * 1.14, Math.PI * 1.86);
+        ctx.arc(headX + headR * 0.35, headY - headR * 0.27, headR * 0.24, Math.PI * 1.14, Math.PI * 1.86);
         ctx.stroke();
 
-        function sleepyEye(x) {
+        function drawHalfEye(x) {
           ctx.save();
           ctx.beginPath();
-          ctx.ellipse(x, headY + headR * 0.04, headR * 0.31, headR * 0.2, 0, 0, TAU);
+          ctx.ellipse(x, headY + headR * 0.04, headR * 0.32, headR * 0.21, 0, 0, TAU);
           ctx.clip();
           ctx.fillStyle = "#ffffff";
-          ctx.fillRect(x - headR * 0.36, headY - headR * 0.03, headR * 0.72, headR * 0.34);
+          ctx.fillRect(x - headR * 0.36, headY - headR * 0.03, headR * 0.72, headR * 0.35);
           ctx.fillStyle = "#050505";
-          ctx.fillRect(x - headR * 0.24, headY + headR * 0.08, headR * 0.48, headR * 0.24);
+          ctx.fillRect(x - headR * 0.25, headY + headR * 0.1, headR * 0.5, headR * 0.25);
+          ctx.fillStyle = orange;
+          ctx.fillRect(x - headR * 0.38, headY - headR * 0.24, headR * 0.76, headR * 0.22);
           ctx.restore();
-          ctx.strokeStyle = "#111111";
+
+          ctx.strokeStyle = black;
           ctx.lineWidth = Math.max(1.8, earthRadius * 0.046);
           ctx.beginPath();
-          ctx.ellipse(x, headY + headR * 0.04, headR * 0.31, headR * 0.2, 0, 0, TAU);
+          ctx.ellipse(x, headY + headR * 0.04, headR * 0.32, headR * 0.21, 0, 0, TAU);
           ctx.stroke();
-          ctx.fillStyle = "#ff7900";
-          ctx.fillRect(x - headR * 0.36, headY - headR * 0.19, headR * 0.72, headR * 0.18);
-          ctx.strokeStyle = "#111111";
-          ctx.lineWidth = Math.max(1.35, earthRadius * 0.034);
+          ctx.lineWidth = Math.max(1.25, earthRadius * 0.034);
           ctx.beginPath();
           ctx.moveTo(x - headR * 0.31, headY + headR * 0.01);
           ctx.lineTo(x + headR * 0.31, headY + headR * 0.01);
           ctx.stroke();
         }
 
-        sleepyEye(headX - headR * 0.33);
-        sleepyEye(headX + headR * 0.33);
+        drawHalfEye(headX - headR * 0.35);
+        drawHalfEye(headX + headR * 0.35);
 
-        ctx.strokeStyle = "#111111";
-        ctx.lineWidth = Math.max(1.3, earthRadius * 0.033);
+        ctx.strokeStyle = black;
+        ctx.lineWidth = Math.max(1.3, earthRadius * 0.035);
         ctx.beginPath();
-        ctx.moveTo(headX - headR * 0.17, headY + headR * 0.42);
-        ctx.quadraticCurveTo(headX, headY + headR * 0.54, headX + headR * 0.17, headY + headR * 0.42);
+        ctx.moveTo(headX - headR * 0.16, headY + headR * 0.42);
+        ctx.quadraticCurveTo(headX, headY + headR * 0.54, headX + headR * 0.16, headY + headR * 0.42);
         ctx.stroke();
         ctx.restore();
       }
@@ -640,7 +650,7 @@
         const centerX = w * 0.58;
         const centerY = h * 0.52;
         const orbitRadius = Math.min(w * 0.26, h * 0.32);
-        const earthRadius = Math.max(24, Math.min(w, h) * 0.085);
+        const earthRadius = Math.max(28, Math.min(w, h) * 0.105);
         const moonRadius = Math.max(14, Math.min(w, h) * 0.052);
         const sunX = Math.max(42, w * 0.11);
         const sunY = centerY;

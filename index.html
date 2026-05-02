@@ -710,26 +710,31 @@
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = "ja-JP";
-          utterance.rate = 0.72;
-          utterance.pitch = 1.22;
+          utterance.rate = 0.84;
+          utterance.pitch = 1.08;
           utterance.volume = 0.95;
           const voices = window.speechSynthesis.getVoices();
           const japaneseVoices = voices.filter((voice) => voice.lang && voice.lang.toLowerCase().startsWith("ja"));
-          const gentleVoiceNames = [
-            "kyoko",
-            "haruka",
-            "nanami",
-            "female",
-            "woman",
-            "google 日本語",
-            "google japanese",
-            "samantha"
+          const voiceScores = [
+            { words: ["nanami", "七海"], score: 80 },
+            { words: ["kyoko", "京子"], score: 76 },
+            { words: ["haruka", "遥", "はるか"], score: 72 },
+            { words: ["ayumi", "歩", "あゆみ"], score: 68 },
+            { words: ["sayaka", "さやか"], score: 64 },
+            { words: ["female", "woman"], score: 58 },
+            { words: ["google 日本語", "google japanese"], score: 52 },
+            { words: ["natural", "online", "premium", "enhanced"], score: 12 }
           ];
-          const gentleVoice = japaneseVoices.find((voice) => {
-            const name = voice.name.toLowerCase();
-            return gentleVoiceNames.some((candidate) => name.includes(candidate));
-          });
-          if (gentleVoice || japaneseVoices[0]) utterance.voice = gentleVoice || japaneseVoices[0];
+          const smoothVoice = japaneseVoices
+            .map((voice) => {
+              const name = voice.name.toLowerCase();
+              const score = voiceScores.reduce((total, group) => (
+                total + (group.words.some((word) => name.includes(word.toLowerCase())) ? group.score : 0)
+              ), 0);
+              return { voice, score };
+            })
+            .sort((a, b) => b.score - a.score)[0];
+          if (smoothVoice?.voice || japaneseVoices[0]) utterance.voice = smoothVoice?.voice || japaneseVoices[0];
           window.speechSynthesis.speak(utterance);
         } catch (error) {
           // Speech is optional; tapping and visuals still work without it.

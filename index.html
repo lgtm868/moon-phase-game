@@ -234,7 +234,7 @@
     button {
       appearance: none;
       width: 100%;
-      min-height: 58px;
+      min-height: 57px;
       border: 0;
       border-radius: 8px;
       background: var(--button);
@@ -410,7 +410,12 @@
         { id: "durple", name: "Durple", spokenName: "ダープル", file: "sprunki-durple.png", color: "#a649ff", music: "hornPulse", audio: "sounds/durple.wav" },
         { id: "mrtree", name: "Mr. Tree", spokenName: "ミスターツリー", file: "sprunki-mrtree.png", color: "#4aa352", music: "treeChord", audio: "sounds/mrtree.wav" },
         { id: "simon", name: "Simon", spokenName: "サイモン", file: "sprunki-simon.png", color: "#ffe054", music: "brightLead", audio: "sounds/simon.mp3" },
-        { id: "tunner", name: "Tunner", spokenName: "タナー", file: "sprunki-tunner.png", color: "#b89464", music: "whistle", audio: "sounds/tunner.wav" }
+        { id: "tunner", name: "Tunner", spokenName: "タナー", file: "sprunki-tunner.png", color: "#b89464", music: "whistle", audio: "sounds/tunner.wav" },
+        { id: "mrfun", name: "Mr. Fun Computer", displayName: "Mr. Fun", spokenName: "ミスターファンコンピューター", file: "sprunki-mrfun.png", color: "#8fd9ff", music: "brightLead", audio: "sounds/mrfun.wav" },
+        { id: "wenda", name: "Wenda", spokenName: "ウェンダ", file: "sprunki-wenda.png", color: "#e9edf2", music: "whistle", audio: "sounds/wenda.wav" },
+        { id: "pinki", name: "Pinki", spokenName: "ピンキー", file: "sprunki-pinki.png", color: "#ff9ed5", music: "treeChord", audio: "sounds/pinki.wav" },
+        { id: "jevin", name: "Jevin", spokenName: "ジェヴィン", file: "sprunki-jevin.png", color: "#2867c8", music: "hornPulse", audio: "sounds/jevin.wav" },
+        { id: "black", name: "Black", spokenName: "ブラック", file: "sprunki-black.png", color: "#111111", music: "bassPulse", audio: "sounds/black.mp3" }
       ];
       let selectedSprunki = 0;
       sprunkiCharacters.forEach((character) => {
@@ -1223,7 +1228,7 @@
           button.setAttribute("aria-label", `${character.name}にする`);
           dot.className = "sprunki-dot";
           dot.style.background = character.color;
-          label.textContent = character.name;
+          label.textContent = character.displayName || character.name;
           button.append(dot, label);
           button.addEventListener("click", () => {
             selectedSprunki = index;

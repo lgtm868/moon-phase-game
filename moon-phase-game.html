@@ -58,7 +58,7 @@
       width: min(100%, 460px);
       min-height: calc(100svh - 26px);
       display: grid;
-      grid-template-rows: auto minmax(280px, 1fr) auto auto auto;
+      grid-template-rows: auto minmax(280px, 1fr) auto auto auto auto;
       gap: 10px;
     }
 
@@ -183,6 +183,47 @@
       border-color: transparent;
     }
 
+    .sprunki-picker {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .sprunki-choice {
+      min-height: 50px;
+      padding: 4px 2px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 248, 223, 0.1);
+      color: rgba(255, 248, 223, 0.92);
+      font-size: clamp(11px, 2.8vw, 13px);
+      font-weight: 800;
+      line-height: 1.05;
+      box-shadow: none;
+    }
+
+    .sprunki-choice:active {
+      transform: none;
+      box-shadow: none;
+      background: rgba(255, 242, 183, 0.22);
+    }
+
+    .sprunki-choice.is-active {
+      background: var(--button);
+      color: var(--button-ink);
+      border-color: transparent;
+    }
+
+    .sprunki-dot {
+      display: block;
+      width: 22px;
+      height: 22px;
+      margin: 0 auto 4px;
+      border: 2px solid rgba(0, 0, 0, 0.35);
+      border-radius: 50%;
+      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.28);
+    }
+
     .controls {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -246,6 +287,14 @@
         min-height: 34px;
       }
 
+      .sprunki-picker {
+        gap: 5px;
+      }
+
+      .sprunki-choice {
+        min-height: 42px;
+      }
+
       button {
         min-height: 56px;
       }
@@ -279,6 +328,8 @@
 
     <section class="phase-picker" id="phaseList" aria-label="月の名前から選ぶ"></section>
 
+    <section class="sprunki-picker" id="sprunkiList" aria-label="スプランキーを選ぶ"></section>
+
     <nav class="controls" aria-label="ゲームのそうさ">
       <button id="playButton" type="button" aria-label="再生する">
         <span class="button-icon" aria-hidden="true">▶</span>
@@ -307,15 +358,26 @@
       const stepButton = document.getElementById("stepButton");
       const resetButton = document.getElementById("resetButton");
       const phaseList = document.getElementById("phaseList");
+      const sprunkiList = document.getElementById("sprunkiList");
       const scene = document.querySelector(".scene");
 
       const spaceCtx = space.getContext("2d");
       const phaseCtx = phaseMoon.getContext("2d");
       const TAU = Math.PI * 2;
       const STEP = TAU / 16;
-      const orenSprite = new Image();
-      orenSprite.src = "oren-sprite.png";
-      orenSprite.addEventListener("load", () => draw());
+      const sprunkiCharacters = [
+        { id: "oren", name: "オレン", file: "oren-sprite.png", color: "#ff7900" },
+        { id: "raddy", name: "ラディ", file: "sprunki-red.png", color: "#f51414" },
+        { id: "clukr", name: "クルーカー", file: "sprunki-gray.png", color: "#b9bec4" },
+        { id: "funbot", name: "ファンボット", file: "sprunki-funbot.png", color: "#ffd33d" },
+        { id: "vineria", name: "ヴィネリア", file: "sprunki-vineria.png", color: "#58d947" }
+      ];
+      let selectedSprunki = 0;
+      sprunkiCharacters.forEach((character) => {
+        character.image = new Image();
+        character.image.src = character.file;
+        character.image.addEventListener("load", () => draw());
+      });
 
       let phase = 0;
       let playing = false;
@@ -390,6 +452,27 @@
         } catch (error) {
           // Audio is optional; the game remains fully usable without it.
         }
+      }
+
+      function speakJapanese(text) {
+        if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
+        try {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = "ja-JP";
+          utterance.rate = 0.82;
+          utterance.pitch = 1.08;
+          const voices = window.speechSynthesis.getVoices();
+          const japaneseVoice = voices.find((voice) => voice.lang && voice.lang.toLowerCase().startsWith("ja"));
+          if (japaneseVoice) utterance.voice = japaneseVoice;
+          window.speechSynthesis.speak(utterance);
+        } catch (error) {
+          // Speech is optional; tapping and visuals still work without it.
+        }
+      }
+
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.addEventListener?.("voiceschanged", () => {});
       }
 
       const moonMarks = [
@@ -500,15 +583,16 @@
         drawLitMoon(ctx, cx, cy, radius, -1, 0, 0.08);
       }
 
-      function drawOrenSpriteOnEarth(ctx, earthX, earthY, earthRadius) {
-        if (!orenSprite.complete || !orenSprite.naturalWidth) {
+      function drawSprunkiSpriteOnEarth(ctx, earthX, earthY, earthRadius) {
+        const sprite = sprunkiCharacters[selectedSprunki].image;
+        if (!sprite.complete || !sprite.naturalWidth) {
           drawSprunkiOnEarth(ctx, earthX, earthY, earthRadius);
           return;
         }
 
         const dance = tapEffects.earth;
         const bob = dance > 0 ? Math.sin(performance.now() * 0.026) * earthRadius * 0.08 * dance : 0;
-        const imageRatio = orenSprite.naturalWidth / orenSprite.naturalHeight;
+        const imageRatio = sprite.naturalWidth / sprite.naturalHeight;
         const spriteHeight = earthRadius * 2.72;
         const spriteWidth = spriteHeight * imageRatio;
         const x = earthX - spriteWidth / 2;
@@ -529,7 +613,7 @@
           ctx.lineTo(earthX + earthRadius * 0.78, earthY - earthRadius * 1.04);
           ctx.stroke();
         }
-        ctx.drawImage(orenSprite, x, y, spriteWidth, spriteHeight);
+        ctx.drawImage(sprite, x, y, spriteWidth, spriteHeight);
         ctx.restore();
       }
 
@@ -811,7 +895,7 @@
         ctx.strokeStyle = "rgba(255, 255, 255, 0.36)";
         ctx.lineWidth = 2;
         ctx.stroke();
-        drawOrenSpriteOnEarth(ctx, centerX, centerY, earthRadius);
+        drawSprunkiSpriteOnEarth(ctx, centerX, centerY, earthRadius);
 
         ctx.font = `700 ${Math.max(14, w * 0.042)}px sans-serif`;
         ctx.fillStyle = "rgba(255, 248, 223, 0.94)";
@@ -878,11 +962,44 @@
           button.setAttribute("aria-label", `${label.name}を表示`);
           button.addEventListener("click", () => {
             playTone();
+            speakJapanese(label.name);
             setPlaying(false);
             snapPhase(index * STEP);
             draw();
           });
           phaseList.appendChild(button);
+        });
+      }
+
+      function buildSprunkiPicker() {
+        sprunkiList.innerHTML = "";
+        sprunkiCharacters.forEach((character, index) => {
+          const button = document.createElement("button");
+          const dot = document.createElement("span");
+          const label = document.createElement("span");
+          button.type = "button";
+          button.className = "sprunki-choice";
+          button.setAttribute("aria-label", `${character.name}にする`);
+          dot.className = "sprunki-dot";
+          dot.style.background = character.color;
+          label.textContent = character.name;
+          button.append(dot, label);
+          button.addEventListener("click", () => {
+            playTone();
+            selectedSprunki = index;
+            triggerTapEffect("earth");
+            updateSprunkiPicker();
+            draw();
+          });
+          sprunkiList.appendChild(button);
+        });
+        updateSprunkiPicker();
+      }
+
+      function updateSprunkiPicker() {
+        sprunkiList.querySelectorAll(".sprunki-choice").forEach((button, index) => {
+          button.classList.toggle("is-active", index === selectedSprunki);
+          button.setAttribute("aria-pressed", index === selectedSprunki ? "true" : "false");
         });
       }
 
@@ -950,6 +1067,7 @@
         if (hit === "moon") {
           setPlaying(false);
           snapPhase(Math.round((phase + STEP) / STEP) * STEP);
+          speakJapanese(phaseLabels[currentIndex()].name);
         }
         triggerTapEffect(hit);
         draw();
@@ -964,6 +1082,7 @@
         playTone();
         setPlaying(false);
         snapPhase(Math.round((phase + STEP) / STEP) * STEP);
+        speakJapanese(phaseLabels[currentIndex()].name);
         draw();
       });
 
@@ -971,6 +1090,7 @@
         playTone();
         setPlaying(false);
         snapPhase(0);
+        speakJapanese(phaseLabels[0].name);
         draw();
       });
 
@@ -979,6 +1099,7 @@
       space.addEventListener("click", handleSceneTap);
 
       buildPhasePicker();
+      buildSprunkiPicker();
       resize();
     })();
   </script>

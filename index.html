@@ -428,6 +428,13 @@
         character.image = new Image();
         character.image.src = character.file;
         character.image.addEventListener("load", () => draw());
+        if (character.audio) {
+          character.audioElement = new Audio(character.audio);
+          character.audioElement.loop = true;
+          character.audioElement.preload = "auto";
+          character.audioElement.volume = 0.82;
+          character.audioElement.playsInline = true;
+        }
       });
 
       let phase = 0;
@@ -436,10 +443,12 @@
       let animationId = 0;
       let audioContext = null;
       const sprunkiSynthTimers = new Map();
+      const activeSprunkiAudios = new Map();
       const sprunkiAudioBuffers = new Map();
       const sprunkiLoopInfos = new Map();
       const activeSprunkiSources = new Map();
       let sprunkiMusicToken = 0;
+      let sprunkiResyncTimer = 0;
       // Most Phase 1 Sprunki loops cluster around this bar length; all character loops lock to this grid.
       const SPRUNKI_BAR_SECONDS = 4.8125;
       const SPRUNKI_START_DELAY = 0.06;
@@ -523,8 +532,15 @@
 
       function stopSprunkiMusic() {
         sprunkiMusicToken += 1;
+        clearInterval(sprunkiResyncTimer);
+        sprunkiResyncTimer = 0;
         sprunkiSynthTimers.forEach((timer) => clearInterval(timer));
         sprunkiSynthTimers.clear();
+        activeSprunkiAudios.forEach((audio) => {
+          audio.pause();
+          audio.currentTime = 0;
+        });
+        activeSprunkiAudios.clear();
         activeSprunkiSources.forEach((sources) => {
           sources.forEach((source) => {
             source.onended = null;
@@ -704,6 +720,42 @@
         };
       }
 
+      function startHtmlSprunkiAudio(character) {
+        const audio = character.audioElement;
+        if (!audio) return false;
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.loop = true;
+          audio.volume = 0.82;
+          activeSprunkiAudios.set(character.id, audio);
+          const playPromise = audio.play();
+          if (playPromise && typeof playPromise.catch === "function") {
+            playPromise.catch(() => {
+              activeSprunkiAudios.delete(character.id);
+              playSynthSprunkiMusic(character);
+            });
+          }
+          return true;
+        } catch (error) {
+          activeSprunkiAudios.delete(character.id);
+          return false;
+        }
+      }
+
+      function resyncHtmlSprunkiAudios() {
+        if (!musicEnabled || !activeSprunkiAudios.size) return;
+        activeSprunkiAudios.forEach((audio) => {
+          try {
+            audio.currentTime = 0;
+            const playPromise = audio.play();
+            if (playPromise && typeof playPromise.catch === "function") playPromise.catch(() => {});
+          } catch (error) {
+            // If a browser rejects a resync seek, keep the current playback alive.
+          }
+        });
+      }
+
       function startSyncedSprunkiSource(character, buffer, startAt) {
         const context = getAudioContext();
         const info = getSprunkiLoopInfo(character, buffer);
@@ -743,6 +795,14 @@
         stopSprunkiMusic();
         const token = sprunkiMusicToken + 1;
         sprunkiMusicToken = token;
+        const startedWithHtmlAudio = selectedSprunkiIndexes
+          .map((index) => sprunkiCharacters[index])
+          .filter((character) => startHtmlSprunkiAudio(character))
+          .length;
+        if (startedWithHtmlAudio) {
+          sprunkiResyncTimer = setInterval(resyncHtmlSprunkiAudios, SPRUNKI_BAR_SECONDS * 1000);
+          return;
+        }
         loadSelectedSprunkiMusic(token);
       }
 

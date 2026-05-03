@@ -440,11 +440,9 @@
       const sprunkiLoopInfos = new Map();
       const activeSprunkiSources = new Map();
       let sprunkiMusicToken = 0;
-      let sprunkiSchedulerTimer = 0;
       // Most Phase 1 Sprunki loops cluster around this bar length; all character loops lock to this grid.
       const SPRUNKI_BAR_SECONDS = 4.8125;
       const SPRUNKI_START_DELAY = 0.06;
-      const SPRUNKI_SCHEDULE_AHEAD = 0.18;
       let sceneHitAreas = null;
       const tapEffects = {
         sun: 0,
@@ -525,8 +523,6 @@
 
       function stopSprunkiMusic() {
         sprunkiMusicToken += 1;
-        clearTimeout(sprunkiSchedulerTimer);
-        sprunkiSchedulerTimer = 0;
         sprunkiSynthTimers.forEach((timer) => clearInterval(timer));
         sprunkiSynthTimers.clear();
         activeSprunkiSources.forEach((sources) => {
@@ -714,24 +710,14 @@
         const source = context.createBufferSource();
         const gain = context.createGain();
         source.buffer = buffer;
+        source.loop = true;
+        source.loopStart = info.offset;
+        source.loopEnd = info.duration;
         source.playbackRate.setValueAtTime(info.playbackRate, startAt);
         gain.gain.setValueAtTime(0.82, startAt);
         source.connect(gain).connect(context.destination);
         rememberSprunkiSource(character, source);
-        source.start(startAt, info.offset, info.duration);
-        source.stop(startAt + SPRUNKI_BAR_SECONDS + 0.03);
-      }
-
-      function scheduleSprunkiCycle(entries, token, cycleStart) {
-        if (!musicEnabled || token !== sprunkiMusicToken) return;
-        const context = getAudioContext();
-        let startAt = cycleStart;
-        while (startAt < context.currentTime + 0.035) startAt += SPRUNKI_BAR_SECONDS;
-        entries.forEach(({ character, buffer }) => startSyncedSprunkiSource(character, buffer, startAt));
-        const nextStart = startAt + SPRUNKI_BAR_SECONDS;
-        const wait = Math.max(40, (nextStart - context.currentTime - SPRUNKI_SCHEDULE_AHEAD) * 1000);
-        clearTimeout(sprunkiSchedulerTimer);
-        sprunkiSchedulerTimer = setTimeout(() => scheduleSprunkiCycle(entries, token, nextStart), wait);
+        source.start(startAt, info.offset);
       }
 
       async function loadSelectedSprunkiMusic(token) {
@@ -748,7 +734,7 @@
         const startAt = context.currentTime + SPRUNKI_START_DELAY;
         const audioEntries = entries.filter(({ buffer }) => buffer);
         const synthEntries = entries.filter(({ buffer }) => !buffer);
-        if (audioEntries.length) scheduleSprunkiCycle(audioEntries, token, startAt);
+        audioEntries.forEach(({ character, buffer }) => startSyncedSprunkiSource(character, buffer, startAt));
         synthEntries.forEach(({ character }) => playSynthSprunkiMusic(character));
       }
 

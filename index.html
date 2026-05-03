@@ -373,7 +373,7 @@
         <span class="button-icon" aria-hidden="true">↺</span>
         もどる
       </button>
-      <button id="musicButton" type="button" aria-label="音楽を1回再生する">
+      <button id="musicButton" type="button" aria-label="音楽を鳴らす">
         <span class="button-icon" aria-hidden="true">♪</span>
         おと
       </button>
@@ -423,7 +423,7 @@
         { id: "black", name: "Black", spokenName: "ブラック", file: "sprunki-black.png", color: "#111111", music: "bassPulse", audio: "sounds/black.mp3" }
       ];
       let selectedSprunkiIndexes = [0];
-      let musicEnabled = true;
+      let musicEnabled = false;
       sprunkiCharacters.forEach((character) => {
         character.image = new Image();
         character.image.src = character.file;
@@ -448,6 +448,7 @@
       const sprunkiLoopInfos = new Map();
       const activeSprunkiSources = new Map();
       let sprunkiMusicToken = 0;
+      let sprunkiResyncTimer = 0;
       // Most Phase 1 Sprunki loops cluster around this bar length; all character loops lock to this grid.
       const SPRUNKI_BAR_SECONDS = 4.8125;
       const SPRUNKI_START_DELAY = 0.06;
@@ -531,6 +532,8 @@
 
       function stopSprunkiMusic() {
         sprunkiMusicToken += 1;
+        clearInterval(sprunkiResyncTimer);
+        sprunkiResyncTimer = 0;
         sprunkiSynthTimers.forEach((timer) => clearInterval(timer));
         sprunkiSynthTimers.clear();
         activeSprunkiAudios.forEach((audio) => {
@@ -724,7 +727,7 @@
         try {
           audio.pause();
           audio.currentTime = 0;
-          audio.loop = false;
+          audio.loop = true;
           audio.volume = 0.82;
           activeSprunkiAudios.set(character.id, audio);
           audio.onended = () => {
@@ -746,18 +749,33 @@
         }
       }
 
+      function resyncHtmlSprunkiAudios() {
+        if (!musicEnabled || !activeSprunkiAudios.size) return;
+        activeSprunkiAudios.forEach((audio) => {
+          try {
+            audio.currentTime = 0;
+            const playPromise = audio.play();
+            if (playPromise && typeof playPromise.catch === "function") playPromise.catch(() => {});
+          } catch (error) {
+            // If a browser rejects a resync seek, keep the current playback alive.
+          }
+        });
+      }
+
       function startSyncedSprunkiSource(character, buffer, startAt) {
         const context = getAudioContext();
         const info = getSprunkiLoopInfo(character, buffer);
         const source = context.createBufferSource();
         const gain = context.createGain();
         source.buffer = buffer;
+        source.loop = true;
+        source.loopStart = info.offset;
+        source.loopEnd = info.duration;
         source.playbackRate.setValueAtTime(info.playbackRate, startAt);
         gain.gain.setValueAtTime(0.82, startAt);
         source.connect(gain).connect(context.destination);
         rememberSprunkiSource(character, source);
-        source.start(startAt, info.offset, info.duration);
-        source.stop(startAt + SPRUNKI_BAR_SECONDS + 0.03);
+        source.start(startAt, info.offset);
       }
 
       async function loadSelectedSprunkiMusic(token) {
@@ -779,6 +797,7 @@
       }
 
       function restartSelectedSprunkiMusic() {
+        if (!musicEnabled) return;
         stopSprunkiMusic();
         const token = sprunkiMusicToken + 1;
         sprunkiMusicToken = token;
@@ -786,7 +805,10 @@
           .map((index) => sprunkiCharacters[index])
           .filter((character) => startHtmlSprunkiAudio(character))
           .length;
-        if (startedWithHtmlAudio) return;
+        if (startedWithHtmlAudio) {
+          sprunkiResyncTimer = setInterval(resyncHtmlSprunkiAudios, SPRUNKI_BAR_SECONDS * 1000);
+          return;
+        }
         loadSelectedSprunkiMusic(token);
       }
 
@@ -799,10 +821,6 @@
           const timer = setInterval(() => {
             step += 1;
             playSprunkiBar(context, character, step);
-            if (step >= 7) {
-              clearInterval(timer);
-              sprunkiSynthTimers.delete(character.id);
-            }
           }, 240);
           sprunkiSynthTimers.set(character.id, timer);
         } catch (error) {
@@ -811,9 +829,11 @@
       }
 
       function updateMusicButton() {
-        musicButton.innerHTML = '<span class="button-icon" aria-hidden="true">♪</span>おと';
-        musicButton.setAttribute("aria-label", "音楽を1回再生する");
-        musicButton.setAttribute("aria-pressed", "false");
+        musicButton.innerHTML = musicEnabled
+          ? '<span class="button-icon" aria-hidden="true">×</span>むおん'
+          : '<span class="button-icon" aria-hidden="true">♪</span>おと';
+        musicButton.setAttribute("aria-label", musicEnabled ? "音楽を止める" : "音楽を鳴らす");
+        musicButton.setAttribute("aria-pressed", musicEnabled ? "true" : "false");
       }
 
       function speakJapanese(text) {
@@ -1405,6 +1425,7 @@
             } else if (selectedPosition < 0) {
               selectedSprunkiIndexes.push(index);
             }
+            if (musicEnabled) restartSelectedSprunkiMusic();
             speakEnglish(character.name);
             triggerTapEffect("earth");
             updateSprunkiPicker();
@@ -1488,6 +1509,8 @@
           setPlaying(false);
           snapPhase(Math.round((phase + STEP) / STEP) * STEP);
           speakJapanese(phaseLabels[currentIndex()].name);
+        } else if (hit === "earth" && musicEnabled) {
+          restartSelectedSprunkiMusic();
         }
         triggerTapEffect(hit);
         draw();
@@ -1515,7 +1538,12 @@
       });
 
       musicButton.addEventListener("click", () => {
-        restartSelectedSprunkiMusic();
+        musicEnabled = !musicEnabled;
+        if (musicEnabled) {
+          restartSelectedSprunkiMusic();
+        } else {
+          stopSprunkiMusic();
+        }
         updateMusicButton();
       });
 

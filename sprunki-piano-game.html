@@ -1,0 +1,1112 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11151d">
+  <title>スプランキー ピアノ音ゲー</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #11151d;
+      --panel: #1d2430;
+      --panel-2: #262f3d;
+      --ink: #f7f1de;
+      --muted: #b7c0ce;
+      --line: rgba(247, 241, 222, 0.2);
+      --accent: #50d4c6;
+      --accent-2: #ffc85a;
+      --danger: #ff6d6d;
+      --white-key: #fffaf0;
+      --white-key-edge: #cfc7b6;
+      --black-key: #16191f;
+      --black-key-edge: #454d59;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      overflow: hidden;
+    }
+
+    body {
+      min-height: 100svh;
+      display: flex;
+      justify-content: center;
+      padding: max(8px, env(safe-area-inset-top)) 10px max(8px, env(safe-area-inset-bottom));
+      background:
+        linear-gradient(140deg, rgba(80, 212, 198, 0.12), transparent 34%),
+        linear-gradient(215deg, rgba(255, 200, 90, 0.12), transparent 36%),
+        #11151d;
+    }
+
+    main {
+      width: min(100%, 980px);
+      min-height: calc(100svh - 16px);
+      display: grid;
+      grid-template-rows: auto minmax(190px, 1fr) auto auto;
+      gap: 8px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .title-block,
+    .hud {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(29, 36, 48, 0.9);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .title-block {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      min-width: 0;
+    }
+
+    .hero-face {
+      width: clamp(48px, 12vw, 70px);
+      height: clamp(48px, 12vw, 70px);
+      object-fit: contain;
+      filter: drop-shadow(0 7px 12px rgba(0, 0, 0, 0.35));
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(22px, 5.4vw, 36px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: clamp(12px, 2.8vw, 15px);
+      line-height: 1.25;
+    }
+
+    .hud {
+      min-width: min(360px, 42vw);
+      display: grid;
+      grid-template-columns: repeat(4, minmax(64px, 1fr));
+      gap: 1px;
+      overflow: hidden;
+    }
+
+    .hud-item {
+      display: grid;
+      place-items: center;
+      padding: 8px 7px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .hud-label {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1;
+    }
+
+    .hud-value {
+      margin-top: 4px;
+      font-size: clamp(18px, 4vw, 25px);
+      font-weight: 900;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 190px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px calc(100% / 24)),
+        linear-gradient(180deg, #171d27 0%, #202939 62%, #171d27 100%);
+      overflow: hidden;
+    }
+
+    #noteCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .lane-heads {
+      position: absolute;
+      inset: 8px 8px auto;
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 4px;
+      pointer-events: none;
+    }
+
+    .lane-head {
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 8px;
+      background: rgba(17, 21, 29, 0.58);
+      overflow: hidden;
+    }
+
+    .lane-head img {
+      max-width: 34px;
+      max-height: 34px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.3));
+    }
+
+    .judge-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 20px;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent-2), var(--accent), transparent);
+      box-shadow: 0 0 18px rgba(80, 212, 198, 0.65);
+      pointer-events: none;
+    }
+
+    .feedback {
+      position: absolute;
+      left: 50%;
+      bottom: 43px;
+      transform: translateX(-50%);
+      min-width: 136px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: rgba(17, 21, 29, 0.72);
+      color: var(--accent-2);
+      font-size: clamp(22px, 5vw, 34px);
+      font-weight: 900;
+      line-height: 1;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 120ms ease, transform 120ms ease;
+      pointer-events: none;
+    }
+
+    .feedback.is-live {
+      opacity: 1;
+      transform: translate(-50%, -4px);
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    button,
+    .switch-link {
+      appearance: none;
+      border: 0;
+      border-radius: 8px;
+      font: inherit;
+      font-weight: 900;
+      line-height: 1.1;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .control-button {
+      min-height: 48px;
+      color: #17202b;
+      background: var(--accent-2);
+      box-shadow: 0 5px 0 #c78e2d, 0 10px 18px rgba(0, 0, 0, 0.24);
+    }
+
+    .switch-link {
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    .control-button.secondary {
+      background: #d8edf0;
+      box-shadow: 0 5px 0 #93b5bc, 0 10px 18px rgba(0, 0, 0, 0.22);
+    }
+
+    .control-button:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 #c78e2d, 0 5px 12px rgba(0, 0, 0, 0.24);
+    }
+
+    .piano-shell {
+      display: grid;
+      gap: 6px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, #222a36, #151a22);
+      padding: 8px;
+    }
+
+    .keyboard-help {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 3px;
+      color: var(--muted);
+      font-size: clamp(8px, 1.75vw, 11px);
+      text-align: center;
+      font-weight: 800;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .keyboard-help span {
+      min-height: 14px;
+      display: grid;
+      place-items: center;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+    }
+
+    .piano {
+      position: relative;
+      width: 100%;
+      height: clamp(132px, 22svh, 210px);
+      border-radius: 8px;
+      background: #0e1117;
+      padding: 0 1px 1px;
+      touch-action: none;
+      user-select: none;
+      overflow: hidden;
+    }
+
+    .white-keys,
+    .black-keys {
+      position: absolute;
+      inset: 0 1px 1px;
+    }
+
+    .white-keys {
+      display: grid;
+      grid-template-columns: repeat(14, minmax(0, 1fr));
+      gap: 1px;
+    }
+
+    .piano-key {
+      position: relative;
+      padding: 0;
+      border-radius: 0 0 7px 7px;
+      overflow: hidden;
+    }
+
+    .white-key {
+      height: 100%;
+      border: 1px solid var(--white-key-edge);
+      border-top: 0;
+      background: linear-gradient(180deg, #fffdf6 0%, var(--white-key) 70%, #ded6c8 100%);
+      color: #18212b;
+      box-shadow: inset 0 -9px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    .black-key {
+      position: absolute;
+      top: 0;
+      width: calc((100% / 14) * 0.58);
+      height: 62%;
+      z-index: 4;
+      border: 1px solid var(--black-key-edge);
+      border-top: 0;
+      background: linear-gradient(180deg, #2d3440 0%, var(--black-key) 74%, #07080b 100%);
+      color: #f7f1de;
+      box-shadow: inset 0 -9px 10px rgba(255, 255, 255, 0.04), 0 5px 9px rgba(0, 0, 0, 0.42);
+    }
+
+    .piano-key.is-active {
+      filter: brightness(1.08);
+    }
+
+    .white-key.is-active {
+      background: linear-gradient(180deg, #e9fffb 0%, #b8f4ec 70%, #75cabf 100%);
+    }
+
+    .black-key.is-active {
+      background: linear-gradient(180deg, #5cfff1 0%, #209a90 70%, #0b3c3a 100%);
+    }
+
+    .note-label,
+    .key-label {
+      position: absolute;
+      left: 0;
+      right: 0;
+      display: block;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .note-label {
+      bottom: 22px;
+      font-size: clamp(11px, 2.5vw, 15px);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .key-label {
+      bottom: 7px;
+      color: rgba(24, 33, 43, 0.62);
+      font-size: clamp(8px, 1.9vw, 11px);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .black-key .note-label {
+      bottom: 25px;
+      font-size: clamp(8px, 1.8vw, 11px);
+      line-height: 1.05;
+      padding: 0 2px;
+    }
+
+    .black-key .key-label {
+      bottom: 8px;
+      color: rgba(247, 241, 222, 0.72);
+      font-size: clamp(7px, 1.65vw, 10px);
+    }
+
+    .character-strip {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .character-button {
+      min-height: 52px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 5px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.055);
+      color: var(--ink);
+      padding: 4px;
+      box-shadow: none;
+      overflow: hidden;
+    }
+
+    .character-button.is-active {
+      border-color: rgba(80, 212, 198, 0.84);
+      background: rgba(80, 212, 198, 0.18);
+    }
+
+    .character-button img {
+      width: 34px;
+      height: 42px;
+      object-fit: contain;
+    }
+
+    .character-button span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: clamp(9px, 2vw, 12px);
+      text-align: left;
+    }
+
+    @media (max-width: 720px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .hud {
+        min-width: 0;
+      }
+
+      .controls {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 5px;
+      }
+
+      .character-strip {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-height: 700px) {
+      body {
+        padding-top: max(4px, env(safe-area-inset-top));
+        padding-bottom: max(4px, env(safe-area-inset-bottom));
+      }
+
+      main {
+        min-height: calc(100svh - 8px);
+        grid-template-rows: auto minmax(150px, 1fr) auto auto;
+        gap: 5px;
+      }
+
+      .title-block {
+        padding: 6px 8px;
+      }
+
+      .hero-face {
+        width: 42px;
+        height: 42px;
+      }
+
+      .subtitle {
+        display: none;
+      }
+
+      .hud-item {
+        padding: 6px 4px;
+      }
+
+      .hud-value {
+        font-size: 18px;
+      }
+
+      .control-button {
+        min-height: 40px;
+        font-size: 12px;
+      }
+
+      .piano {
+        height: 118px;
+      }
+
+      .character-button {
+        min-height: 42px;
+      }
+
+      .character-button img {
+        width: 28px;
+        height: 34px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main aria-label="スプランキーのピアノ音ゲー">
+    <section class="topbar" aria-label="ゲーム情報">
+      <div class="title-block">
+        <img class="hero-face" id="heroFace" src="sprunki-oren.png" alt="">
+        <div>
+          <h1>スプランキー ピアノ</h1>
+          <p class="subtitle">C4-B5の2オクターブ鍵盤で落下ノーツを演奏</p>
+        </div>
+      </div>
+      <div class="hud" aria-live="polite">
+        <div class="hud-item"><span class="hud-label">Score</span><strong class="hud-value" id="score">0</strong></div>
+        <div class="hud-item"><span class="hud-label">Combo</span><strong class="hud-value" id="combo">0</strong></div>
+        <div class="hud-item"><span class="hud-label">Best</span><strong class="hud-value" id="best">0</strong></div>
+        <div class="hud-item"><span class="hud-label">Hit</span><strong class="hud-value" id="stats">0/0/0</strong></div>
+      </div>
+    </section>
+
+    <section class="stage" id="stage" aria-label="落下ノーツ">
+      <canvas id="noteCanvas"></canvas>
+      <div class="lane-heads" id="laneHeads" aria-hidden="true"></div>
+      <div class="judge-line" aria-hidden="true"></div>
+      <div class="feedback" id="feedback" aria-live="polite">Ready</div>
+    </section>
+
+    <section class="controls" aria-label="ゲーム操作">
+      <button class="control-button" id="startButton" type="button">START</button>
+      <button class="control-button secondary" id="pauseButton" type="button">PAUSE</button>
+      <button class="control-button secondary" id="resetButton" type="button">RESET</button>
+      <button class="control-button secondary" id="soundButton" type="button" aria-pressed="true">SOUND ON</button>
+      <a class="control-button secondary switch-link" href="index.html?game=moon" target="_top" aria-label="Switch to moon phase game">MOON</a>
+    </section>
+
+    <section class="piano-shell" aria-label="ピアノ鍵盤">
+      <div class="keyboard-help" id="keyboardHelp" aria-hidden="true"></div>
+      <div class="piano" id="piano">
+        <div class="white-keys" id="whiteKeys"></div>
+        <div class="black-keys" id="blackKeys"></div>
+      </div>
+      <div class="character-strip" id="characterStrip" aria-label="スプランキーを選ぶ"></div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const noteCanvas = document.getElementById("noteCanvas");
+      const stage = document.getElementById("stage");
+      const whiteKeys = document.getElementById("whiteKeys");
+      const blackKeys = document.getElementById("blackKeys");
+      const piano = document.getElementById("piano");
+      const keyboardHelp = document.getElementById("keyboardHelp");
+      const laneHeads = document.getElementById("laneHeads");
+      const characterStrip = document.getElementById("characterStrip");
+      const heroFace = document.getElementById("heroFace");
+      const scoreEl = document.getElementById("score");
+      const comboEl = document.getElementById("combo");
+      const bestEl = document.getElementById("best");
+      const statsEl = document.getElementById("stats");
+      const feedbackEl = document.getElementById("feedback");
+      const startButton = document.getElementById("startButton");
+      const pauseButton = document.getElementById("pauseButton");
+      const resetButton = document.getElementById("resetButton");
+      const soundButton = document.getElementById("soundButton");
+      const ctx = noteCanvas.getContext("2d");
+
+      const BPM = 96;
+      const BEAT_MS = 60000 / BPM;
+      const TRAVEL_MS = 1800;
+      const GREAT_MS = 60;
+      const GOOD_MS = 120;
+      const MISS_GRACE_MS = 150;
+      const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+      const FLAT_NAMES = { "C#": "Db", "D#": "Eb", "F#": "Gb", "G#": "Ab", "A#": "Bb" };
+      const KEY_BY_NOTE = new Map([
+        ["C4", "A"], ["C#4", "W"], ["D4", "S"], ["D#4", "E"], ["E4", "D"], ["F4", "F"],
+        ["F#4", "T"], ["G4", "G"], ["G#4", "Y"], ["A4", "H"], ["A#4", "U"], ["B4", "J"],
+        ["C5", "K"], ["C#5", "O"], ["D5", "L"], ["D#5", "P"], ["E5", ";"], ["F5", "'"],
+        ["F#5", "]"], ["G5", "Z"], ["G#5", "X"], ["A5", "C"], ["A#5", "V"], ["B5", "B"]
+      ]);
+      const CODE_TO_NOTE = new Map([
+        ["KeyA", "C4"], ["KeyW", "C#4"], ["KeyS", "D4"], ["KeyE", "D#4"], ["KeyD", "E4"], ["KeyF", "F4"],
+        ["KeyT", "F#4"], ["KeyG", "G4"], ["KeyY", "G#4"], ["KeyH", "A4"], ["KeyU", "A#4"], ["KeyJ", "B4"],
+        ["KeyK", "C5"], ["KeyO", "C#5"], ["KeyL", "D5"], ["KeyP", "D#5"], ["Semicolon", "E5"], ["Quote", "F5"],
+        ["BracketRight", "F#5"], ["KeyZ", "G5"], ["KeyX", "G#5"], ["KeyC", "A5"], ["KeyV", "A#5"], ["KeyB", "B5"]
+      ]);
+
+      const characters = [
+        { id: "oren", name: "Oren", color: "#ff7900", image: "sprunki-oren.png", audio: "sounds/oren.wav" },
+        { id: "raddy", name: "Raddy", color: "#f51414", image: "sprunki-raddy.png", audio: "sounds/raddy.wav" },
+        { id: "clukr", name: "Clukr", color: "#b9bec4", image: "sprunki-clukr.png", audio: "sounds/clukr.wav" },
+        { id: "funbot", name: "Fun Bot", color: "#ffd33d", image: "sprunki-funbot.png", audio: "sounds/funbot.wav" },
+        { id: "vineria", name: "Vineria", color: "#58d947", image: "sprunki-vineria.png", audio: "sounds/vineria.wav" },
+        { id: "gray", name: "Gray", color: "#6f737a", image: "sprunki-gray.png", audio: "sounds/gray.wav" },
+        { id: "sky", name: "Sky", color: "#71c9ff", image: "sprunki-sky.png", audio: "sounds/sky.wav" },
+        { id: "simon", name: "Simon", color: "#ffe054", image: "sprunki-simon.png", audio: "sounds/simon.wav" }
+      ];
+
+      const notes = [];
+      const whiteNotes = [];
+      const noteById = new Map();
+      const keyElements = new Map();
+      const activePointers = new Map();
+      const activeKeys = new Map();
+      const audioBuffers = new Map();
+      const pressedVisualTimers = new Map();
+
+      let audioContext = null;
+      let animationId = 0;
+      let canvasWidth = 0;
+      let canvasHeight = 0;
+      let selectedCharacter = 0;
+      let soundEnabled = true;
+      let lastFrame = performance.now();
+      let state = makeInitialState();
+
+      function makeInitialState() {
+        return {
+          running: false,
+          paused: false,
+          startAt: 0,
+          pauseAt: 0,
+          pauseTotal: 0,
+          songTime: 0,
+          nextIndex: 0,
+          chart: [],
+          score: 0,
+          combo: 0,
+          best: 0,
+          great: 0,
+          good: 0,
+          miss: 0,
+          feedbackUntil: 0,
+          feedbackText: "Ready"
+        };
+      }
+
+      function buildNotes() {
+        for (let octave = 4; octave <= 5; octave += 1) {
+          for (const name of NOTE_NAMES) {
+            const id = `${name}${octave}`;
+            const midi = (octave + 1) * 12 + NOTE_NAMES.indexOf(name);
+            const isBlack = name.includes("#");
+            const note = {
+              id,
+              name,
+              octave,
+              midi,
+              frequency: 440 * (2 ** ((midi - 69) / 12)),
+              isBlack,
+              label: isBlack ? `${name}\n${FLAT_NAMES[name]}` : (name === "C" ? id : name),
+              keyLabel: KEY_BY_NOTE.get(id) || ""
+            };
+            notes.push(note);
+            noteById.set(id, note);
+            if (!isBlack) whiteNotes.push(note);
+          }
+        }
+      }
+
+      function createKeyButton(note, whiteIndex) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `piano-key ${note.isBlack ? "black-key" : "white-key"}`;
+        button.dataset.note = note.id;
+        button.setAttribute("aria-label", `${note.id} key`);
+        button.innerHTML = `<span class="note-label">${note.label.replace("\n", "<br>")}</span><span class="key-label">${note.keyLabel}</span>`;
+        if (note.isBlack) {
+          const left = ((whiteIndex + 1) / 14) * 100;
+          button.style.left = `calc(${left}% - ((100% / 14) * 0.29))`;
+        }
+        button.addEventListener("pointerdown", handlePointerDown);
+        button.addEventListener("pointerup", handlePointerUp);
+        button.addEventListener("pointercancel", handlePointerCancel);
+        button.addEventListener("pointerleave", handlePointerCancel);
+        keyElements.set(note.id, button);
+        return button;
+      }
+
+      function buildKeyboard() {
+        buildNotes();
+        whiteNotes.forEach((note) => whiteKeys.appendChild(createKeyButton(note, 0)));
+        let whiteIndex = -1;
+        notes.forEach((note) => {
+          if (!note.isBlack) {
+            whiteIndex += 1;
+            return;
+          }
+          blackKeys.appendChild(createKeyButton(note, whiteIndex));
+        });
+        const firstOctave = notes.slice(0, 12);
+        keyboardHelp.innerHTML = firstOctave.map((note) => `<span>${note.keyLabel}<br>${note.id}</span>`).join("");
+      }
+
+      function buildCharacters() {
+        laneHeads.innerHTML = characters.map((character) => (
+          `<div class="lane-head"><img src="${character.image}" alt=""></div>`
+        )).join("");
+        characters.forEach((character, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `character-button${index === selectedCharacter ? " is-active" : ""}`;
+          button.innerHTML = `<img src="${character.image}" alt=""><span>${character.name}</span>`;
+          button.addEventListener("click", () => {
+            selectedCharacter = index;
+            heroFace.src = character.image;
+            document.querySelectorAll(".character-button").forEach((item, itemIndex) => {
+              item.classList.toggle("is-active", itemIndex === selectedCharacter);
+            });
+          });
+          characterStrip.appendChild(button);
+        });
+      }
+
+      function getAudioContext() {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioContext.state === "suspended") audioContext.resume();
+        return audioContext;
+      }
+
+      function playPianoTone(note, velocity = 0.75) {
+        if (!soundEnabled) return;
+        try {
+          const context = getAudioContext();
+          const now = context.currentTime;
+          const master = context.createGain();
+          const low = context.createOscillator();
+          const high = context.createOscillator();
+          const filter = context.createBiquadFilter();
+          low.type = "triangle";
+          high.type = "sine";
+          low.frequency.setValueAtTime(note.frequency, now);
+          high.frequency.setValueAtTime(note.frequency * 2.01, now);
+          filter.type = "lowpass";
+          filter.frequency.setValueAtTime(2400, now);
+          filter.frequency.exponentialRampToValueAtTime(620, now + 0.45);
+          master.gain.setValueAtTime(0.0001, now);
+          master.gain.exponentialRampToValueAtTime(0.18 * velocity, now + 0.012);
+          master.gain.exponentialRampToValueAtTime(0.055 * velocity, now + 0.16);
+          master.gain.exponentialRampToValueAtTime(0.0001, now + 0.72);
+          low.connect(filter);
+          high.connect(filter);
+          filter.connect(master).connect(context.destination);
+          low.start(now);
+          high.start(now);
+          low.stop(now + 0.75);
+          high.stop(now + 0.75);
+        } catch (error) {
+          soundEnabled = false;
+          updateSoundButton();
+        }
+      }
+
+      async function loadCharacterBuffer(character) {
+        if (!soundEnabled || !character.audio || audioBuffers.has(character.id)) return;
+        try {
+          const context = getAudioContext();
+          const response = await fetch(character.audio);
+          const data = await response.arrayBuffer();
+          const buffer = await context.decodeAudioData(data);
+          audioBuffers.set(character.id, buffer);
+        } catch (error) {
+          audioBuffers.set(character.id, null);
+        }
+      }
+
+      function playCharacterHit() {
+        if (!soundEnabled) return;
+        const character = characters[selectedCharacter];
+        const buffer = audioBuffers.get(character.id);
+        if (!buffer) return;
+        try {
+          const context = getAudioContext();
+          const source = context.createBufferSource();
+          const gain = context.createGain();
+          source.buffer = buffer;
+          gain.gain.setValueAtTime(0.0001, context.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.28);
+          source.connect(gain).connect(context.destination);
+          source.start(context.currentTime, 0, Math.min(0.32, buffer.duration));
+        } catch (error) {
+          // Character samples are decorative; piano tone remains the playable source.
+        }
+      }
+
+      function makeChart() {
+        const pattern = [
+          "C4", "D4", "E4", "G4", "A4", "G4", "E4", "D4",
+          "C5", "B4", "A4", "G4", "E4", "G4", "A4", "C5",
+          "D5", "E5", "G5", "A5", "G5", "E5", "D5", "C5",
+          "B4", "G4", "A4", "C5", "E5", "D5", "C5", "A4"
+        ];
+        const chart = [];
+        for (let i = 0; i < 96; i += 1) {
+          const beat = i * 0.5;
+          const noteId = pattern[i % pattern.length];
+          chart.push({
+            id: i,
+            noteId,
+            hitTime: 900 + beat * BEAT_MS,
+            judged: false,
+            result: ""
+          });
+          if (i % 16 === 12) {
+            const harmony = noteId.endsWith("4") ? "C5" : "C4";
+            chart.push({
+              id: i + 1000,
+              noteId: harmony,
+              hitTime: 900 + beat * BEAT_MS,
+              judged: false,
+              result: ""
+            });
+          }
+        }
+        return chart.sort((a, b) => a.hitTime - b.hitTime);
+      }
+
+      function resizeCanvas() {
+        const bounds = stage.getBoundingClientRect();
+        const ratio = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+        canvasWidth = Math.max(1, bounds.width);
+        canvasHeight = Math.max(1, bounds.height);
+        noteCanvas.width = Math.round(canvasWidth * ratio);
+        noteCanvas.height = Math.round(canvasHeight * ratio);
+        noteCanvas.style.width = `${canvasWidth}px`;
+        noteCanvas.style.height = `${canvasHeight}px`;
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        draw();
+      }
+
+      function startGame() {
+        try {
+          getAudioContext();
+          characters.forEach((character) => loadCharacterBuffer(character));
+        } catch (error) {
+          soundEnabled = false;
+          updateSoundButton();
+        }
+        if (state.running && state.paused) {
+          const now = performance.now();
+          state.pauseTotal += now - state.pauseAt;
+          state.paused = false;
+          state.feedbackText = "Resume";
+          state.feedbackUntil = now + 600;
+        } else {
+          state = makeInitialState();
+          state.chart = makeChart();
+          state.running = true;
+          state.paused = false;
+          state.startAt = performance.now();
+          state.feedbackText = "Go";
+          state.feedbackUntil = performance.now() + 700;
+        }
+        startButton.textContent = "RESTART";
+        pauseButton.textContent = "PAUSE";
+        updateHud();
+      }
+
+      function pauseGame() {
+        if (!state.running) return;
+        if (state.paused) {
+          startGame();
+          return;
+        }
+        state.paused = true;
+        state.pauseAt = performance.now();
+        pauseButton.textContent = "RESUME";
+        state.feedbackText = "Pause";
+        state.feedbackUntil = performance.now() + 600;
+      }
+
+      function resetGame() {
+        state = makeInitialState();
+        startButton.textContent = "START";
+        pauseButton.textContent = "PAUSE";
+        updateHud();
+        draw();
+      }
+
+      function updateSoundButton() {
+        soundButton.textContent = soundEnabled ? "SOUND ON" : "SOUND OFF";
+        soundButton.setAttribute("aria-pressed", soundEnabled ? "true" : "false");
+      }
+
+      function songTime(now) {
+        if (!state.running) return state.songTime;
+        if (state.paused) return state.pauseAt - state.startAt - state.pauseTotal;
+        return now - state.startAt - state.pauseTotal;
+      }
+
+      function noteColumn(noteId) {
+        return notes.findIndex((note) => note.id === noteId);
+      }
+
+      function judgeNote(noteId, inputTime) {
+        if (!state.running || state.paused) return;
+        const currentTime = songTime(inputTime);
+        let target = null;
+        let bestDelta = Infinity;
+        for (const note of state.chart) {
+          if (note.judged || note.noteId !== noteId) continue;
+          const delta = Math.abs(currentTime - note.hitTime);
+          if (delta < bestDelta) {
+            bestDelta = delta;
+            target = note;
+          }
+        }
+        if (!target || bestDelta > GOOD_MS) return;
+        target.judged = true;
+        target.result = bestDelta <= GREAT_MS ? "Great" : "Good";
+        if (target.result === "Great") {
+          state.score += 100;
+          state.great += 1;
+        } else {
+          state.score += 50;
+          state.good += 1;
+        }
+        state.combo += 1;
+        state.best = Math.max(state.best, state.combo);
+        state.feedbackText = target.result;
+        state.feedbackUntil = inputTime + 420;
+        playCharacterHit();
+        updateHud();
+      }
+
+      function registerMisses(now) {
+        if (!state.running || state.paused) return;
+        const currentTime = songTime(now);
+        for (const note of state.chart) {
+          if (note.judged) continue;
+          if (currentTime - note.hitTime > MISS_GRACE_MS) {
+            note.judged = true;
+            note.result = "Miss";
+            state.combo = 0;
+            state.miss += 1;
+            state.feedbackText = "Miss";
+            state.feedbackUntil = now + 360;
+          }
+        }
+        const lastNote = state.chart[state.chart.length - 1];
+        if (lastNote && currentTime > lastNote.hitTime + 2300 && state.chart.every((note) => note.judged)) {
+          state.running = false;
+          state.feedbackText = "Finish";
+          state.feedbackUntil = now + 1200;
+          startButton.textContent = "START";
+        }
+      }
+
+      function updateHud() {
+        scoreEl.textContent = String(state.score);
+        comboEl.textContent = String(state.combo);
+        bestEl.textContent = String(state.best);
+        statsEl.textContent = `${state.great}/${state.good}/${state.miss}`;
+      }
+
+      function showKey(noteId, on) {
+        const element = keyElements.get(noteId);
+        if (!element) return;
+        element.classList.toggle("is-active", on);
+        if (on) {
+          clearTimeout(pressedVisualTimers.get(noteId));
+          pressedVisualTimers.set(noteId, setTimeout(() => showKey(noteId, false), 140));
+        }
+      }
+
+      function playInput(noteId, now = performance.now()) {
+        const note = noteById.get(noteId);
+        if (!note) return;
+        showKey(noteId, true);
+        playPianoTone(note);
+        judgeNote(noteId, now);
+      }
+
+      function handlePointerDown(event) {
+        const noteId = event.currentTarget.dataset.note;
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        activePointers.set(event.pointerId, noteId);
+        playInput(noteId, performance.now());
+        event.preventDefault();
+      }
+
+      function handlePointerUp(event) {
+        const noteId = activePointers.get(event.pointerId);
+        if (noteId) showKey(noteId, false);
+        activePointers.delete(event.pointerId);
+      }
+
+      function handlePointerCancel(event) {
+        const noteId = activePointers.get(event.pointerId);
+        if (noteId) showKey(noteId, false);
+        activePointers.delete(event.pointerId);
+      }
+
+      function noteFromKeyboard(event) {
+        return CODE_TO_NOTE.get(event.code) || null;
+      }
+
+      function drawNotes(now = performance.now()) {
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        const currentTime = songTime(now);
+        const laneWidth = canvasWidth / notes.length;
+        const hitY = canvasHeight - 20;
+        ctx.save();
+        for (const chartNote of state.chart) {
+          if (chartNote.judged) continue;
+          const timeUntilHit = chartNote.hitTime - currentTime;
+          if (timeUntilHit > TRAVEL_MS || timeUntilHit < -MISS_GRACE_MS) continue;
+          const progress = 1 - (timeUntilHit / TRAVEL_MS);
+          const x = noteColumn(chartNote.noteId) * laneWidth;
+          const y = progress * hitY - 18;
+          const note = noteById.get(chartNote.noteId);
+          const character = characters[(chartNote.id + selectedCharacter) % characters.length];
+          ctx.fillStyle = note.isBlack ? "#232936" : character.color;
+          ctx.strokeStyle = note.isBlack ? "rgba(247, 241, 222, 0.55)" : "rgba(17, 21, 29, 0.5)";
+          ctx.lineWidth = 1.5;
+          roundedRect(ctx, x + 2, y, Math.max(8, laneWidth - 4), 24, 6);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = note.isBlack ? "#f7f1de" : "#11151d";
+          ctx.font = "900 10px system-ui, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(chartNote.noteId.replace("#", "♯"), x + laneWidth / 2, y + 12);
+        }
+        ctx.restore();
+      }
+
+      function roundedRect(context, x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        context.beginPath();
+        context.moveTo(x + r, y);
+        context.lineTo(x + width - r, y);
+        context.quadraticCurveTo(x + width, y, x + width, y + r);
+        context.lineTo(x + width, y + height - r);
+        context.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+        context.lineTo(x + r, y + height);
+        context.quadraticCurveTo(x, y + height, x, y + height - r);
+        context.lineTo(x, y + r);
+        context.quadraticCurveTo(x, y, x + r, y);
+      }
+
+      function draw(now = performance.now()) {
+        drawNotes(now);
+        if (now < state.feedbackUntil) {
+          feedbackEl.textContent = state.feedbackText;
+          feedbackEl.classList.add("is-live");
+        } else {
+          feedbackEl.classList.remove("is-live");
+        }
+      }
+
+      function tick(now) {
+        const elapsed = now - lastFrame;
+        lastFrame = now;
+        if (elapsed < 1000) registerMisses(now);
+        draw(now);
+        updateHud();
+        animationId = requestAnimationFrame(tick);
+      }
+
+      buildKeyboard();
+      buildCharacters();
+      updateSoundButton();
+      updateHud();
+      resizeCanvas();
+      animationId = requestAnimationFrame(tick);
+
+      startButton.addEventListener("click", startGame);
+      pauseButton.addEventListener("click", pauseGame);
+      resetButton.addEventListener("click", resetGame);
+      soundButton.addEventListener("click", () => {
+        soundEnabled = !soundEnabled;
+        updateSoundButton();
+        if (soundEnabled) {
+          try {
+            getAudioContext();
+            characters.forEach((character) => loadCharacterBuffer(character));
+          } catch (error) {
+            soundEnabled = false;
+            updateSoundButton();
+          }
+        }
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.repeat) return;
+        const noteId = noteFromKeyboard(event);
+        if (!noteId) return;
+        activeKeys.set(event.code, noteId);
+        playInput(noteId, performance.now());
+        event.preventDefault();
+      });
+
+      window.addEventListener("keyup", (event) => {
+        const noteId = activeKeys.get(event.code);
+        if (!noteId) return;
+        showKey(noteId, false);
+        activeKeys.delete(event.code);
+      });
+
+      window.addEventListener("resize", resizeCanvas, { passive: true });
+      window.addEventListener("orientationchange", () => setTimeout(resizeCanvas, 150), { passive: true });
+      window.addEventListener("beforeunload", () => cancelAnimationFrame(animationId));
+    })();
+  </script>
+</body>
+</html>

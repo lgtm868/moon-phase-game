@@ -1067,6 +1067,21 @@
         return notes.findIndex((note) => note.id === noteId);
       }
 
+      function keyRect(noteId) {
+        const key = keyElements.get(noteId);
+        if (!key) {
+          const fallbackWidth = canvasWidth / notes.length;
+          return { x: noteColumn(noteId) * fallbackWidth, width: fallbackWidth };
+        }
+        const keyBounds = key.getBoundingClientRect();
+        const pianoBounds = piano.getBoundingClientRect();
+        const scaleX = canvasWidth / Math.max(1, pianoBounds.width);
+        return {
+          x: (keyBounds.left - pianoBounds.left) * scaleX,
+          width: keyBounds.width * scaleX
+        };
+      }
+
       function judgeNote(noteId, inputTime) {
         if (!state.running || state.paused) return;
         const currentTime = songTime(inputTime);
@@ -1260,14 +1275,16 @@
           const timeUntilHit = chartNote.hitTime - currentTime;
           if (timeUntilHit > TRAVEL_MS || timeUntilHit < -MISS_GRACE_MS) continue;
           const progress = 1 - (timeUntilHit / TRAVEL_MS);
-          const x = noteColumn(chartNote.noteId) * laneWidth;
+          const rect = keyRect(chartNote.noteId);
+          const x = rect.x;
           const y = progress * hitY - 18;
           const note = noteById.get(chartNote.noteId);
           const character = characters[(chartNote.id + selectedCharacter) % characters.length];
           const closeness = Math.max(0, 1 - Math.abs(timeUntilHit) / GOOD_MS);
-          const noteX = x + 2;
+          const inset = note.isBlack ? 0 : 1;
+          const noteX = x + inset;
           const noteY = y;
-          const noteW = Math.max(8, laneWidth - 4);
+          const noteW = Math.max(6, rect.width - inset * 2);
           const noteH = note.isBlack ? 30 : 24;
           ctx.fillStyle = Math.abs(timeUntilHit) <= GREAT_MS
             ? "#50ffd9"
@@ -1293,15 +1310,16 @@
           ctx.font = "900 9px system-ui, sans-serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText(note.isBlack ? "BLACK" : "WHITE", x + laneWidth / 2, y + 9);
+          ctx.fillText(note.isBlack ? "BLACK" : "WHITE", x + rect.width / 2, y + 9);
           ctx.font = "900 10px system-ui, sans-serif";
-          ctx.fillText(chartNote.noteId.replace("#", "♯"), x + laneWidth / 2, y + (note.isBlack ? 22 : 17));
+          ctx.fillText(chartNote.noteId.replace("#", "♯"), x + rect.width / 2, y + (note.isBlack ? 22 : 17));
         }
         state.hitEffects = state.hitEffects.filter((effect) => now - effect.at < 520);
         for (const effect of state.hitEffects) {
           const age = now - effect.at;
           const alpha = 1 - age / 520;
-          const x = noteColumn(effect.noteId) * laneWidth + laneWidth / 2;
+          const rect = keyRect(effect.noteId);
+          const x = rect.x + rect.width / 2;
           const radius = 8 + age * 0.08;
           ctx.strokeStyle = effect.result === "Great"
             ? `rgba(80, 255, 217, ${alpha})`

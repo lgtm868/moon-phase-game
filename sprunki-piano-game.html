@@ -302,6 +302,10 @@
       inset: 0 1px 1px;
     }
 
+    .black-keys {
+      pointer-events: none;
+    }
+
     .white-keys {
       display: grid;
       grid-template-columns: repeat(14, minmax(0, 1fr));
@@ -330,6 +334,7 @@
       width: calc((100% / 14) * 0.58);
       height: 62%;
       z-index: 4;
+      pointer-events: auto;
       border: 1px solid var(--black-key-edge);
       border-top: 0;
       background: linear-gradient(180deg, #2d3440 0%, var(--black-key) 74%, #07080b 100%);

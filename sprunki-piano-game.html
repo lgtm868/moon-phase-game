@@ -1205,18 +1205,6 @@
           ]
         },
         {
-          id: "scale",
-          name: "Scale",
-          level: 3,
-          bpm: 112,
-          repeats: 3,
-          pattern: [
-            ["C4", 0.5], ["D4", 0.5], ["E4", 0.5], ["F4", 0.5], ["G4", 0.5], ["A4", 0.5], ["B4", 0.5], ["C5", 1.5],
-            [null, 0.5],
-            ["B4", 0.5], ["A4", 0.5], ["G4", 0.5], ["F4", 0.5], ["E4", 0.5], ["D4", 0.5], ["C4", 2]
-          ]
-        },
-        {
           id: "mary",
           name: "Mary",
           level: 1,
@@ -1278,18 +1266,6 @@
             ["A4", 1], ["A4", 1], ["B4", 1.5], ["A4", 0.5], ["A4", 1], ["B4", 1], ["C5", 2],
             ["B4", 1], ["B4", 1], ["A4", 1.5], ["G#4", 0.5], ["A4", 1], ["B4", 1], ["A4", 2],
             [null, 1]
-          ]
-        },
-        {
-          id: "blues",
-          name: "Blues",
-          level: 8,
-          bpm: 118,
-          repeats: 4,
-          pattern: [
-            ["C4", 0.5], ["D#4", 0.5], ["F4", 0.5], ["F#4", 0.5], ["G4", 1], [null, 0.5],
-            ["A#4", 0.5], ["G4", 0.5], ["F4", 0.5], ["D#4", 0.5], ["C4", 1], [null, 0.5],
-            ["C5", 0.5], ["A#4", 0.5], ["G4", 0.5], ["F#4", 0.5], ["F4", 1], [null, 1]
           ]
         },
         {
@@ -1485,27 +1461,13 @@
             ["G#4", 2]
           ]
         },
-        {
-          id: "sprunki",
-          name: "Sprunki",
-          level: 8,
-          bpm: 96,
-          repeats: 3,
-          pattern: [
-            ["C4", 0.5], ["D4", 0.5], ["E4", 1], [null, 0.5], ["G4", 0.5], ["A4", 1], ["G4", 1],
-            ["E4", 0.5], ["D4", 0.5], ["C5", 1], [null, 0.5], ["B4", 0.5], ["A4", 1], ["G4", 1],
-            ["E5", 0.5], ["G5", 0.5], ["A5", 1], [null, 0.5], ["G5", 0.5], ["E5", 1], ["D5", 1],
-            ["C5", 0.5], ["A4", 0.5], ["G4", 1], [null, 1]
-          ]
-        }
       ];
 
       const SONG_CATEGORIES = [
-        { id: "starter", name: "Starter", ids: ["twinkle", "ode", "scale", "mary", "hotcross", "london"] },
+        { id: "starter", name: "Starter", ids: ["twinkle", "ode", "mary", "hotcross", "london"] },
         { id: "classic", name: "Classic", ids: ["canon", "fur-elise", "eine-kleine", "blue-danube", "swan-lake", "nutcracker", "spring", "bach-air", "hallelujah", "william-tell", "bridal-chorus"] },
         { id: "provided", name: "Provided Score", ids: ["anpanman-march-score"] },
-        { id: "style", name: "Style", ids: ["sakura", "blues"] },
-        { id: "sprunki", name: "Sprunki", ids: ["sprunki"] }
+        { id: "traditional", name: "Traditional", ids: ["sakura"] }
       ];
 
       const characters = [
@@ -1863,16 +1825,6 @@
                 judged: false,
                 result: ""
               });
-              if (song.id === "sprunki" && id % 12 === 6) {
-                const harmony = noteId.endsWith("4") ? "C5" : "C4";
-                chart.push({
-                  id: id + 1000,
-                  noteId: harmony,
-                  hitTime: 900 + beat * beatMs,
-                  judged: false,
-                  result: ""
-                });
-              }
               id += 1;
             }
             beat += beats;

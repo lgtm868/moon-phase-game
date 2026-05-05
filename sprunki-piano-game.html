@@ -105,9 +105,9 @@
     }
 
     .hud {
-      min-width: min(360px, 42vw);
+      min-width: min(430px, 48vw);
       display: grid;
-      grid-template-columns: repeat(4, minmax(64px, 1fr));
+      grid-template-columns: repeat(3, minmax(64px, 1fr)) auto;
       gap: 1px;
       overflow: hidden;
     }
@@ -131,6 +131,58 @@
       font-weight: 900;
       line-height: 1;
       font-variant-numeric: tabular-nums;
+      min-width: 4ch;
+      text-align: center;
+    }
+
+    .judge-counts {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 1px;
+      min-height: 34px;
+    }
+
+    .judge-count {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 3px;
+      padding: 5px 6px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .judge-count strong {
+      color: var(--ink);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      min-width: 3ch;
+      text-align: right;
+    }
+
+    .judge-count.perfect strong {
+      color: #ffffff;
+    }
+
+    .judge-count.great strong {
+      color: #50ffd9;
+    }
+
+    .judge-count.good strong {
+      color: #ffc85a;
+    }
+
+    .judge-count.ok strong {
+      color: #d8edf0;
+    }
+
+    .judge-count.miss strong {
+      color: #ff7a7a;
     }
 
     .stage {
@@ -853,6 +905,16 @@
         min-width: 0;
       }
 
+      .judge-count {
+        padding: 4px 3px;
+        font-size: 8px;
+      }
+
+      .judge-count strong {
+        font-size: 11px;
+        min-width: 2ch;
+      }
+
       .menu-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 6px;
@@ -969,8 +1031,14 @@
         <div class="hud-item"><span class="hud-label">Score</span><strong class="hud-value" id="score">0</strong></div>
         <div class="hud-item"><span class="hud-label">Combo</span><strong class="hud-value" id="combo">0</strong></div>
         <div class="hud-item"><span class="hud-label">Best</span><strong class="hud-value" id="best">0</strong></div>
-        <div class="hud-item"><span class="hud-label">Hit</span><strong class="hud-value" id="stats">0/0/0</strong></div>
         <button class="menu-button" id="menuButton" type="button">MENU</button>
+        <div class="judge-counts" id="stats" aria-label="Judgment counts">
+          <div class="judge-count perfect"><span>Perfect</span><strong id="countPerfect">0</strong></div>
+          <div class="judge-count great"><span>Great</span><strong id="countGreat">0</strong></div>
+          <div class="judge-count good"><span>Good</span><strong id="countGood">0</strong></div>
+          <div class="judge-count ok"><span>OK</span><strong id="countOk">0</strong></div>
+          <div class="judge-count miss"><span>Miss</span><strong id="countMiss">0</strong></div>
+        </div>
       </div>
     </section>
 
@@ -1040,7 +1108,11 @@
       const scoreEl = document.getElementById("score");
       const comboEl = document.getElementById("combo");
       const bestEl = document.getElementById("best");
-      const statsEl = document.getElementById("stats");
+      const countPerfectEl = document.getElementById("countPerfect");
+      const countGreatEl = document.getElementById("countGreat");
+      const countGoodEl = document.getElementById("countGood");
+      const countOkEl = document.getElementById("countOk");
+      const countMissEl = document.getElementById("countMiss");
       const feedbackEl = document.getElementById("feedback");
       const resultOverlay = document.getElementById("resultOverlay");
       const resultTitle = document.getElementById("resultTitle");
@@ -1954,7 +2026,11 @@
         scoreEl.textContent = String(state.score);
         comboEl.textContent = String(state.combo);
         bestEl.textContent = String(state.best);
-        statsEl.textContent = `${state.perfect}/${state.great}/${state.good}/${state.ok}/${state.miss}`;
+        countPerfectEl.textContent = String(state.perfect);
+        countGreatEl.textContent = String(state.great);
+        countGoodEl.textContent = String(state.good);
+        countOkEl.textContent = String(state.ok);
+        countMissEl.textContent = String(state.miss);
       }
 
       function showKey(noteId, on) {

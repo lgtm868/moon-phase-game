@@ -190,6 +190,32 @@
       pointer-events: none;
     }
 
+    .judge-zone {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 8px;
+      height: 44px;
+      background:
+        linear-gradient(180deg, transparent, rgba(255, 200, 90, 0.15), transparent),
+        linear-gradient(90deg, transparent, rgba(80, 212, 198, 0.2), transparent);
+      border-top: 1px solid rgba(255, 200, 90, 0.42);
+      border-bottom: 1px solid rgba(255, 200, 90, 0.42);
+      pointer-events: none;
+    }
+
+    .judge-zone::after {
+      content: "HIT";
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255, 248, 220, 0.74);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
     .feedback {
       position: absolute;
       left: 50%;
@@ -214,9 +240,25 @@
       transform: translate(-50%, -4px);
     }
 
+    .feedback.is-great {
+      color: #50ffd9;
+      box-shadow: 0 0 24px rgba(80, 255, 217, 0.42);
+    }
+
+    .feedback.is-good {
+      color: #ffc85a;
+      box-shadow: 0 0 20px rgba(255, 200, 90, 0.35);
+    }
+
+    .feedback.is-bad,
+    .feedback.is-miss {
+      color: #ff7a7a;
+      box-shadow: 0 0 22px rgba(255, 109, 109, 0.38);
+    }
+
     .controls {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: minmax(132px, 1.35fr) repeat(5, minmax(0, 1fr));
       gap: 8px;
     }
 
@@ -248,6 +290,39 @@
     .control-button.secondary {
       background: #d8edf0;
       box-shadow: 0 5px 0 #93b5bc, 0 10px 18px rgba(0, 0, 0, 0.22);
+    }
+
+    .song-control {
+      min-height: 48px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 7px;
+      padding: 5px 7px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-weight: 900;
+    }
+
+    .song-control span {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1;
+    }
+
+    .song-control select {
+      min-width: 0;
+      width: 100%;
+      border: 0;
+      border-radius: 6px;
+      background: #f7f1de;
+      color: #17202b;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 900;
+      padding: 7px 6px;
     }
 
     .control-button:active {
@@ -443,8 +518,12 @@
       }
 
       .controls {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 5px;
+      }
+
+      .song-control {
+        grid-column: 1 / -1;
       }
 
       .character-strip {
@@ -526,11 +605,13 @@
     <section class="stage" id="stage" aria-label="落下ノーツ">
       <canvas id="noteCanvas"></canvas>
       <div class="lane-heads" id="laneHeads" aria-hidden="true"></div>
+      <div class="judge-zone" aria-hidden="true"></div>
       <div class="judge-line" aria-hidden="true"></div>
       <div class="feedback" id="feedback" aria-live="polite">Ready</div>
     </section>
 
     <section class="controls" aria-label="ゲーム操作">
+      <label class="song-control"><span>SONG</span><select id="songSelect"></select></label>
       <button class="control-button" id="startButton" type="button">START</button>
       <button class="control-button secondary" id="pauseButton" type="button">PAUSE</button>
       <button class="control-button secondary" id="resetButton" type="button">RESET</button>
@@ -566,14 +647,13 @@
       const bestEl = document.getElementById("best");
       const statsEl = document.getElementById("stats");
       const feedbackEl = document.getElementById("feedback");
+      const songSelect = document.getElementById("songSelect");
       const startButton = document.getElementById("startButton");
       const pauseButton = document.getElementById("pauseButton");
       const resetButton = document.getElementById("resetButton");
       const soundButton = document.getElementById("soundButton");
       const ctx = noteCanvas.getContext("2d");
 
-      const BPM = 96;
-      const BEAT_MS = 60000 / BPM;
       const TRAVEL_MS = 1800;
       const GREAT_MS = 60;
       const GOOD_MS = 120;
@@ -596,6 +676,41 @@
         ["KeyK", "C5"], ["KeyO", "C#5"], ["KeyL", "D5"], ["KeyP", "D#5"], ["Semicolon", "E5"], ["Quote", "F5"],
         ["BracketRight", "F#5"], ["KeyZ", "G5"], ["KeyX", "G#5"], ["KeyC", "A5"], ["KeyV", "A#5"], ["KeyB", "B5"]
       ]);
+      const SONGS = [
+        {
+          id: "twinkle",
+          name: "Twinkle",
+          bpm: 92,
+          repeats: 3,
+          pattern: ["C4", "C4", "G4", "G4", "A4", "A4", "G4", "F4", "F4", "E4", "E4", "D4", "D4", "C4"]
+        },
+        {
+          id: "ode",
+          name: "Ode",
+          bpm: 104,
+          repeats: 3,
+          pattern: ["E4", "E4", "F4", "G4", "G4", "F4", "E4", "D4", "C4", "C4", "D4", "E4", "E4", "D4", "D4"]
+        },
+        {
+          id: "scale",
+          name: "Scale",
+          bpm: 112,
+          repeats: 4,
+          pattern: ["C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5", "B4", "A4", "G4", "F4", "E4", "D4"]
+        },
+        {
+          id: "sprunki",
+          name: "Sprunki",
+          bpm: 96,
+          repeats: 3,
+          pattern: [
+            "C4", "D4", "E4", "G4", "A4", "G4", "E4", "D4",
+            "C5", "B4", "A4", "G4", "E4", "G4", "A4", "C5",
+            "D5", "E5", "G5", "A5", "G5", "E5", "D5", "C5",
+            "B4", "G4", "A4", "C5", "E5", "D5", "C5", "A4"
+          ]
+        }
+      ];
 
       const characters = [
         { id: "oren", name: "Oren", color: "#ff7900", image: "sprunki-oren.png", audio: "sounds/oren.wav" },
@@ -622,6 +737,7 @@
       let canvasWidth = 0;
       let canvasHeight = 0;
       let selectedCharacter = 0;
+      let selectedSongId = SONGS[0].id;
       let soundEnabled = true;
       let lastFrame = performance.now();
       let lastCoordinateInputAt = 0;
@@ -644,7 +760,9 @@
           good: 0,
           miss: 0,
           feedbackUntil: 0,
-          feedbackText: "Ready"
+          feedbackText: "Ready",
+          feedbackKind: "",
+          hitEffects: []
         };
       }
 
@@ -719,6 +837,17 @@
           });
           characterStrip.appendChild(button);
         });
+      }
+
+      function buildSongSelect() {
+        songSelect.innerHTML = SONGS.map((song) => (
+          `<option value="${song.id}">${song.name}</option>`
+        )).join("");
+        songSelect.value = selectedSongId;
+      }
+
+      function selectedSong() {
+        return SONGS.find((song) => song.id === selectedSongId) || SONGS[0];
       }
 
       function getAudioContext() {
@@ -810,29 +939,26 @@
       }
 
       function makeChart() {
-        const pattern = [
-          "C4", "D4", "E4", "G4", "A4", "G4", "E4", "D4",
-          "C5", "B4", "A4", "G4", "E4", "G4", "A4", "C5",
-          "D5", "E5", "G5", "A5", "G5", "E5", "D5", "C5",
-          "B4", "G4", "A4", "C5", "E5", "D5", "C5", "A4"
-        ];
+        const song = selectedSong();
+        const beatMs = 60000 / song.bpm;
         const chart = [];
-        for (let i = 0; i < 96; i += 1) {
+        const total = song.pattern.length * song.repeats;
+        for (let i = 0; i < total; i += 1) {
           const beat = i * 0.5;
-          const noteId = pattern[i % pattern.length];
+          const noteId = song.pattern[i % song.pattern.length];
           chart.push({
             id: i,
             noteId,
-            hitTime: 900 + beat * BEAT_MS,
+            hitTime: 900 + beat * beatMs,
             judged: false,
             result: ""
           });
-          if (i % 16 === 12) {
+          if (song.id === "sprunki" && i % 16 === 12) {
             const harmony = noteId.endsWith("4") ? "C5" : "C4";
             chart.push({
               id: i + 1000,
               noteId: harmony,
-              hitTime: 900 + beat * BEAT_MS,
+              hitTime: 900 + beat * beatMs,
               judged: false,
               result: ""
             });
@@ -867,6 +993,7 @@
           state.pauseTotal += now - state.pauseAt;
           state.paused = false;
           state.feedbackText = "Resume";
+          state.feedbackKind = "good";
           state.feedbackUntil = now + 600;
         } else {
           state = makeInitialState();
@@ -874,7 +1001,8 @@
           state.running = true;
           state.paused = false;
           state.startAt = performance.now();
-          state.feedbackText = "Go";
+          state.feedbackText = `${selectedSong().name} Go`;
+          state.feedbackKind = "good";
           state.feedbackUntil = performance.now() + 700;
         }
         startButton.textContent = "RESTART";
@@ -892,6 +1020,7 @@
         state.pauseAt = performance.now();
         pauseButton.textContent = "RESUME";
         state.feedbackText = "Pause";
+        state.feedbackKind = "";
         state.feedbackUntil = performance.now() + 600;
       }
 
@@ -931,9 +1060,16 @@
             target = note;
           }
         }
-        if (!target || bestDelta > GOOD_MS) return;
+        if (!target || bestDelta > GOOD_MS) {
+          state.feedbackText = target && currentTime < target.hitTime ? "Too Early" : "Wrong";
+          state.feedbackKind = "bad";
+          state.feedbackUntil = inputTime + 320;
+          return;
+        }
+        const signedDelta = Math.round(currentTime - target.hitTime);
         target.judged = true;
         target.result = bestDelta <= GREAT_MS ? "Great" : "Good";
+        target.delta = signedDelta;
         if (target.result === "Great") {
           state.score += 100;
           state.great += 1;
@@ -943,8 +1079,10 @@
         }
         state.combo += 1;
         state.best = Math.max(state.best, state.combo);
-        state.feedbackText = target.result;
+        state.feedbackText = `${target.result} ${signedDelta >= 0 ? "+" : ""}${signedDelta}ms`;
+        state.feedbackKind = target.result.toLowerCase();
         state.feedbackUntil = inputTime + 420;
+        state.hitEffects.push({ noteId, result: target.result, at: inputTime });
         playCharacterHit();
         updateHud();
       }
@@ -960,13 +1098,16 @@
             state.combo = 0;
             state.miss += 1;
             state.feedbackText = "Miss";
+            state.feedbackKind = "miss";
             state.feedbackUntil = now + 360;
+            state.hitEffects.push({ noteId: note.noteId, result: "Miss", at: now });
           }
         }
         const lastNote = state.chart[state.chart.length - 1];
         if (lastNote && currentTime > lastNote.hitTime + 2300 && state.chart.every((note) => note.judged)) {
           state.running = false;
           state.feedbackText = "Finish";
+          state.feedbackKind = "good";
           state.feedbackUntil = now + 1200;
           startButton.textContent = "START";
         }
@@ -1082,6 +1223,18 @@
         const laneWidth = canvasWidth / notes.length;
         const hitY = canvasHeight - 20;
         ctx.save();
+        const goodPixels = (GOOD_MS / TRAVEL_MS) * hitY;
+        const greatPixels = (GREAT_MS / TRAVEL_MS) * hitY;
+        ctx.fillStyle = "rgba(255, 200, 90, 0.13)";
+        ctx.fillRect(0, hitY - goodPixels, canvasWidth, goodPixels * 2);
+        ctx.fillStyle = "rgba(80, 255, 217, 0.17)";
+        ctx.fillRect(0, hitY - greatPixels, canvasWidth, greatPixels * 2);
+        ctx.fillStyle = "rgba(247, 241, 222, 0.72)";
+        ctx.font = "900 11px system-ui, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText("GOOD", 8, hitY - goodPixels - 8);
+        ctx.fillText("GREAT", 8, hitY);
         for (const chartNote of state.chart) {
           if (chartNote.judged) continue;
           const timeUntilHit = chartNote.hitTime - currentTime;
@@ -1091,17 +1244,37 @@
           const y = progress * hitY - 18;
           const note = noteById.get(chartNote.noteId);
           const character = characters[(chartNote.id + selectedCharacter) % characters.length];
-          ctx.fillStyle = note.isBlack ? "#232936" : character.color;
+          const closeness = Math.max(0, 1 - Math.abs(timeUntilHit) / GOOD_MS);
+          ctx.fillStyle = Math.abs(timeUntilHit) <= GREAT_MS ? "#50ffd9" : (note.isBlack ? "#232936" : character.color);
           ctx.strokeStyle = note.isBlack ? "rgba(247, 241, 222, 0.55)" : "rgba(17, 21, 29, 0.5)";
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = 1.5 + closeness * 2.5;
+          ctx.shadowColor = Math.abs(timeUntilHit) <= GOOD_MS ? "rgba(80, 255, 217, 0.75)" : "transparent";
+          ctx.shadowBlur = Math.abs(timeUntilHit) <= GOOD_MS ? 12 : 0;
           roundedRect(ctx, x + 2, y, Math.max(8, laneWidth - 4), 24, 6);
           ctx.fill();
           ctx.stroke();
+          ctx.shadowBlur = 0;
           ctx.fillStyle = note.isBlack ? "#f7f1de" : "#11151d";
           ctx.font = "900 10px system-ui, sans-serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(chartNote.noteId.replace("#", "♯"), x + laneWidth / 2, y + 12);
+        }
+        state.hitEffects = state.hitEffects.filter((effect) => now - effect.at < 520);
+        for (const effect of state.hitEffects) {
+          const age = now - effect.at;
+          const alpha = 1 - age / 520;
+          const x = noteColumn(effect.noteId) * laneWidth + laneWidth / 2;
+          const radius = 8 + age * 0.08;
+          ctx.strokeStyle = effect.result === "Great"
+            ? `rgba(80, 255, 217, ${alpha})`
+            : effect.result === "Good"
+              ? `rgba(255, 200, 90, ${alpha})`
+              : `rgba(255, 109, 109, ${alpha})`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(x, hitY, radius, 0, Math.PI * 2);
+          ctx.stroke();
         }
         ctx.restore();
       }
@@ -1122,9 +1295,11 @@
 
       function draw(now = performance.now()) {
         drawNotes(now);
+        feedbackEl.classList.remove("is-great", "is-good", "is-bad", "is-miss");
         if (now < state.feedbackUntil) {
           feedbackEl.textContent = state.feedbackText;
           feedbackEl.classList.add("is-live");
+          if (state.feedbackKind) feedbackEl.classList.add(`is-${state.feedbackKind}`);
         } else {
           feedbackEl.classList.remove("is-live");
         }
@@ -1141,6 +1316,7 @@
 
       buildKeyboard();
       buildCharacters();
+      buildSongSelect();
       updateSoundButton();
       updateHud();
       resizeCanvas();
@@ -1149,6 +1325,13 @@
       startButton.addEventListener("click", startGame);
       pauseButton.addEventListener("click", pauseGame);
       resetButton.addEventListener("click", resetGame);
+      songSelect.addEventListener("change", () => {
+        selectedSongId = songSelect.value;
+        resetGame();
+        state.feedbackText = `${selectedSong().name} Ready`;
+        state.feedbackKind = "";
+        state.feedbackUntil = performance.now() + 900;
+      });
       piano.addEventListener("pointerdown", handlePointerDown);
       piano.addEventListener("pointerup", handlePointerUp);
       piano.addEventListener("pointercancel", handlePointerCancel);

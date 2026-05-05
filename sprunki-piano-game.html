@@ -295,7 +295,7 @@
     .song-control {
       min-height: 48px;
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
       gap: 7px;
       padding: 5px 7px;
@@ -323,6 +323,28 @@
       font-size: 13px;
       font-weight: 900;
       padding: 7px 6px;
+    }
+
+    .difficulty-pill {
+      min-width: 52px;
+      padding: 7px 6px;
+      border-radius: 6px;
+      background: #50d4c6;
+      color: #102125;
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .difficulty-pill[data-difficulty="normal"] {
+      background: #ffc85a;
+      color: #2f2208;
+    }
+
+    .difficulty-pill[data-difficulty="hard"] {
+      background: #ff6d6d;
+      color: #2b0b0b;
     }
 
     .control-button:active {
@@ -611,7 +633,7 @@
     </section>
 
     <section class="controls" aria-label="ゲーム操作">
-      <label class="song-control"><span>SONG</span><select id="songSelect"></select></label>
+      <label class="song-control"><span>SONG</span><select id="songSelect"></select><strong class="difficulty-pill" id="difficultyLabel">Easy</strong></label>
       <button class="control-button" id="startButton" type="button">START</button>
       <button class="control-button secondary" id="pauseButton" type="button">PAUSE</button>
       <button class="control-button secondary" id="resetButton" type="button">RESET</button>
@@ -648,6 +670,7 @@
       const statsEl = document.getElementById("stats");
       const feedbackEl = document.getElementById("feedback");
       const songSelect = document.getElementById("songSelect");
+      const difficultyLabel = document.getElementById("difficultyLabel");
       const startButton = document.getElementById("startButton");
       const pauseButton = document.getElementById("pauseButton");
       const resetButton = document.getElementById("resetButton");
@@ -680,6 +703,7 @@
         {
           id: "twinkle",
           name: "Twinkle",
+          difficulty: "Easy",
           bpm: 92,
           repeats: 2,
           pattern: [
@@ -692,6 +716,7 @@
         {
           id: "ode",
           name: "Ode",
+          difficulty: "Easy",
           bpm: 104,
           repeats: 2,
           pattern: [
@@ -704,6 +729,7 @@
         {
           id: "scale",
           name: "Scale",
+          difficulty: "Normal",
           bpm: 112,
           repeats: 3,
           pattern: [
@@ -713,8 +739,85 @@
           ]
         },
         {
+          id: "mary",
+          name: "Mary",
+          difficulty: "Easy",
+          bpm: 96,
+          repeats: 3,
+          pattern: [
+            ["E4", 1], ["D4", 1], ["C4", 1], ["D4", 1], ["E4", 1], ["E4", 1], ["E4", 2],
+            ["D4", 1], ["D4", 1], ["D4", 2], ["E4", 1], ["G4", 1], ["G4", 2],
+            ["E4", 1], ["D4", 1], ["C4", 1], ["D4", 1], ["E4", 1], ["E4", 1], ["E4", 1], ["E4", 1],
+            ["D4", 1], ["D4", 1], ["E4", 1], ["D4", 1], ["C4", 2]
+          ]
+        },
+        {
+          id: "hotcross",
+          name: "Hot Cross",
+          difficulty: "Easy",
+          bpm: 88,
+          repeats: 4,
+          pattern: [
+            ["E4", 1], ["D4", 1], ["C4", 2],
+            ["E4", 1], ["D4", 1], ["C4", 2],
+            ["C4", 0.5], ["C4", 0.5], ["C4", 0.5], ["C4", 0.5],
+            ["D4", 0.5], ["D4", 0.5], ["D4", 0.5], ["D4", 0.5],
+            ["E4", 1], ["D4", 1], ["C4", 2]
+          ]
+        },
+        {
+          id: "london",
+          name: "London",
+          difficulty: "Normal",
+          bpm: 108,
+          repeats: 3,
+          pattern: [
+            ["G4", 1], ["A4", 1], ["G4", 1], ["F4", 1], ["E4", 1], ["F4", 1], ["G4", 2],
+            ["D4", 1], ["E4", 1], ["F4", 2], ["E4", 1], ["F4", 1], ["G4", 2],
+            ["G4", 1], ["A4", 1], ["G4", 1], ["F4", 1], ["E4", 1], ["F4", 1], ["G4", 2],
+            ["D4", 2], ["G4", 2], ["E4", 1], ["C4", 1], ["C4", 2]
+          ]
+        },
+        {
+          id: "canon",
+          name: "Canon",
+          difficulty: "Normal",
+          bpm: 100,
+          repeats: 3,
+          pattern: [
+            ["D4", 0.5], ["A4", 0.5], ["B4", 0.5], ["F#4", 0.5], ["G4", 0.5], ["D4", 0.5], ["G4", 0.5], ["A4", 0.5],
+            ["D5", 0.5], ["C#5", 0.5], ["B4", 0.5], ["A4", 0.5], ["G4", 0.5], ["F#4", 0.5], ["G4", 0.5], ["A4", 0.5],
+            [null, 1]
+          ]
+        },
+        {
+          id: "sakura",
+          name: "Sakura",
+          difficulty: "Hard",
+          bpm: 84,
+          repeats: 3,
+          pattern: [
+            ["A4", 1], ["A4", 1], ["B4", 1.5], ["A4", 0.5], ["A4", 1], ["B4", 1], ["C5", 2],
+            ["B4", 1], ["B4", 1], ["A4", 1.5], ["G#4", 0.5], ["A4", 1], ["B4", 1], ["A4", 2],
+            [null, 1]
+          ]
+        },
+        {
+          id: "blues",
+          name: "Blues",
+          difficulty: "Hard",
+          bpm: 118,
+          repeats: 4,
+          pattern: [
+            ["C4", 0.5], ["D#4", 0.5], ["F4", 0.5], ["F#4", 0.5], ["G4", 1], [null, 0.5],
+            ["A#4", 0.5], ["G4", 0.5], ["F4", 0.5], ["D#4", 0.5], ["C4", 1], [null, 0.5],
+            ["C5", 0.5], ["A#4", 0.5], ["G4", 0.5], ["F#4", 0.5], ["F4", 1], [null, 1]
+          ]
+        },
+        {
           id: "sprunki",
           name: "Sprunki",
+          difficulty: "Hard",
           bpm: 96,
           repeats: 3,
           pattern: [
@@ -727,14 +830,14 @@
       ];
 
       const characters = [
-        { id: "oren", name: "Oren", color: "#ff7900", image: "sprunki-oren.png", audio: "sounds/oren.wav" },
-        { id: "raddy", name: "Raddy", color: "#f51414", image: "sprunki-raddy.png", audio: "sounds/raddy.wav" },
-        { id: "clukr", name: "Clukr", color: "#b9bec4", image: "sprunki-clukr.png", audio: "sounds/clukr.wav" },
-        { id: "funbot", name: "Fun Bot", color: "#ffd33d", image: "sprunki-funbot.png", audio: "sounds/funbot.wav" },
-        { id: "vineria", name: "Vineria", color: "#58d947", image: "sprunki-vineria.png", audio: "sounds/vineria.wav" },
-        { id: "gray", name: "Gray", color: "#6f737a", image: "sprunki-gray.png", audio: "sounds/gray.wav" },
-        { id: "sky", name: "Sky", color: "#71c9ff", image: "sprunki-sky.png", audio: "sounds/sky.wav" },
-        { id: "simon", name: "Simon", color: "#ffe054", image: "sprunki-simon.png", audio: "sounds/simon.wav" }
+        { id: "oren", name: "Oren", color: "#ff7900", image: "sprunki-oren.png", audio: "sounds/oren.wav", timbre: { low: "triangle", high: "sine", detune: 2, filter: 2400, decay: 0.72, gain: 0.18 } },
+        { id: "raddy", name: "Raddy", color: "#f51414", image: "sprunki-raddy.png", audio: "sounds/raddy.wav", timbre: { low: "sawtooth", high: "square", detune: -5, filter: 1700, decay: 0.46, gain: 0.13 } },
+        { id: "clukr", name: "Clukr", color: "#b9bec4", image: "sprunki-clukr.png", audio: "sounds/clukr.wav", timbre: { low: "square", high: "triangle", detune: 7, filter: 1300, decay: 0.38, gain: 0.12 } },
+        { id: "funbot", name: "Fun Bot", color: "#ffd33d", image: "sprunki-funbot.png", audio: "sounds/funbot.wav", timbre: { low: "square", high: "square", detune: 12, filter: 2600, decay: 0.3, gain: 0.11 } },
+        { id: "vineria", name: "Vineria", color: "#58d947", image: "sprunki-vineria.png", audio: "sounds/vineria.wav", timbre: { low: "sine", high: "triangle", detune: -9, filter: 2100, decay: 0.92, gain: 0.16 } },
+        { id: "gray", name: "Gray", color: "#6f737a", image: "sprunki-gray.png", audio: "sounds/gray.wav", timbre: { low: "triangle", high: "triangle", detune: -14, filter: 950, decay: 1.05, gain: 0.15 } },
+        { id: "sky", name: "Sky", color: "#71c9ff", image: "sprunki-sky.png", audio: "sounds/sky.wav", timbre: { low: "sine", high: "sine", detune: 16, filter: 3200, decay: 0.82, gain: 0.14 } },
+        { id: "simon", name: "Simon", color: "#ffe054", image: "sprunki-simon.png", audio: "sounds/simon.wav", timbre: { low: "triangle", high: "sine", detune: 0, filter: 2800, decay: 0.65, gain: 0.2 } }
       ];
 
       const notes = [];
@@ -855,13 +958,20 @@
 
       function buildSongSelect() {
         songSelect.innerHTML = SONGS.map((song) => (
-          `<option value="${song.id}">${song.name}</option>`
+          `<option value="${song.id}">${song.name} (${song.difficulty})</option>`
         )).join("");
         songSelect.value = selectedSongId;
+        updateDifficultyLabel();
       }
 
       function selectedSong() {
         return SONGS.find((song) => song.id === selectedSongId) || SONGS[0];
+      }
+
+      function updateDifficultyLabel() {
+        const difficulty = selectedSong().difficulty;
+        difficultyLabel.textContent = difficulty;
+        difficultyLabel.dataset.difficulty = difficulty.toLowerCase();
       }
 
       function getAudioContext() {
@@ -895,24 +1005,27 @@
           const low = context.createOscillator();
           const high = context.createOscillator();
           const filter = context.createBiquadFilter();
-          low.type = "triangle";
-          high.type = "sine";
+          const timbre = characters[selectedCharacter].timbre;
+          low.type = timbre.low;
+          high.type = timbre.high;
           low.frequency.setValueAtTime(note.frequency, now);
           high.frequency.setValueAtTime(note.frequency * 2.01, now);
+          low.detune.setValueAtTime(timbre.detune, now);
+          high.detune.setValueAtTime(-timbre.detune * 0.6, now);
           filter.type = "lowpass";
-          filter.frequency.setValueAtTime(2400, now);
-          filter.frequency.exponentialRampToValueAtTime(620, now + 0.45);
+          filter.frequency.setValueAtTime(timbre.filter, now);
+          filter.frequency.exponentialRampToValueAtTime(Math.max(420, timbre.filter * 0.28), now + 0.45);
           master.gain.setValueAtTime(0.0001, now);
-          master.gain.exponentialRampToValueAtTime(0.18 * velocity, now + 0.012);
-          master.gain.exponentialRampToValueAtTime(0.055 * velocity, now + 0.16);
-          master.gain.exponentialRampToValueAtTime(0.0001, now + 0.72);
+          master.gain.exponentialRampToValueAtTime(timbre.gain * velocity, now + 0.012);
+          master.gain.exponentialRampToValueAtTime(timbre.gain * 0.32 * velocity, now + 0.16);
+          master.gain.exponentialRampToValueAtTime(0.0001, now + timbre.decay);
           low.connect(filter);
           high.connect(filter);
           filter.connect(master).connect(context.destination);
           low.start(now);
           high.start(now);
-          low.stop(now + 0.75);
-          high.stop(now + 0.75);
+          low.stop(now + timbre.decay + 0.04);
+          high.stop(now + timbre.decay + 0.04);
         } catch (error) {
           soundEnabled = false;
           updateSoundButton();
@@ -1382,6 +1495,7 @@
       resetButton.addEventListener("click", resetGame);
       songSelect.addEventListener("change", () => {
         selectedSongId = songSelect.value;
+        updateDifficultyLabel();
         resetGame();
         state.feedbackText = `${selectedSong().name} Ready`;
         state.feedbackKind = "";

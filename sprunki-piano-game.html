@@ -623,6 +623,7 @@
       let selectedCharacter = 0;
       let soundEnabled = true;
       let lastFrame = performance.now();
+      let lastCoordinateInputAt = 0;
       let state = makeInitialState();
 
       function makeInitialState() {
@@ -981,10 +982,10 @@
         judgeNote(noteId, now);
       }
 
-      function noteFromPointer(event) {
+      function noteFromClientPoint(clientX, clientY) {
         const bounds = piano.getBoundingClientRect();
-        const x = Math.min(Math.max(event.clientX - bounds.left, 0), bounds.width - 1);
-        const y = Math.min(Math.max(event.clientY - bounds.top, 0), bounds.height - 1);
+        const x = Math.min(Math.max(clientX - bounds.left, 0), bounds.width - 1);
+        const y = Math.min(Math.max(clientY - bounds.top, 0), bounds.height - 1);
         const whiteWidth = bounds.width / whiteNotes.length;
         if (y <= bounds.height * 0.62) {
           const blackWidth = whiteWidth * 0.58;
@@ -999,13 +1000,49 @@
         return whiteNotes[whiteIndex]?.id || null;
       }
 
+      function noteFromPointer(event) {
+        return noteFromClientPoint(event.clientX, event.clientY);
+      }
+
+      function playCoordinateInput(clientX, clientY, event, force = false) {
+        const now = performance.now();
+        if (!force && now - lastCoordinateInputAt < 80) return;
+        const noteId = noteFromClientPoint(clientX, clientY);
+        if (!noteId) return;
+        lastCoordinateInputAt = now;
+        activePointers.set(event.pointerId ?? `fallback-${now}`, noteId);
+        playInput(noteId, now);
+        event.preventDefault?.();
+      }
+
       function handlePointerDown(event) {
+        const now = performance.now();
+        if (now - lastCoordinateInputAt < 80) {
+          event.preventDefault();
+          return;
+        }
         const noteId = noteFromPointer(event);
         if (!noteId) return;
         piano.setPointerCapture?.(event.pointerId);
+        lastCoordinateInputAt = now;
         activePointers.set(event.pointerId, noteId);
-        playInput(noteId, performance.now());
+        playInput(noteId, now);
         event.preventDefault();
+      }
+
+      function handleMouseDown(event) {
+        if (event.button !== 0) return;
+        playCoordinateInput(event.clientX, event.clientY, event);
+      }
+
+      function handleClick(event) {
+        playCoordinateInput(event.clientX, event.clientY, event);
+      }
+
+      function handleTouchStart(event) {
+        for (const touch of Array.from(event.changedTouches || [])) {
+          playCoordinateInput(touch.clientX, touch.clientY, event, true);
+        }
       }
 
       function handlePointerUp(event) {
@@ -1101,6 +1138,9 @@
       piano.addEventListener("pointerup", handlePointerUp);
       piano.addEventListener("pointercancel", handlePointerCancel);
       piano.addEventListener("pointerleave", handlePointerCancel);
+      piano.addEventListener("mousedown", handleMouseDown);
+      piano.addEventListener("click", handleClick);
+      piano.addEventListener("touchstart", handleTouchStart, { passive: false });
       soundButton.addEventListener("click", () => {
         soundEnabled = !soundEnabled;
         updateSoundButton();

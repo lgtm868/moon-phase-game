@@ -2224,13 +2224,6 @@
             ctx.fillRect(noteX + 3, noteY + noteH - 5, Math.max(2, noteW - 6), 2);
           }
           ctx.shadowBlur = 0;
-          ctx.fillStyle = note.isBlack ? "#f7f1de" : "#11151d";
-          ctx.font = "900 9px system-ui, sans-serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(note.isBlack ? "BLACK" : "WHITE", x + rect.width / 2, y + 9);
-          ctx.font = "900 10px system-ui, sans-serif";
-          ctx.fillText(chartNote.noteId.replace("#", "♯"), x + rect.width / 2, y + (note.isBlack ? 22 : 17));
         }
         state.hitEffects = state.hitEffects.filter((effect) => now - effect.at < 520);
         for (const effect of state.hitEffects) {

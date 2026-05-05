@@ -140,7 +140,7 @@
       <button class="tab" type="button" data-game="piano" aria-pressed="false">PIANO</button>
     </nav>
   </header>
-  <iframe class="game-frame" id="gameFrame" title="Selected game" src="moon-phase-game.html"></iframe>
+  <iframe class="game-frame" id="gameFrame" title="Selected game" src="moon-phase-game.html" allow="autoplay"></iframe>
 
   <script>
     (() => {
@@ -161,7 +161,10 @@
 
       function selectGame(game, replace = false) {
         const target = games[game] ? game : "moon";
-        frame.src = games[target].src;
+        const currentSrc = frame.getAttribute("src");
+        if (currentSrc !== games[target].src) {
+          frame.src = games[target].src;
+        }
         status.textContent = games[target].title;
         tabs.forEach((tab) => {
           const isActive = tab.dataset.game === target;

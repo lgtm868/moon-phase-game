@@ -115,6 +115,14 @@
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--panel);
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .phase-strip:focus-visible {
+      outline: 3px solid rgba(255, 241, 169, 0.82);
+      outline-offset: 3px;
     }
 
     #phaseMoon {
@@ -347,7 +355,7 @@
       <canvas id="space"></canvas>
     </section>
 
-    <section class="phase-strip" aria-live="polite">
+    <section class="phase-strip" id="phaseSummary" aria-live="polite" role="button" tabindex="0">
       <canvas id="phaseMoon" width="240" height="240" aria-label="地球から見える月"></canvas>
       <div class="phase-copy">
         <div class="small-label">つきの なまえ</div>
@@ -386,6 +394,7 @@
 
       const space = document.getElementById("space");
       const phaseMoon = document.getElementById("phaseMoon");
+      const phaseSummary = document.getElementById("phaseSummary");
       const phaseName = document.getElementById("phaseName");
       const phaseMessage = document.getElementById("phaseMessage");
       const playButton = document.getElementById("playButton");
@@ -1699,10 +1708,16 @@
         const label = phaseLabels[index];
         phaseName.textContent = label.name;
         phaseMessage.textContent = label.message;
+        phaseSummary.setAttribute("aria-label", `${label.name}を読み上げる`);
         phaseList.querySelectorAll(".phase-choice").forEach((button, buttonIndex) => {
           button.classList.toggle("is-active", buttonIndex === index);
           button.setAttribute("aria-pressed", buttonIndex === index ? "true" : "false");
         });
+      }
+
+      function speakCurrentPhaseName() {
+        playTone();
+        speakJapanese(phaseLabels[currentIndex()].name);
       }
 
       function buildPhasePicker() {
@@ -1873,6 +1888,12 @@
       window.addEventListener("resize", resize, { passive: true });
       window.addEventListener("orientationchange", () => setTimeout(resize, 150), { passive: true });
       space.addEventListener("click", handleSceneTap);
+      phaseSummary.addEventListener("click", speakCurrentPhaseName);
+      phaseSummary.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        speakCurrentPhaseName();
+      });
 
       buildPhasePicker();
       buildSprunkiPicker();

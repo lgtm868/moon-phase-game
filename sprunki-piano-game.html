@@ -1399,6 +1399,7 @@
           bpm: 95,
           repeats: 1,
           source: "user-provided MIDI: anpanman_no_march.mid",
+          strictTone: true,
           pattern: [
             ["C5", 0.5], ["C5", 0.5], ["G#4", 1], ["F4", 0.25], ["E4", 0.25], ["F4", 0.25], ["G4", 0.25], ["G#4", 0.5],
             ["F4", 0.5], ["A#4", 0.75], ["C5", 0.25], ["A#4", 0.5], ["G#4", 0.5], ["G4", 0.5], ["F4", 0.5], ["D#4", 1],
@@ -1480,6 +1481,7 @@
         { id: "sky", name: "Sky", color: "#71c9ff", image: "sprunki-sky.png", audio: "sounds/sky.wav", timbre: { low: "sine", high: "sine", detune: 16, filter: 3200, decay: 0.82, gain: 0.14 } },
         { id: "simon", name: "Simon", color: "#ffe054", image: "sprunki-simon.png", audio: "sounds/simon.wav", timbre: { low: "triangle", high: "sine", detune: 0, filter: 2800, decay: 0.65, gain: 0.2 } }
       ];
+      const strictSongTimbre = { low: "triangle", high: "sine", detune: 0, filter: 2600, decay: 0.34, gain: 0.15, highRatio: 2 };
 
       const notes = [];
       const whiteNotes = [];
@@ -1749,16 +1751,18 @@
           const low = context.createOscillator();
           const high = context.createOscillator();
           const filter = context.createBiquadFilter();
-          const timbre = characters[selectedCharacter].timbre;
+          const song = selectedSong();
+          const strictTone = song && song.strictTone === true;
+          const timbre = strictTone ? strictSongTimbre : characters[selectedCharacter].timbre;
           low.type = timbre.low;
           high.type = timbre.high;
           low.frequency.setValueAtTime(note.frequency, now);
-          high.frequency.setValueAtTime(note.frequency * 2.01, now);
+          high.frequency.setValueAtTime(note.frequency * (timbre.highRatio || 2.01), now);
           low.detune.setValueAtTime(timbre.detune, now);
-          high.detune.setValueAtTime(-timbre.detune * 0.6, now);
+          high.detune.setValueAtTime(strictTone ? 0 : -timbre.detune * 0.6, now);
           filter.type = "lowpass";
           filter.frequency.setValueAtTime(timbre.filter, now);
-          filter.frequency.exponentialRampToValueAtTime(Math.max(420, timbre.filter * 0.28), now + 0.45);
+          filter.frequency.exponentialRampToValueAtTime(Math.max(420, timbre.filter * 0.28), now + Math.min(0.45, timbre.decay));
           master.gain.setValueAtTime(0.0001, now);
           master.gain.exponentialRampToValueAtTime(timbre.gain * velocity, now + 0.012);
           master.gain.exponentialRampToValueAtTime(timbre.gain * 0.32 * velocity, now + 0.16);
@@ -1993,7 +1997,9 @@
         state.feedbackKind = judgment.kind;
         state.feedbackUntil = inputTime + 420;
         state.hitEffects.push({ noteId, result: target.result, at: inputTime });
-        playCharacterHit();
+        if (!selectedSong().strictTone) {
+          playCharacterHit();
+        }
         updateHud();
       }
 

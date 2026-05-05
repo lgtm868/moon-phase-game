@@ -245,9 +245,19 @@
       box-shadow: 0 0 24px rgba(80, 255, 217, 0.42);
     }
 
+    .feedback.is-perfect {
+      color: #ffffff;
+      box-shadow: 0 0 26px rgba(255, 255, 255, 0.48), 0 0 34px rgba(80, 255, 217, 0.34);
+    }
+
     .feedback.is-good {
       color: #ffc85a;
       box-shadow: 0 0 20px rgba(255, 200, 90, 0.35);
+    }
+
+    .feedback.is-ok {
+      color: #d8edf0;
+      box-shadow: 0 0 18px rgba(216, 237, 240, 0.26);
     }
 
     .feedback.is-bad,
@@ -1054,9 +1064,17 @@
       const ctx = noteCanvas.getContext("2d");
 
       const TRAVEL_MS = 1800;
-      const GREAT_MS = 60;
-      const GOOD_MS = 120;
+      const PERFECT_MS = 28;
+      const GREAT_MS = 55;
+      const GOOD_MS = 90;
+      const OK_MS = 135;
       const MISS_GRACE_MS = 150;
+      const JUDGMENTS = {
+        Perfect: { score: 120, count: "perfect", kind: "perfect" },
+        Great: { score: 100, count: "great", kind: "great" },
+        Good: { score: 70, count: "good", kind: "good" },
+        OK: { score: 30, count: "ok", kind: "ok" }
+      };
       const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
       const FLAT_NAMES = { "C#": "Db", "D#": "Eb", "F#": "Gb", "G#": "Ab", "A#": "Bb" };
       const BLACK_KEY_BOUNDARIES = new Map([
@@ -1416,8 +1434,10 @@
           score: 0,
           combo: 0,
           best: 0,
+          perfect: 0,
           great: 0,
           good: 0,
+          ok: 0,
           miss: 0,
           feedbackUntil: 0,
           feedbackText: "Ready",
@@ -1816,7 +1836,7 @@
       function showResult() {
         if (state.resultShown) return;
         state.resultShown = true;
-        const totalHits = state.great + state.good;
+        const totalHits = state.perfect + state.great + state.good + state.ok;
         const totalNotes = Math.max(1, state.chart.length);
         const hitRate = Math.round((totalHits / totalNotes) * 100);
         const cleared = hitRate >= 70 && state.miss <= Math.max(3, Math.floor(totalNotes * 0.25));
@@ -1824,7 +1844,7 @@
         resultDetail.innerHTML = [
           `<span>Song</span> ${selectedSong().name} / Lv.${selectedSong().level}`,
           `<span>Score</span> ${state.score}`,
-          `<span>Hit</span> ${hitRate}%  Great ${state.great}  Good ${state.good}  Miss ${state.miss}`,
+          `<span>Hit</span> ${hitRate}%  Perfect ${state.perfect}  Great ${state.great}  Good ${state.good}  OK ${state.ok}  Miss ${state.miss}`,
           `<span>Best Combo</span> ${state.best}`
         ].join("<br>");
         resultOverlay.classList.toggle("is-clear", cleared);
@@ -1875,27 +1895,30 @@
             target = note;
           }
         }
-        if (!target || bestDelta > GOOD_MS) {
+        if (!target || bestDelta > OK_MS) {
           state.feedbackText = target && currentTime < target.hitTime ? "Too Early" : "Wrong";
           state.feedbackKind = "bad";
           state.feedbackUntil = inputTime + 320;
           return;
         }
         const signedDelta = Math.round(currentTime - target.hitTime);
+        const result = bestDelta <= PERFECT_MS
+          ? "Perfect"
+          : bestDelta <= GREAT_MS
+            ? "Great"
+            : bestDelta <= GOOD_MS
+              ? "Good"
+              : "OK";
+        const judgment = JUDGMENTS[result];
         target.judged = true;
-        target.result = bestDelta <= GREAT_MS ? "Great" : "Good";
+        target.result = result;
         target.delta = signedDelta;
-        if (target.result === "Great") {
-          state.score += 100;
-          state.great += 1;
-        } else {
-          state.score += 50;
-          state.good += 1;
-        }
+        state.score += judgment.score;
+        state[judgment.count] += 1;
         state.combo += 1;
         state.best = Math.max(state.best, state.combo);
         state.feedbackText = `${target.result} ${signedDelta >= 0 ? "+" : ""}${signedDelta}ms`;
-        state.feedbackKind = target.result.toLowerCase();
+        state.feedbackKind = judgment.kind;
         state.feedbackUntil = inputTime + 420;
         state.hitEffects.push({ noteId, result: target.result, at: inputTime });
         playCharacterHit();
@@ -1931,7 +1954,7 @@
         scoreEl.textContent = String(state.score);
         comboEl.textContent = String(state.combo);
         bestEl.textContent = String(state.best);
-        statsEl.textContent = `${state.great}/${state.good}/${state.miss}`;
+        statsEl.textContent = `${state.perfect}/${state.great}/${state.good}/${state.ok}/${state.miss}`;
       }
 
       function showKey(noteId, on) {
@@ -2068,17 +2091,13 @@
         const laneWidth = canvasWidth / notes.length;
         const hitY = canvasHeight - 20;
         ctx.save();
-        const goodPixels = (GOOD_MS / TRAVEL_MS) * hitY;
         const greatPixels = (GREAT_MS / TRAVEL_MS) * hitY;
-        ctx.fillStyle = "rgba(255, 200, 90, 0.13)";
-        ctx.fillRect(0, hitY - goodPixels, canvasWidth, goodPixels * 2);
         ctx.fillStyle = "rgba(80, 255, 217, 0.17)";
         ctx.fillRect(0, hitY - greatPixels, canvasWidth, greatPixels * 2);
         ctx.fillStyle = "rgba(247, 241, 222, 0.72)";
         ctx.font = "900 11px system-ui, sans-serif";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText("GOOD", 8, hitY - goodPixels - 8);
         ctx.fillText("GREAT", 8, hitY);
         for (const chartNote of state.chart) {
           if (chartNote.judged) continue;
@@ -2090,7 +2109,7 @@
           const y = progress * hitY - 18;
           const note = noteById.get(chartNote.noteId);
           const character = characters[(chartNote.id + selectedCharacter) % characters.length];
-          const closeness = Math.max(0, 1 - Math.abs(timeUntilHit) / GOOD_MS);
+          const closeness = Math.max(0, 1 - Math.abs(timeUntilHit) / OK_MS);
           const inset = note.isBlack ? 0 : 1;
           const noteX = x + inset;
           const noteY = y;
@@ -2103,8 +2122,8 @@
               : "#fffaf0";
           ctx.strokeStyle = note.isBlack ? "rgba(80, 255, 217, 0.92)" : character.color;
           ctx.lineWidth = 1.5 + closeness * 2.5;
-          ctx.shadowColor = Math.abs(timeUntilHit) <= GOOD_MS ? "rgba(80, 255, 217, 0.75)" : "transparent";
-          ctx.shadowBlur = Math.abs(timeUntilHit) <= GOOD_MS ? 12 : 0;
+          ctx.shadowColor = Math.abs(timeUntilHit) <= OK_MS ? "rgba(80, 255, 217, 0.75)" : "transparent";
+          ctx.shadowBlur = Math.abs(timeUntilHit) <= OK_MS ? 12 : 0;
           roundedRect(ctx, noteX, noteY, noteW, noteH, 6);
           ctx.fill();
           ctx.stroke();
@@ -2131,11 +2150,15 @@
           const rect = keyRect(effect.noteId);
           const x = rect.x + rect.width / 2;
           const radius = 8 + age * 0.08;
-          ctx.strokeStyle = effect.result === "Great"
-            ? `rgba(80, 255, 217, ${alpha})`
-            : effect.result === "Good"
-              ? `rgba(255, 200, 90, ${alpha})`
-              : `rgba(255, 109, 109, ${alpha})`;
+          ctx.strokeStyle = effect.result === "Perfect"
+            ? `rgba(255, 255, 255, ${alpha})`
+            : effect.result === "Great"
+              ? `rgba(80, 255, 217, ${alpha})`
+              : effect.result === "Good"
+                ? `rgba(255, 200, 90, ${alpha})`
+                : effect.result === "OK"
+                  ? `rgba(216, 237, 240, ${alpha})`
+                  : `rgba(255, 109, 109, ${alpha})`;
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.arc(x, hitY, radius, 0, Math.PI * 2);
@@ -2160,7 +2183,7 @@
 
       function draw(now = performance.now()) {
         drawNotes(now);
-        feedbackEl.classList.remove("is-great", "is-good", "is-bad", "is-miss");
+        feedbackEl.classList.remove("is-perfect", "is-great", "is-good", "is-ok", "is-bad", "is-miss");
         if (now < state.feedbackUntil) {
           feedbackEl.textContent = state.feedbackText;
           feedbackEl.classList.add("is-live");

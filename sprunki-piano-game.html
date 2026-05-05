@@ -1245,20 +1245,37 @@
           const note = noteById.get(chartNote.noteId);
           const character = characters[(chartNote.id + selectedCharacter) % characters.length];
           const closeness = Math.max(0, 1 - Math.abs(timeUntilHit) / GOOD_MS);
-          ctx.fillStyle = Math.abs(timeUntilHit) <= GREAT_MS ? "#50ffd9" : (note.isBlack ? "#232936" : character.color);
-          ctx.strokeStyle = note.isBlack ? "rgba(247, 241, 222, 0.55)" : "rgba(17, 21, 29, 0.5)";
+          const noteX = x + 2;
+          const noteY = y;
+          const noteW = Math.max(8, laneWidth - 4);
+          const noteH = note.isBlack ? 30 : 24;
+          ctx.fillStyle = Math.abs(timeUntilHit) <= GREAT_MS
+            ? "#50ffd9"
+            : note.isBlack
+              ? "#10131a"
+              : "#fffaf0";
+          ctx.strokeStyle = note.isBlack ? "rgba(80, 255, 217, 0.92)" : character.color;
           ctx.lineWidth = 1.5 + closeness * 2.5;
           ctx.shadowColor = Math.abs(timeUntilHit) <= GOOD_MS ? "rgba(80, 255, 217, 0.75)" : "transparent";
           ctx.shadowBlur = Math.abs(timeUntilHit) <= GOOD_MS ? 12 : 0;
-          roundedRect(ctx, x + 2, y, Math.max(8, laneWidth - 4), 24, 6);
+          roundedRect(ctx, noteX, noteY, noteW, noteH, 6);
           ctx.fill();
           ctx.stroke();
+          if (note.isBlack) {
+            ctx.fillStyle = "rgba(80, 255, 217, 0.9)";
+            ctx.fillRect(noteX + 3, noteY + 3, Math.max(2, noteW - 6), 4);
+          } else {
+            ctx.fillStyle = "rgba(17, 21, 29, 0.16)";
+            ctx.fillRect(noteX + 3, noteY + noteH - 5, Math.max(2, noteW - 6), 2);
+          }
           ctx.shadowBlur = 0;
           ctx.fillStyle = note.isBlack ? "#f7f1de" : "#11151d";
-          ctx.font = "900 10px system-ui, sans-serif";
+          ctx.font = "900 9px system-ui, sans-serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText(chartNote.noteId.replace("#", "♯"), x + laneWidth / 2, y + 12);
+          ctx.fillText(note.isBlack ? "BLACK" : "WHITE", x + laneWidth / 2, y + 9);
+          ctx.font = "900 10px system-ui, sans-serif";
+          ctx.fillText(chartNote.noteId.replace("#", "♯"), x + laneWidth / 2, y + (note.isBlack ? 22 : 17));
         }
         state.hitEffects = state.hitEffects.filter((effect) => now - effect.at < 520);
         for (const effect of state.hitEffects) {

@@ -2,15 +2,187 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="refresh" content="0; url=moon-phase-game.html">
-  <link rel="canonical" href="moon-phase-game.html">
-  <title>おつきさまのかたち</title>
-  <script>
-    location.replace(`moon-phase-game.html${location.search}${location.hash}`);
-  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11151d">
+  <title>Moon Games</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #11151d;
+      --bar: #1d2430;
+      --ink: #f7f1de;
+      --muted: #aeb8c6;
+      --line: rgba(247, 241, 222, 0.2);
+      --moon: #fff2b7;
+      --piano: #50d4c6;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    body {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .switcher {
+      min-height: 58px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 12px;
+      padding: max(8px, env(safe-area-inset-top)) 10px 8px;
+      background: rgba(29, 36, 48, 0.96);
+      border-bottom: 1px solid var(--line);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+      z-index: 2;
+    }
+
+    .brand {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(17px, 4vw, 24px);
+      line-height: 1;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .tabs {
+      justify-self: end;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(92px, 148px));
+      gap: 8px;
+      width: min(100%, 312px);
+    }
+
+    .tab {
+      appearance: none;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--ink);
+      font: inherit;
+      font-size: clamp(13px, 3.4vw, 16px);
+      font-weight: 900;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .tab.is-active[data-game="moon"] {
+      background: var(--moon);
+      color: #283047;
+      border-color: transparent;
+    }
+
+    .tab.is-active[data-game="piano"] {
+      background: var(--piano);
+      color: #102125;
+      border-color: transparent;
+    }
+
+    .game-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+      background: #11151d;
+    }
+
+    @media (max-width: 520px) {
+      .switcher {
+        grid-template-columns: 1fr;
+        gap: 7px;
+        min-height: 86px;
+      }
+
+      .tabs {
+        justify-self: stretch;
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
-  <a href="moon-phase-game.html">おつきさまのかたちをひらく</a>
+  <header class="switcher">
+    <div class="brand">
+      <h1>Moon Games</h1>
+      <div class="status" id="status">MOON</div>
+    </div>
+    <nav class="tabs" aria-label="ゲーム切り替え">
+      <button class="tab" type="button" data-game="moon" aria-pressed="true">MOON</button>
+      <button class="tab" type="button" data-game="piano" aria-pressed="false">PIANO</button>
+    </nav>
+  </header>
+  <iframe class="game-frame" id="gameFrame" title="Selected game" src="moon-phase-game.html"></iframe>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const games = {
+        moon: { title: "MOON", src: "moon-phase-game.html" },
+        piano: { title: "PIANO", src: "sprunki-piano-game.html" }
+      };
+      const frame = document.getElementById("gameFrame");
+      const status = document.getElementById("status");
+      const tabs = Array.from(document.querySelectorAll(".tab"));
+
+      function selectedGameFromUrl() {
+        const params = new URLSearchParams(location.search);
+        return games[params.get("game")] ? params.get("game") : "moon";
+      }
+
+      function selectGame(game, replace = false) {
+        const target = games[game] ? game : "moon";
+        frame.src = games[target].src;
+        status.textContent = games[target].title;
+        tabs.forEach((tab) => {
+          const isActive = tab.dataset.game === target;
+          tab.classList.toggle("is-active", isActive);
+          tab.setAttribute("aria-pressed", isActive ? "true" : "false");
+        });
+        const nextUrl = `${location.pathname}?game=${target}`;
+        if (replace) {
+          history.replaceState({ game: target }, "", nextUrl);
+        } else {
+          history.pushState({ game: target }, "", nextUrl);
+        }
+      }
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => selectGame(tab.dataset.game));
+      });
+
+      window.addEventListener("popstate", () => selectGame(selectedGameFromUrl(), true));
+      selectGame(selectedGameFromUrl(), true);
+    })();
+  </script>
 </body>
 </html>

@@ -256,6 +256,64 @@
       box-shadow: 0 0 22px rgba(255, 109, 109, 0.38);
     }
 
+    .result-overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(8, 11, 16, 0.78);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease;
+      z-index: 6;
+    }
+
+    .result-overlay.is-live {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .result-card {
+      width: min(100%, 420px);
+      display: grid;
+      gap: 10px;
+      padding: 18px;
+      border: 2px solid rgba(80, 255, 217, 0.78);
+      border-radius: 8px;
+      background: rgba(29, 36, 48, 0.96);
+      text-align: center;
+      box-shadow: 0 0 36px rgba(80, 255, 217, 0.3);
+    }
+
+    .result-title {
+      margin: 0;
+      color: #50ffd9;
+      font-size: clamp(46px, 13vw, 86px);
+      font-weight: 900;
+      line-height: 0.9;
+    }
+
+    .result-overlay.is-failed .result-card {
+      border-color: rgba(255, 109, 109, 0.84);
+      box-shadow: 0 0 36px rgba(255, 109, 109, 0.28);
+    }
+
+    .result-overlay.is-failed .result-title {
+      color: #ff7a7a;
+    }
+
+    .result-detail {
+      color: var(--ink);
+      font-size: clamp(13px, 3.2vw, 17px);
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .result-detail span {
+      color: var(--muted);
+    }
+
     .controls {
       display: grid;
       grid-template-columns: minmax(132px, 1.35fr) repeat(5, minmax(0, 1fr));
@@ -630,6 +688,12 @@
       <div class="judge-zone" aria-hidden="true"></div>
       <div class="judge-line" aria-hidden="true"></div>
       <div class="feedback" id="feedback" aria-live="polite">Ready</div>
+      <div class="result-overlay" id="resultOverlay" aria-live="polite">
+        <div class="result-card">
+          <h2 class="result-title" id="resultTitle">CLEAR</h2>
+          <div class="result-detail" id="resultDetail"></div>
+        </div>
+      </div>
     </section>
 
     <section class="controls" aria-label="ゲーム操作">
@@ -669,6 +733,9 @@
       const bestEl = document.getElementById("best");
       const statsEl = document.getElementById("stats");
       const feedbackEl = document.getElementById("feedback");
+      const resultOverlay = document.getElementById("resultOverlay");
+      const resultTitle = document.getElementById("resultTitle");
+      const resultDetail = document.getElementById("resultDetail");
       const songSelect = document.getElementById("songSelect");
       const difficultyLabel = document.getElementById("difficultyLabel");
       const startButton = document.getElementById("startButton");
@@ -879,7 +946,8 @@
           feedbackUntil: 0,
           feedbackText: "Ready",
           feedbackKind: "",
-          hitEffects: []
+          hitEffects: [],
+          resultShown: false
         };
       }
 
@@ -1130,6 +1198,7 @@
           state.feedbackUntil = now + 600;
         } else {
           state = makeInitialState();
+          hideResult();
           state.chart = makeChart();
           state.running = true;
           state.paused = false;
@@ -1161,8 +1230,32 @@
         state = makeInitialState();
         startButton.textContent = "START";
         pauseButton.textContent = "PAUSE";
+        hideResult();
         updateHud();
         draw();
+      }
+
+      function hideResult() {
+        resultOverlay.classList.remove("is-live", "is-clear", "is-failed");
+      }
+
+      function showResult() {
+        if (state.resultShown) return;
+        state.resultShown = true;
+        const totalHits = state.great + state.good;
+        const totalNotes = Math.max(1, state.chart.length);
+        const hitRate = Math.round((totalHits / totalNotes) * 100);
+        const cleared = hitRate >= 70 && state.miss <= Math.max(3, Math.floor(totalNotes * 0.25));
+        resultTitle.textContent = cleared ? "CLEAR" : "FAILED";
+        resultDetail.innerHTML = [
+          `<span>Song</span> ${selectedSong().name} / ${selectedSong().difficulty}`,
+          `<span>Score</span> ${state.score}`,
+          `<span>Hit</span> ${hitRate}%  Great ${state.great}  Good ${state.good}  Miss ${state.miss}`,
+          `<span>Best Combo</span> ${state.best}`
+        ].join("<br>");
+        resultOverlay.classList.toggle("is-clear", cleared);
+        resultOverlay.classList.toggle("is-failed", !cleared);
+        resultOverlay.classList.add("is-live");
       }
 
       function updateSoundButton() {
@@ -1254,10 +1347,9 @@
         const lastNote = state.chart[state.chart.length - 1];
         if (lastNote && currentTime > lastNote.hitTime + 2300 && state.chart.every((note) => note.judged)) {
           state.running = false;
-          state.feedbackText = "Finish";
-          state.feedbackKind = "good";
-          state.feedbackUntil = now + 1200;
           startButton.textContent = "START";
+          pauseButton.textContent = "PAUSE";
+          showResult();
         }
       }
 

@@ -55,7 +55,7 @@
       width: min(100%, 980px);
       min-height: calc(100svh - 16px);
       display: grid;
-      grid-template-rows: auto minmax(190px, 1fr) auto auto;
+      grid-template-rows: auto minmax(190px, 1fr) auto auto auto;
       gap: 8px;
     }
 
@@ -364,23 +364,58 @@
       font-weight: 900;
     }
 
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     .song-control span {
       color: var(--muted);
       font-size: 11px;
       line-height: 1;
     }
 
-    .song-control select {
+    .song-current {
       min-width: 0;
       width: 100%;
+      min-height: 38px;
       border: 0;
       border-radius: 6px;
-      background: #f7f1de;
+      background: linear-gradient(135deg, #f7f1de 0%, #dff7ff 100%);
       color: #17202b;
       font: inherit;
-      font-size: 13px;
       font-weight: 900;
-      padding: 7px 6px;
+      padding: 5px 8px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 5px;
+      align-items: center;
+      text-align: left;
+      box-shadow: inset 0 -2px 0 rgba(23, 32, 43, 0.12);
+    }
+
+    .song-current-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      color: #17202b;
+    }
+
+    .song-current-category {
+      color: #51606f;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      white-space: nowrap;
     }
 
     .difficulty-pill {
@@ -408,6 +443,124 @@
     .difficulty-pill[data-level="10"] {
       background: #ff6d6d;
       color: #2b0b0b;
+    }
+
+    .song-picker {
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 12px 26px rgba(0, 0, 0, 0.18);
+    }
+
+    .category-tabs {
+      display: grid;
+      gap: 6px;
+    }
+
+    .category-tab {
+      min-height: 36px;
+      border-radius: 7px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: none;
+      text-align: left;
+      padding: 7px 9px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .category-tab.is-active {
+      color: #17202b;
+      background: #78e7dc;
+      border-color: transparent;
+      box-shadow: 0 4px 0 #399f98, 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .category-tab-count {
+      min-width: 22px;
+      padding: 3px 5px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.16);
+      text-align: center;
+      font-size: 10px;
+    }
+
+    .song-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+      gap: 7px;
+      align-content: start;
+      max-height: 150px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .song-card {
+      min-height: 58px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      padding: 8px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 5px;
+      text-align: left;
+      align-items: start;
+    }
+
+    .song-card.is-active {
+      color: #17202b;
+      background: linear-gradient(135deg, #ffe17a, #8af1e5);
+      border-color: transparent;
+      box-shadow: 0 4px 0 #b98520, 0 9px 18px rgba(0, 0, 0, 0.22);
+    }
+
+    .song-card-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.15;
+    }
+
+    .song-card-meta {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .song-card.is-active .song-card-meta {
+      color: #43515c;
+    }
+
+    .song-card-level {
+      padding: 4px 5px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.2);
+      color: var(--ink);
+      font-size: 10px;
+      font-weight: 900;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .song-card.is-active .song-card-level {
+      background: rgba(23, 32, 43, 0.16);
+      color: #17202b;
     }
 
     .control-button:active {
@@ -611,6 +764,25 @@
         grid-column: 1 / -1;
       }
 
+      .song-picker {
+        grid-template-columns: 1fr;
+        gap: 7px;
+      }
+
+      .category-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .category-tab {
+        min-height: 34px;
+        padding: 6px 7px;
+      }
+
+      .song-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-height: 132px;
+      }
+
       .character-strip {
         grid-template-columns: repeat(4, minmax(0, 1fr));
       }
@@ -624,7 +796,7 @@
 
       main {
         min-height: calc(100svh - 8px);
-        grid-template-rows: auto minmax(150px, 1fr) auto auto;
+        grid-template-rows: auto minmax(142px, 1fr) auto auto auto;
         gap: 5px;
       }
 
@@ -652,6 +824,24 @@
       .control-button {
         min-height: 40px;
         font-size: 12px;
+      }
+
+      .song-picker {
+        padding: 5px;
+      }
+
+      .category-tab {
+        min-height: 30px;
+        padding: 5px 6px;
+      }
+
+      .song-grid {
+        max-height: 96px;
+      }
+
+      .song-card {
+        min-height: 48px;
+        padding: 6px;
       }
 
       .piano {
@@ -702,12 +892,17 @@
     </section>
 
     <section class="controls" aria-label="ゲーム操作">
-      <label class="song-control"><span>SONG</span><select id="songSelect"></select><strong class="difficulty-pill" id="difficultyLabel" data-level="1">Lv.1</strong></label>
+      <div class="song-control"><span>SONG</span><select class="visually-hidden" id="songSelect" aria-label="Song"></select><button class="song-current" id="songCurrent" type="button"><span class="song-current-name" id="songCurrentName">Twinkle</span><span class="song-current-category" id="songCurrentCategory">Starter</span></button><strong class="difficulty-pill" id="difficultyLabel" data-level="1">Lv.1</strong></div>
       <button class="control-button" id="startButton" type="button">START</button>
       <button class="control-button secondary" id="pauseButton" type="button">PAUSE</button>
       <button class="control-button secondary" id="resetButton" type="button">RESET</button>
       <button class="control-button secondary" id="soundButton" type="button" aria-pressed="true">SOUND ON</button>
       <a class="control-button secondary switch-link" href="index.html?game=moon" target="_top" aria-label="Switch to moon phase game">MOON</a>
+    </section>
+
+    <section class="song-picker" aria-label="Song picker">
+      <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Song categories"></div>
+      <div class="song-grid" id="songGrid" role="listbox" aria-label="Songs"></div>
     </section>
 
     <section class="piano-shell" aria-label="ピアノ鍵盤">
@@ -742,6 +937,11 @@
       const resultTitle = document.getElementById("resultTitle");
       const resultDetail = document.getElementById("resultDetail");
       const songSelect = document.getElementById("songSelect");
+      const songCurrent = document.getElementById("songCurrent");
+      const songCurrentName = document.getElementById("songCurrentName");
+      const songCurrentCategory = document.getElementById("songCurrentCategory");
+      const categoryTabs = document.getElementById("categoryTabs");
+      const songGrid = document.getElementById("songGrid");
       const difficultyLabel = document.getElementById("difficultyLabel");
       const startButton = document.getElementById("startButton");
       const pauseButton = document.getElementById("pauseButton");
@@ -1060,6 +1260,13 @@
         }
       ];
 
+      const SONG_CATEGORIES = [
+        { id: "starter", name: "Starter", ids: ["twinkle", "ode", "scale", "mary", "hotcross", "london"] },
+        { id: "classic", name: "Classic", ids: ["canon", "fur-elise", "eine-kleine", "blue-danube", "swan-lake", "nutcracker", "spring", "bach-air", "hallelujah", "william-tell", "bridal-chorus"] },
+        { id: "style", name: "Style", ids: ["sakura", "blues", "hero-march", "pipe-jump", "ribbon-waltz"] },
+        { id: "sprunki", name: "Sprunki", ids: ["sprunki"] }
+      ];
+
       const characters = [
         { id: "oren", name: "Oren", color: "#ff7900", image: "sprunki-oren.png", audio: "sounds/oren.wav", timbre: { low: "triangle", high: "sine", detune: 2, filter: 2400, decay: 0.72, gain: 0.18 } },
         { id: "raddy", name: "Raddy", color: "#f51414", image: "sprunki-raddy.png", audio: "sounds/raddy.wav", timbre: { low: "sawtooth", high: "square", detune: -5, filter: 1700, decay: 0.46, gain: 0.13 } },
@@ -1086,6 +1293,7 @@
       let canvasHeight = 0;
       let selectedCharacter = 0;
       let selectedSongId = SONGS[0].id;
+      let selectedCategoryId = SONG_CATEGORIES[0].id;
       let soundEnabled = true;
       let lastFrame = performance.now();
       let lastCoordinateInputAt = 0;
@@ -1193,11 +1401,84 @@
           `<option value="${song.id}">${song.name} (Lv.${song.level})</option>`
         )).join("");
         songSelect.value = selectedSongId;
-        updateDifficultyLabel();
+        buildCategoryTabs();
+        buildSongCards();
+        updateSongUi();
       }
 
       function selectedSong() {
         return SONGS.find((song) => song.id === selectedSongId) || SONGS[0];
+      }
+
+      function categoryForSong(songId) {
+        return SONG_CATEGORIES.find((category) => category.ids.includes(songId)) || SONG_CATEGORIES[0];
+      }
+
+      function songsForCategory(categoryId) {
+        const category = SONG_CATEGORIES.find((item) => item.id === categoryId) || SONG_CATEGORIES[0];
+        return category.ids.map((id) => SONGS.find((song) => song.id === id)).filter(Boolean);
+      }
+
+      function selectSong(songId) {
+        if (!SONGS.some((song) => song.id === songId)) return;
+        selectedSongId = songId;
+        selectedCategoryId = categoryForSong(songId).id;
+        songSelect.value = selectedSongId;
+        updateSongUi();
+        resetGame();
+        state.feedbackText = `${selectedSong().name} Ready`;
+        state.feedbackKind = "";
+        state.feedbackUntil = performance.now() + 900;
+      }
+
+      function buildCategoryTabs() {
+        categoryTabs.innerHTML = "";
+        SONG_CATEGORIES.forEach((category) => {
+          const button = document.createElement("button");
+          button.className = "category-tab";
+          button.type = "button";
+          button.setAttribute("role", "tab");
+          button.dataset.category = category.id;
+          button.innerHTML = `<span>${category.name}</span><span class="category-tab-count">${songsForCategory(category.id).length}</span>`;
+          button.addEventListener("click", () => {
+            selectedCategoryId = category.id;
+            updateSongUi();
+          });
+          categoryTabs.appendChild(button);
+        });
+      }
+
+      function buildSongCards() {
+        songGrid.innerHTML = "";
+        songsForCategory(selectedCategoryId).forEach((song) => {
+          const card = document.createElement("button");
+          card.className = "song-card";
+          card.type = "button";
+          card.setAttribute("role", "option");
+          card.dataset.song = song.id;
+          card.innerHTML = `<span class="song-card-title">${song.name}</span><span class="song-card-level">Lv.${song.level}</span><span class="song-card-meta">${song.bpm} BPM</span>`;
+          card.addEventListener("click", () => selectSong(song.id));
+          songGrid.appendChild(card);
+        });
+      }
+
+      function updateSongUi() {
+        const song = selectedSong();
+        const category = categoryForSong(song.id);
+        songCurrentName.textContent = song.name;
+        songCurrentCategory.textContent = category.name;
+        updateDifficultyLabel();
+        document.querySelectorAll(".category-tab").forEach((tab) => {
+          const active = tab.dataset.category === selectedCategoryId;
+          tab.classList.toggle("is-active", active);
+          tab.setAttribute("aria-selected", active ? "true" : "false");
+        });
+        buildSongCards();
+        document.querySelectorAll(".song-card").forEach((card) => {
+          const active = card.dataset.song === selectedSongId;
+          card.classList.toggle("is-active", active);
+          card.setAttribute("aria-selected", active ? "true" : "false");
+        });
       }
 
       function updateDifficultyLabel() {
@@ -1774,13 +2055,12 @@
       startButton.addEventListener("click", startGame);
       pauseButton.addEventListener("click", pauseGame);
       resetButton.addEventListener("click", resetGame);
+      songCurrent.addEventListener("click", () => {
+        selectedCategoryId = categoryForSong(selectedSongId).id;
+        updateSongUi();
+      });
       songSelect.addEventListener("change", () => {
-        selectedSongId = songSelect.value;
-        updateDifficultyLabel();
-        resetGame();
-        state.feedbackText = `${selectedSong().name} Ready`;
-        state.feedbackKind = "";
-        state.feedbackUntil = performance.now() + 900;
+        selectSong(songSelect.value);
       });
       if ("PointerEvent" in window) {
         piano.addEventListener("pointerdown", handlePointerDown);

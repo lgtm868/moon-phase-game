@@ -36,7 +36,8 @@
       margin: 0;
       background: var(--bg);
       color: var(--ink);
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     body {
@@ -724,14 +725,28 @@
         if (!audioContext) {
           audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
-        if (audioContext.state === "suspended") audioContext.resume();
         return audioContext;
+      }
+
+      async function unlockAudio() {
+        const context = getAudioContext();
+        if (context.state === "suspended") {
+          await context.resume();
+        }
+        return context;
       }
 
       function playPianoTone(note, velocity = 0.75) {
         if (!soundEnabled) return;
         try {
           const context = getAudioContext();
+          if (context.state === "suspended") {
+            context.resume().then(() => playPianoTone(note, velocity)).catch(() => {
+              soundEnabled = false;
+              updateSoundButton();
+            });
+            return;
+          }
           const now = context.currentTime;
           const master = context.createGain();
           const low = context.createOscillator();
@@ -764,7 +779,7 @@
       async function loadCharacterBuffer(character) {
         if (!soundEnabled || !character.audio || audioBuffers.has(character.id)) return;
         try {
-          const context = getAudioContext();
+          const context = await unlockAudio();
           const response = await fetch(character.audio);
           const data = await response.arrayBuffer();
           const buffer = await context.decodeAudioData(data);
@@ -841,7 +856,7 @@
 
       function startGame() {
         try {
-          getAudioContext();
+          unlockAudio();
           characters.forEach((character) => loadCharacterBuffer(character));
         } catch (error) {
           soundEnabled = false;
@@ -1146,7 +1161,7 @@
         updateSoundButton();
         if (soundEnabled) {
           try {
-            getAudioContext();
+            unlockAudio();
             characters.forEach((character) => loadCharacterBuffer(character));
           } catch (error) {
             soundEnabled = false;

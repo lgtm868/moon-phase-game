@@ -55,7 +55,7 @@
       width: min(100%, 980px);
       min-height: calc(100svh - 16px);
       display: grid;
-      grid-template-rows: auto minmax(230px, 1fr) auto auto;
+      grid-template-rows: auto minmax(260px, 1fr) auto;
       gap: 8px;
     }
 
@@ -315,8 +315,44 @@
     }
 
     .controls {
+      position: fixed;
+      inset: 0;
+      z-index: 21;
+      display: none;
+      grid-template-columns: minmax(0, 1fr);
+      align-content: start;
+      gap: 10px;
+      padding: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      background: rgba(17, 21, 29, 0.96);
+      backdrop-filter: blur(12px);
+      overflow: auto;
+    }
+
+    .controls.is-open {
       display: grid;
-      grid-template-columns: minmax(132px, 1.35fr) repeat(5, minmax(0, 1fr));
+    }
+
+    .menu-header {
+      width: min(100%, 980px);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .menu-title {
+      color: var(--ink);
+      font-size: clamp(22px, 5vw, 36px);
+      font-weight: 1000;
+      line-height: 1;
+    }
+
+    .menu-grid {
+      width: min(100%, 980px);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(180px, 1.35fr) repeat(5, minmax(0, 1fr));
       gap: 8px;
     }
 
@@ -348,6 +384,14 @@
     .control-button.secondary {
       background: #d8edf0;
       box-shadow: 0 5px 0 #93b5bc, 0 10px 18px rgba(0, 0, 0, 0.22);
+    }
+
+    .menu-button {
+      min-height: 44px;
+      padding: 0 14px;
+      color: #17202b;
+      background: var(--accent-2);
+      box-shadow: 0 5px 0 #c78e2d, 0 10px 18px rgba(0, 0, 0, 0.24);
     }
 
     .song-control {
@@ -748,6 +792,12 @@
       display: grid;
       grid-template-columns: repeat(8, minmax(0, 1fr));
       gap: 6px;
+      width: min(100%, 980px);
+      margin: 0 auto;
+    }
+
+    .piano-shell .character-strip {
+      display: none;
     }
 
     .character-button {
@@ -793,9 +843,9 @@
         min-width: 0;
       }
 
-      .controls {
+      .menu-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 5px;
+        gap: 6px;
       }
 
       .song-control {
@@ -832,7 +882,7 @@
 
       main {
         min-height: calc(100svh - 8px);
-        grid-template-rows: auto minmax(174px, 1fr) auto auto;
+        grid-template-rows: auto minmax(210px, 1fr) auto;
         gap: 5px;
       }
 
@@ -888,6 +938,10 @@
         width: 28px;
         height: 34px;
       }
+
+      .menu-button {
+        min-height: 38px;
+      }
     }
   </style>
 </head>
@@ -906,6 +960,7 @@
         <div class="hud-item"><span class="hud-label">Combo</span><strong class="hud-value" id="combo">0</strong></div>
         <div class="hud-item"><span class="hud-label">Best</span><strong class="hud-value" id="best">0</strong></div>
         <div class="hud-item"><span class="hud-label">Hit</span><strong class="hud-value" id="stats">0/0/0</strong></div>
+        <button class="menu-button" id="menuButton" type="button">MENU</button>
       </div>
     </section>
 
@@ -923,13 +978,20 @@
       </div>
     </section>
 
-    <section class="controls" aria-label="ゲーム操作">
+    <section class="controls" id="gameMenu" aria-label="Game menu" aria-hidden="true">
+      <div class="menu-header">
+        <div class="menu-title">Menu</div>
+        <button class="menu-button" id="menuCloseButton" type="button">PLAY</button>
+      </div>
+      <div class="menu-grid">
       <div class="song-control"><span>SONG</span><select class="visually-hidden" id="songSelect" aria-label="Song"></select><button class="song-current" id="songCurrent" type="button"><span class="song-current-name" id="songCurrentName">Twinkle</span><span class="song-current-category" id="songCurrentCategory">Starter</span></button><strong class="difficulty-pill" id="difficultyLabel" data-level="1">Lv.1</strong></div>
       <button class="control-button" id="startButton" type="button">START</button>
       <button class="control-button secondary" id="pauseButton" type="button">PAUSE</button>
       <button class="control-button secondary" id="resetButton" type="button">RESET</button>
       <button class="control-button secondary" id="soundButton" type="button" aria-pressed="true">SOUND ON</button>
       <a class="control-button secondary switch-link" href="index.html?game=moon" target="_top" aria-label="Switch to moon phase game">MOON</a>
+      </div>
+      <div class="character-strip" id="characterStrip" aria-label="スプランキーを選ぶ"></div>
     </section>
 
     <section class="song-picker" id="songPicker" aria-label="Song picker" aria-hidden="true">
@@ -949,7 +1011,6 @@
         <div class="white-keys" id="whiteKeys"></div>
         <div class="black-keys" id="blackKeys"></div>
       </div>
-      <div class="character-strip" id="characterStrip" aria-label="スプランキーを選ぶ"></div>
     </section>
   </main>
 
@@ -974,6 +1035,9 @@
       const resultOverlay = document.getElementById("resultOverlay");
       const resultTitle = document.getElementById("resultTitle");
       const resultDetail = document.getElementById("resultDetail");
+      const menuButton = document.getElementById("menuButton");
+      const gameMenu = document.getElementById("gameMenu");
+      const menuCloseButton = document.getElementById("menuCloseButton");
       const songSelect = document.getElementById("songSelect");
       const songCurrent = document.getElementById("songCurrent");
       const songCurrentName = document.getElementById("songCurrentName");
@@ -1485,6 +1549,17 @@
         songPicker.setAttribute("aria-hidden", "true");
       }
 
+      function openGameMenu() {
+        gameMenu.classList.add("is-open");
+        gameMenu.setAttribute("aria-hidden", "false");
+        menuCloseButton.focus({ preventScroll: true });
+      }
+
+      function closeGameMenu() {
+        gameMenu.classList.remove("is-open");
+        gameMenu.setAttribute("aria-hidden", "true");
+      }
+
       function buildCategoryTabs() {
         categoryTabs.innerHTML = "";
         SONG_CATEGORIES.forEach((category) => {
@@ -1872,6 +1947,12 @@
       function playInput(noteId, now = performance.now()) {
         const note = noteById.get(noteId);
         if (!note) return;
+        if (!state.running) {
+          startGame();
+          showKey(noteId, true);
+          playPianoTone(note);
+          return;
+        }
         showKey(noteId, true);
         playPianoTone(note);
         judgeNote(noteId, now);
@@ -2106,9 +2187,17 @@
       resizeCanvas();
       animationId = requestAnimationFrame(tick);
 
-      startButton.addEventListener("click", startGame);
+      menuButton.addEventListener("click", openGameMenu);
+      menuCloseButton.addEventListener("click", closeGameMenu);
+      startButton.addEventListener("click", () => {
+        startGame();
+        closeGameMenu();
+      });
       pauseButton.addEventListener("click", pauseGame);
-      resetButton.addEventListener("click", resetGame);
+      resetButton.addEventListener("click", () => {
+        resetGame();
+        closeGameMenu();
+      });
       songCurrent.addEventListener("click", () => {
         openSongPicker();
       });
@@ -2144,6 +2233,14 @@
       });
 
       window.addEventListener("keydown", (event) => {
+        if (gameMenu.classList.contains("is-open")) {
+          if (event.code === "Escape") {
+            closeGameMenu();
+            menuButton.focus({ preventScroll: true });
+          }
+          event.preventDefault();
+          return;
+        }
         if (songPicker.classList.contains("is-open")) {
           if (event.code === "Escape") {
             closeSongPicker();

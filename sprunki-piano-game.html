@@ -1481,7 +1481,16 @@
         { id: "sky", name: "Sky", color: "#71c9ff", image: "sprunki-sky.png", audio: "sounds/sky.wav", timbre: { low: "sine", high: "sine", detune: 16, filter: 3200, decay: 0.82, gain: 0.14 } },
         { id: "simon", name: "Simon", color: "#ffe054", image: "sprunki-simon.png", audio: "sounds/simon.wav", timbre: { low: "triangle", high: "sine", detune: 0, filter: 2800, decay: 0.65, gain: 0.2 } }
       ];
-      const strictSongTimbre = { low: "triangle", high: "sine", detune: 0, filter: 2600, decay: 0.34, gain: 0.15, highRatio: 2 };
+      const strictSongTimbres = [
+        { low: "triangle", high: "sine", detune: 0, filter: 2500, decay: 0.34, gain: 0.15, highRatio: 2 },
+        { low: "sine", high: "triangle", detune: 0, filter: 2200, decay: 0.32, gain: 0.14, highRatio: 2 },
+        { low: "triangle", high: "triangle", detune: 0, filter: 2000, decay: 0.3, gain: 0.13, highRatio: 2 },
+        { low: "sine", high: "sine", detune: 0, filter: 3000, decay: 0.28, gain: 0.13, highRatio: 2 },
+        { low: "triangle", high: "sine", detune: 0, filter: 2700, decay: 0.38, gain: 0.14, highRatio: 2 },
+        { low: "sine", high: "triangle", detune: 0, filter: 1800, decay: 0.36, gain: 0.13, highRatio: 2 },
+        { low: "sine", high: "sine", detune: 0, filter: 3200, decay: 0.31, gain: 0.13, highRatio: 2 },
+        { low: "triangle", high: "sine", detune: 0, filter: 2800, decay: 0.33, gain: 0.15, highRatio: 2 }
+      ];
 
       const notes = [];
       const whiteNotes = [];
@@ -1753,7 +1762,7 @@
           const filter = context.createBiquadFilter();
           const song = selectedSong();
           const strictTone = song && song.strictTone === true;
-          const timbre = strictTone ? strictSongTimbre : characters[selectedCharacter].timbre;
+          const timbre = strictTone ? strictSongTimbres[selectedCharacter] : characters[selectedCharacter].timbre;
           low.type = timbre.low;
           high.type = timbre.high;
           low.frequency.setValueAtTime(note.frequency, now);

@@ -1576,6 +1576,7 @@
       }
 
       function handlePointerDown(event) {
+        if (event.button !== undefined && event.button !== 0 && event.pointerType === "mouse") return;
         const now = performance.now();
         if (now - lastCoordinateInputAt < 80) {
           event.preventDefault();
@@ -1592,17 +1593,41 @@
 
       function handleMouseDown(event) {
         if (event.button !== 0) return;
-        playCoordinateInput(event.clientX, event.clientY, event);
+        const now = performance.now();
+        const noteId = noteFromClientPoint(event.clientX, event.clientY);
+        if (!noteId) return;
+        lastCoordinateInputAt = now;
+        activePointers.set("mouse", noteId);
+        playInput(noteId, now);
+        event.preventDefault();
       }
 
-      function handleClick(event) {
-        playCoordinateInput(event.clientX, event.clientY, event);
+      function handleMouseUp(event) {
+        const noteId = activePointers.get("mouse");
+        if (noteId) showKey(noteId, false);
+        activePointers.delete("mouse");
+        event.preventDefault?.();
       }
 
       function handleTouchStart(event) {
         for (const touch of Array.from(event.changedTouches || [])) {
-          playCoordinateInput(touch.clientX, touch.clientY, event, true);
+          const now = performance.now();
+          const noteId = noteFromClientPoint(touch.clientX, touch.clientY);
+          if (!noteId) continue;
+          activePointers.set(`touch-${touch.identifier}`, noteId);
+          playInput(noteId, now);
         }
+        event.preventDefault();
+      }
+
+      function handleTouchEnd(event) {
+        for (const touch of Array.from(event.changedTouches || [])) {
+          const key = `touch-${touch.identifier}`;
+          const noteId = activePointers.get(key);
+          if (noteId) showKey(noteId, false);
+          activePointers.delete(key);
+        }
+        event.preventDefault?.();
       }
 
       function handlePointerUp(event) {
@@ -1757,13 +1782,19 @@
         state.feedbackKind = "";
         state.feedbackUntil = performance.now() + 900;
       });
-      piano.addEventListener("pointerdown", handlePointerDown);
-      piano.addEventListener("pointerup", handlePointerUp);
-      piano.addEventListener("pointercancel", handlePointerCancel);
-      piano.addEventListener("pointerleave", handlePointerCancel);
-      piano.addEventListener("mousedown", handleMouseDown);
-      piano.addEventListener("click", handleClick);
-      piano.addEventListener("touchstart", handleTouchStart, { passive: false });
+      if ("PointerEvent" in window) {
+        piano.addEventListener("pointerdown", handlePointerDown);
+        piano.addEventListener("pointerup", handlePointerUp);
+        piano.addEventListener("pointercancel", handlePointerCancel);
+        piano.addEventListener("pointerleave", handlePointerCancel);
+      } else {
+        piano.addEventListener("mousedown", handleMouseDown);
+        piano.addEventListener("mouseup", handleMouseUp);
+        piano.addEventListener("mouseleave", handleMouseUp);
+        piano.addEventListener("touchstart", handleTouchStart, { passive: false });
+        piano.addEventListener("touchend", handleTouchEnd, { passive: false });
+        piano.addEventListener("touchcancel", handleTouchEnd, { passive: false });
+      }
       soundButton.addEventListener("click", () => {
         soundEnabled = !soundEnabled;
         updateSoundButton();

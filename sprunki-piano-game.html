@@ -731,7 +731,7 @@
     }
 
     .keyboard-help {
-      display: grid;
+      display: none;
       grid-template-columns: repeat(12, minmax(0, 1fr));
       gap: 3px;
       color: var(--muted);
@@ -1568,7 +1568,6 @@
         button.className = `piano-key ${note.isBlack ? "black-key" : "white-key"}`;
         button.dataset.note = note.id;
         button.setAttribute("aria-label", `${note.id} key`);
-        button.innerHTML = `<span class="note-label">${note.label.replace("\n", "<br>")}</span><span class="key-label">${note.keyLabel}</span>`;
         if (note.isBlack) {
           const left = ((whiteIndex + 1) / 14) * 100;
           button.style.left = `calc(${left}% - ((100% / 14) * 0.29))`;
@@ -1588,8 +1587,7 @@
           }
           blackKeys.appendChild(createKeyButton(note, whiteIndex));
         });
-        const firstOctave = notes.slice(0, 12);
-        keyboardHelp.innerHTML = firstOctave.map((note) => `<span>${note.keyLabel}<br>${note.id}</span>`).join("");
+        keyboardHelp.innerHTML = "";
       }
 
       function buildCharacters() {

@@ -105,9 +105,9 @@
     }
 
     .hud {
-      min-width: min(430px, 48vw);
+      min-width: min(390px, 44vw);
       display: grid;
-      grid-template-columns: repeat(3, minmax(64px, 1fr)) auto;
+      grid-template-columns: repeat(3, minmax(58px, 1fr)) minmax(46px, auto);
       gap: 1px;
       overflow: hidden;
     }
@@ -454,6 +454,15 @@
       color: #17202b;
       background: var(--accent-2);
       box-shadow: 0 5px 0 #c78e2d, 0 10px 18px rgba(0, 0, 0, 0.24);
+    }
+
+    .hud .menu-button {
+      min-height: 0;
+      height: 100%;
+      padding: 0 8px;
+      border-radius: 0;
+      font-size: 11px;
+      box-shadow: none;
     }
 
     .song-control {
@@ -1024,7 +1033,6 @@
         <img class="hero-face" id="heroFace" src="sprunki-oren.png" alt="">
         <div>
           <h1>スプランキー ピアノ</h1>
-          <p class="subtitle">C4-B5の2オクターブ鍵盤で落下ノーツを演奏</p>
         </div>
       </div>
       <div class="hud" aria-live="polite">

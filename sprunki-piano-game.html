@@ -395,12 +395,17 @@
       text-align: center;
     }
 
-    .difficulty-pill[data-difficulty="normal"] {
+    .difficulty-pill[data-level="4"],
+    .difficulty-pill[data-level="5"],
+    .difficulty-pill[data-level="6"] {
       background: #ffc85a;
       color: #2f2208;
     }
 
-    .difficulty-pill[data-difficulty="hard"] {
+    .difficulty-pill[data-level="7"],
+    .difficulty-pill[data-level="8"],
+    .difficulty-pill[data-level="9"],
+    .difficulty-pill[data-level="10"] {
       background: #ff6d6d;
       color: #2b0b0b;
     }
@@ -697,7 +702,7 @@
     </section>
 
     <section class="controls" aria-label="ゲーム操作">
-      <label class="song-control"><span>SONG</span><select id="songSelect"></select><strong class="difficulty-pill" id="difficultyLabel">Easy</strong></label>
+      <label class="song-control"><span>SONG</span><select id="songSelect"></select><strong class="difficulty-pill" id="difficultyLabel" data-level="1">Lv.1</strong></label>
       <button class="control-button" id="startButton" type="button">START</button>
       <button class="control-button secondary" id="pauseButton" type="button">PAUSE</button>
       <button class="control-button secondary" id="resetButton" type="button">RESET</button>
@@ -770,7 +775,7 @@
         {
           id: "twinkle",
           name: "Twinkle",
-          difficulty: "Easy",
+          level: 1,
           bpm: 92,
           repeats: 2,
           pattern: [
@@ -783,7 +788,7 @@
         {
           id: "ode",
           name: "Ode",
-          difficulty: "Easy",
+          level: 2,
           bpm: 104,
           repeats: 2,
           pattern: [
@@ -796,7 +801,7 @@
         {
           id: "scale",
           name: "Scale",
-          difficulty: "Normal",
+          level: 3,
           bpm: 112,
           repeats: 3,
           pattern: [
@@ -808,7 +813,7 @@
         {
           id: "mary",
           name: "Mary",
-          difficulty: "Easy",
+          level: 1,
           bpm: 96,
           repeats: 3,
           pattern: [
@@ -821,7 +826,7 @@
         {
           id: "hotcross",
           name: "Hot Cross",
-          difficulty: "Easy",
+          level: 1,
           bpm: 88,
           repeats: 4,
           pattern: [
@@ -835,7 +840,7 @@
         {
           id: "london",
           name: "London",
-          difficulty: "Normal",
+          level: 4,
           bpm: 108,
           repeats: 3,
           pattern: [
@@ -848,7 +853,7 @@
         {
           id: "canon",
           name: "Canon",
-          difficulty: "Normal",
+          level: 5,
           bpm: 100,
           repeats: 3,
           pattern: [
@@ -860,7 +865,7 @@
         {
           id: "sakura",
           name: "Sakura",
-          difficulty: "Hard",
+          level: 7,
           bpm: 84,
           repeats: 3,
           pattern: [
@@ -872,7 +877,7 @@
         {
           id: "blues",
           name: "Blues",
-          difficulty: "Hard",
+          level: 8,
           bpm: 118,
           repeats: 4,
           pattern: [
@@ -884,7 +889,7 @@
         {
           id: "hero-march",
           name: "Hero March",
-          difficulty: "Normal",
+          level: 6,
           bpm: 116,
           repeats: 3,
           pattern: [
@@ -897,7 +902,7 @@
         {
           id: "pipe-jump",
           name: "Pipe Jump",
-          difficulty: "Hard",
+          level: 10,
           bpm: 132,
           repeats: 4,
           pattern: [
@@ -910,7 +915,7 @@
         {
           id: "ribbon-waltz",
           name: "Ribbon Waltz",
-          difficulty: "Normal",
+          level: 5,
           bpm: 90,
           repeats: 3,
           pattern: [
@@ -923,7 +928,7 @@
         {
           id: "sprunki",
           name: "Sprunki",
-          difficulty: "Hard",
+          level: 8,
           bpm: 96,
           repeats: 3,
           pattern: [
@@ -1065,7 +1070,7 @@
 
       function buildSongSelect() {
         songSelect.innerHTML = SONGS.map((song) => (
-          `<option value="${song.id}">${song.name} (${song.difficulty})</option>`
+          `<option value="${song.id}">${song.name} (Lv.${song.level})</option>`
         )).join("");
         songSelect.value = selectedSongId;
         updateDifficultyLabel();
@@ -1076,9 +1081,9 @@
       }
 
       function updateDifficultyLabel() {
-        const difficulty = selectedSong().difficulty;
-        difficultyLabel.textContent = difficulty;
-        difficultyLabel.dataset.difficulty = difficulty.toLowerCase();
+        const level = selectedSong().level;
+        difficultyLabel.textContent = `Lv.${level}`;
+        difficultyLabel.dataset.level = String(level);
       }
 
       function getAudioContext() {
@@ -1287,7 +1292,7 @@
         const cleared = hitRate >= 70 && state.miss <= Math.max(3, Math.floor(totalNotes * 0.25));
         resultTitle.textContent = cleared ? "CLEAR" : "FAILED";
         resultDetail.innerHTML = [
-          `<span>Song</span> ${selectedSong().name} / ${selectedSong().difficulty}`,
+          `<span>Song</span> ${selectedSong().name} / Lv.${selectedSong().level}`,
           `<span>Score</span> ${state.score}`,
           `<span>Hit</span> ${hitRate}%  Great ${state.great}  Good ${state.good}  Miss ${state.miss}`,
           `<span>Best Combo</span> ${state.best}`

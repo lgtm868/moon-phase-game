@@ -579,6 +579,10 @@
       const MISS_GRACE_MS = 150;
       const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
       const FLAT_NAMES = { "C#": "Db", "D#": "Eb", "F#": "Gb", "G#": "Ab", "A#": "Bb" };
+      const BLACK_KEY_BOUNDARIES = new Map([
+        ["C#4", 1], ["D#4", 2], ["F#4", 4], ["G#4", 5], ["A#4", 6],
+        ["C#5", 8], ["D#5", 9], ["F#5", 11], ["G#5", 12], ["A#5", 13]
+      ]);
       const KEY_BY_NOTE = new Map([
         ["C4", "A"], ["C#4", "W"], ["D4", "S"], ["D#4", "E"], ["E4", "D"], ["F4", "F"],
         ["F#4", "T"], ["G4", "G"], ["G#4", "Y"], ["A4", "H"], ["A#4", "U"], ["B4", "J"],
@@ -676,10 +680,6 @@
           const left = ((whiteIndex + 1) / 14) * 100;
           button.style.left = `calc(${left}% - ((100% / 14) * 0.29))`;
         }
-        button.addEventListener("pointerdown", handlePointerDown);
-        button.addEventListener("pointerup", handlePointerUp);
-        button.addEventListener("pointercancel", handlePointerCancel);
-        button.addEventListener("pointerleave", handlePointerCancel);
         keyElements.set(note.id, button);
         return button;
       }
@@ -981,9 +981,28 @@
         judgeNote(noteId, now);
       }
 
+      function noteFromPointer(event) {
+        const bounds = piano.getBoundingClientRect();
+        const x = Math.min(Math.max(event.clientX - bounds.left, 0), bounds.width - 1);
+        const y = Math.min(Math.max(event.clientY - bounds.top, 0), bounds.height - 1);
+        const whiteWidth = bounds.width / whiteNotes.length;
+        if (y <= bounds.height * 0.62) {
+          const blackWidth = whiteWidth * 0.58;
+          for (const [noteId, boundary] of BLACK_KEY_BOUNDARIES) {
+            const center = boundary * whiteWidth;
+            if (x >= center - blackWidth / 2 && x <= center + blackWidth / 2) {
+              return noteId;
+            }
+          }
+        }
+        const whiteIndex = Math.min(whiteNotes.length - 1, Math.max(0, Math.floor(x / whiteWidth)));
+        return whiteNotes[whiteIndex]?.id || null;
+      }
+
       function handlePointerDown(event) {
-        const noteId = event.currentTarget.dataset.note;
-        event.currentTarget.setPointerCapture?.(event.pointerId);
+        const noteId = noteFromPointer(event);
+        if (!noteId) return;
+        piano.setPointerCapture?.(event.pointerId);
         activePointers.set(event.pointerId, noteId);
         playInput(noteId, performance.now());
         event.preventDefault();
@@ -1078,6 +1097,10 @@
       startButton.addEventListener("click", startGame);
       pauseButton.addEventListener("click", pauseGame);
       resetButton.addEventListener("click", resetGame);
+      piano.addEventListener("pointerdown", handlePointerDown);
+      piano.addEventListener("pointerup", handlePointerUp);
+      piano.addEventListener("pointercancel", handlePointerCancel);
+      piano.addEventListener("pointerleave", handlePointerCancel);
       soundButton.addEventListener("click", () => {
         soundEnabled = !soundEnabled;
         updateSoundButton();

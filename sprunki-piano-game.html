@@ -107,7 +107,7 @@
     .hud {
       min-width: min(390px, 44vw);
       display: grid;
-      grid-template-columns: repeat(3, minmax(58px, 1fr)) minmax(46px, auto);
+      grid-template-columns: repeat(3, minmax(58px, 1fr)) repeat(2, minmax(46px, auto));
       gap: 1px;
       overflow: hidden;
     }
@@ -1039,6 +1039,7 @@
         <div class="hud-item"><span class="hud-label">Score</span><strong class="hud-value" id="score">0</strong></div>
         <div class="hud-item"><span class="hud-label">Combo</span><strong class="hud-value" id="combo">0</strong></div>
         <div class="hud-item"><span class="hud-label">Best</span><strong class="hud-value" id="best">0</strong></div>
+        <button class="menu-button" id="songButton" type="button">SONG</button>
         <button class="menu-button" id="menuButton" type="button">MENU</button>
         <div class="judge-counts" id="stats" aria-label="Judgment counts">
           <div class="judge-count perfect"><span>Perfect</span><strong id="countPerfect">0</strong></div>
@@ -1125,6 +1126,7 @@
       const resultOverlay = document.getElementById("resultOverlay");
       const resultTitle = document.getElementById("resultTitle");
       const resultDetail = document.getElementById("resultDetail");
+      const songButton = document.getElementById("songButton");
       const menuButton = document.getElementById("menuButton");
       const gameMenu = document.getElementById("gameMenu");
       const menuCloseButton = document.getElementById("menuCloseButton");
@@ -1637,6 +1639,7 @@
       }
 
       function openSongPicker() {
+        closeGameMenu();
         selectedCategoryId = categoryForSong(selectedSongId).id;
         updateSongUi();
         songPicker.classList.add("is-open");
@@ -2294,6 +2297,7 @@
       resizeCanvas();
       animationId = requestAnimationFrame(tick);
 
+      songButton.addEventListener("click", openSongPicker);
       menuButton.addEventListener("click", openGameMenu);
       menuCloseButton.addEventListener("click", closeGameMenu);
       startButton.addEventListener("click", () => {
@@ -2351,7 +2355,7 @@
         if (songPicker.classList.contains("is-open")) {
           if (event.code === "Escape") {
             closeSongPicker();
-            songCurrent.focus({ preventScroll: true });
+            songButton.focus({ preventScroll: true });
           }
           event.preventDefault();
           return;

@@ -207,7 +207,7 @@
     .lane-heads {
       position: absolute;
       inset: 8px 8px auto;
-      display: grid;
+      display: none;
       grid-template-columns: repeat(8, minmax(0, 1fr));
       gap: 4px;
       pointer-events: none;
@@ -1591,9 +1591,7 @@
       }
 
       function buildCharacters() {
-        laneHeads.innerHTML = characters.map((character) => (
-          `<div class="lane-head"><img src="${character.image}" alt=""></div>`
-        )).join("");
+        laneHeads.innerHTML = "";
         characters.forEach((character, index) => {
           const button = document.createElement("button");
           button.type = "button";

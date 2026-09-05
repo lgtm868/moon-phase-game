@@ -14,14 +14,32 @@ const cardinal = a => cardinalNames.findIndex((_, i) => distance(a, i * QUARTER)
 const shapeName = a => {
   const anchor = cardinal(a);
   if (anchor >= 0) return cardinalNames[anchor];
+  if ((1 - Math.cos(a)) / 2 < .01) return a < Math.PI ? 'しんげつの すこしあと' : 'しんげつの すこしまえ';
   return (a < Math.PI ? 'ふくらむ' : 'かけていく') + ((1 - Math.cos(a)) / 2 < .5 ? '細い月' : '丸い月');
 };
+const illuminationLabel = a => {
+  const percent = (1 - Math.cos(a)) * 50;
+  if (percent > 0 && percent < 1) return '1パーセントより すくない';
+  if (percent > 99 && percent < 100) return '99パーセントより おおきい';
+  return `やく${Math.round(percent)}パーセント`;
+};
+const screenshots = process.env.QUIZ_SCREENSHOTS !== '0';
 const modes = {
-  current: { tab: '#tabQuiz', kinds: ['name', 'orbit'], size: 20 },
-  future: { tab: '#tabChallenge', kinds: ['order'], size: 20 }
+  current: { tab: '#tabQuiz', label: 'いまの形', kinds: ['name', 'orbit'], size: 20 },
+  future: { tab: '#tabChallenge', label: '1週間後', kinds: ['order'], size: 20 }
 };
 const motionControls = '#playButton, #stepButton, #resetButton';
-const pixels = { canvases: 0, minimum: 1 };
+const pixelSizes = [64, 40];
+const pixels = { canvases: 0, minimum: 1,
+  byResolution: Object.fromEntries(pixelSizes.map(size => [size, { canvases: 0, minimum: 1 }])) };
+
+async function checkModeLabels(page) {
+  for (const { tab, label } of Object.values(modes)) {
+    assert.equal((await page.locator(tab).innerText()).trim(), label, `${tab}: explicit visible mode label`);
+    assert.equal(await page.getByRole('tab', { name: label, exact: true }).getAttribute('id'), tab.slice(1),
+      `${tab}: accessible mode label retains the existing tab ID`);
+  }
+}
 
 async function snapshot(page) {
   return page.evaluate(() => {
@@ -93,15 +111,19 @@ async function checkSourceReadAloud(page, question, label) {
 }
 
 async function checkPixels(page, label) {
-  const report = await page.locator('#quizOptions button').evaluateAll(buttons => {
+  for (const size of pixelSizes) await checkPixelsAtSize(page, `${label}, ${size}px`, size);
+}
+
+async function checkPixelsAtSize(page, label, size) {
+  const report = await page.locator('#quizOptions button').evaluateAll((buttons, size) => {
     const masks = [], samples = [];
     for (const button of buttons) {
       const canvases = button.querySelectorAll('canvas');
       if (canvases.length !== 1) return { error: 'each option needs one canvas' };
       const original = canvases[0], bounds = original.getBoundingClientRect();
-      // Sample at CSS display resolution, including the 40px options near new/full moon.
+      // Resample the same option at desktop and short-landscape display resolutions.
       const canvas = document.createElement('canvas');
-      canvas.width = Math.round(bounds.width); canvas.height = Math.round(bounds.height);
+      canvas.width = canvas.height = size;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(original, 0, 0, canvas.width, canvas.height);
       const { width, height } = canvas, { data } = ctx.getImageData(0, 0, width, height);
@@ -119,7 +141,9 @@ async function checkPixels(page, label) {
         mask.push(Number(lit));
       }
       masks.push(mask);
-      samples.push({ id: button.dataset.phase, width, height, total, coverage: opaque / total,
+      samples.push({ id: button.dataset.phase, width, height,
+        displayWidth: Math.round(bounds.width), displayHeight: Math.round(bounds.height),
+        total, coverage: opaque / total,
         fraction: bright / total, expected: (1 - Math.cos(angle)) / 2, mismatch: mismatch / total });
     }
     let minimum = 1;
@@ -130,12 +154,14 @@ async function checkPixels(page, label) {
       minimum = Math.min(minimum, changed / masks[i].length);
     }
     return { samples, minimum };
-  });
+  }, size);
   assert.equal(report.error, undefined, `${label}: ${report.error}`);
   for (const sample of report.samples) {
     const context = `${label}: ${JSON.stringify(sample)}`;
-    assert.equal(sample.width, 40, `display resolution: ${context}`);
-    assert.equal(sample.height, 40, `display resolution: ${context}`);
+    assert.equal(sample.displayWidth, 64, `desktop display resolution: ${context}`);
+    assert.equal(sample.displayHeight, 64, `desktop display resolution: ${context}`);
+    assert.equal(sample.width, size, `sample resolution: ${context}`);
+    assert.equal(sample.height, size, `sample resolution: ${context}`);
     assert.ok(sample.total > 100 && sample.coverage > .95, `nonblank: ${context}`);
     assert.ok(Math.abs(sample.fraction - sample.expected) < .08, `illumination: ${context}`);
     assert.ok(sample.mismatch < .07, `side and terminator: ${context}`);
@@ -143,6 +169,8 @@ async function checkPixels(page, label) {
   assert.ok(report.minimum >= .15, `${label}: rendered binary-mask distance ${report.minimum} < .15`);
   pixels.canvases += report.samples.length;
   pixels.minimum = Math.min(pixels.minimum, report.minimum);
+  pixels.byResolution[size].canvases += report.samples.length;
+  pixels.byResolution[size].minimum = Math.min(pixels.byResolution[size].minimum, report.minimum);
 }
 
 function checkSeparation(question, label) {
@@ -275,6 +303,7 @@ async function checkDeck(browser, seed, errors) {
     await page.clock.install();
     await page.goto(url);
     await page.evaluate(() => document.fonts.ready);
+    await checkModeLabels(page);
     await page.locator('#voiceButton').click();
     const exploration = { scene: await page.locator('#space').getAttribute('aria-valuenow') };
     // One 20-card deck per mode and seed; switching is interleaved, not extra deck traversal.
@@ -296,7 +325,7 @@ async function checkDeck(browser, seed, errors) {
       for (const s of q.shapes) {
         assert.ok(Number.isFinite(s.angle) && s.angle >= 0 && s.angle < TAU);
         assert.equal(s.name, shapeName(s.angle), `${label}: generic/cardinal name`);
-        assert.equal(s.label, `${s.name}、あかるいところ やく${Math.round((1 - Math.cos(s.angle)) * 50)}パーセント`);
+        assert.equal(s.label, `${s.name}、あかるいところ ${illuminationLabel(s.angle)}`);
       }
       assert.deepEqual(q.correct, []); assert.deepEqual(q.wrong, []);
       assert.ok(q.nextDisabled && q.buttonStates.every(b => !b.disabled));
@@ -350,7 +379,7 @@ async function checkDeck(browser, seed, errors) {
         await checkSourceReadAloud(page, solved, label);
         references.add(anchor);
       }
-      if (seed === 12345 && index > 0 && anchor < 0 && !captured.has(mode)) {
+      if (screenshots && seed === 12345 && index > 0 && anchor < 0 && !captured.has(mode)) {
         await page.clock.runFor(800);
         await page.screenshot({ path: path.resolve(__dirname, '..', 'output', `quiz-${mode}-intermediate.png`) });
         captured.add(mode);
@@ -380,12 +409,106 @@ async function checkDeck(browser, seed, errors) {
   } finally { await page.close(); }
 }
 
+async function checkBoundaryPhases(browser, errors) {
+  const covered = new Set();
+  let tinyWaning = 0, rejected = 0, checked = 0;
+  // Fixed jitter forces sector endpoints and two visible, sub-1% waning crescents.
+  // Drive the real deck through its UI; do not replace production answer/shape helpers.
+  for (const jitter of [.55, .7, 1e-6, 1 - 1e-6]) {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    page.on('pageerror', error => errors.push(error.message));
+    try {
+      await page.addInitScript(value => { Math.random = () => value; }, jitter);
+      await page.clock.install();
+      await page.goto(url);
+      await checkModeLabels(page);
+      await page.locator('#voiceButton').click();
+      for (const mode of Object.keys(modes)) {
+        await page.locator(modes[mode].tab).click();
+        for (let index = 0; index < 20; index++) {
+          const q = await snapshot(page), label = `boundary ${mode}, jitter ${jitter}, source ${q.source}`;
+          const target = normalize(q.source + (mode === 'future' ? QUARTER : 0));
+          const answers = q.shapes.filter(s => distance(s.angle, target) < EPS);
+          assert.equal(answers.length, 1, `${label}: exactly one geometrically correct option`);
+          const answer = answers[0];
+          const nearLast = mode === 'future' && q.source < 3 * QUARTER
+            && q.source > 3 * QUARTER - .2 && jitter > .5 && jitter < .8;
+          const endpoint = distance(target, 0) < 1e-5;
+          if (nearLast || endpoint) {
+            checked++;
+            if (endpoint) {
+              const side = target === 0 ? 'new' : target < Math.PI ? 'after' : 'before';
+              covered.add(`${mode}:${side}`);
+              assert.equal(answer.name, side === 'new' ? 'しんげつ'
+                : side === 'after' ? 'しんげつの すこしあと' : 'しんげつの すこしまえ', label);
+              assert.equal(answer.label, `${answer.name}、あかるいところ ${side === 'new'
+                ? 'やく0パーセント' : '1パーセントより すくない'}`, label);
+            }
+            for (const shape of q.shapes) {
+              assert.equal(shape.name, shapeName(shape.angle), `${label}: option name`);
+              assert.equal(shape.label, `${shape.name}、あかるいところ ${illuminationLabel(shape.angle)}`,
+                `${label}: precise accessible illumination`);
+            }
+            if (nearLast) {
+              tinyWaning++;
+              assert.ok(target > TAU - .2 && target < TAU, `${label}: target is before new, not after`);
+              assert.ok((1 - Math.cos(target)) / 2 < .01, `${label}: genuinely sub-1% illuminated`);
+              assert.equal(answer.name, 'しんげつの すこしまえ');
+              assert.ok(distance(answer.angle, 0) > .05, `${label}: tiny phase is not rounded to new`);
+              const mask = await page.locator(`#quizOptions button[data-phase="${answer.id}"] canvas`).evaluate(canvas => {
+                const { width, height } = canvas;
+                const data = canvas.getContext('2d').getImageData(0, 0, width, height).data;
+                let left = 0, right = 0, opaque = 0;
+                for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+                  const offset = (y * width + x) * 4;
+                  if (data[offset + 3] < 200) continue;
+                  opaque++;
+                  if (data[offset] > 40) { if (x < width / 2) left++; else right++; }
+                }
+                return { left, right, opaque };
+              });
+              assert.ok(mask.opaque > 1000 && mask.left > 0, `${label}: visible left crescent ${JSON.stringify(mask)}`);
+              assert.equal(mask.right, 0, `${label}: waning light cannot be on the right`);
+              assert.ok(mask.left / mask.opaque < .02, `${label}: rendered crescent stays tiny`);
+            }
+            for (const wrong of q.shapes.filter(s => s.id !== answer.id)) {
+              await page.locator(`#quizOptions button[data-phase="${wrong.id}"]`).click();
+              const attempt = await snapshot(page);
+              sameQuestion(attempt, q, `${label}: rejected ${wrong.id}`);
+              assert.deepEqual(attempt.correct, [], `${label}: wrong option never scores`);
+              assert.ok(attempt.nextDisabled && attempt.wrong.includes(wrong.id));
+              assert.match(attempt.result, /もういちど/);
+              assert.equal(attempt.scene, q.scene);
+              assert.deepEqual(attempt.summary, q.summary);
+              rejected++;
+            }
+          }
+          await page.locator(`#quizOptions button[data-phase="${answer.id}"]`).click();
+          const solved = await snapshot(page);
+          sameQuestion(solved, q, `${label}: scoring preserves exact source`);
+          assert.equal(solved.scene, q.scene, `${label}: scoring preserves source scene`);
+          assert.deepEqual(solved.correct, [answer.id]);
+          assert.equal(solved.nextDisabled, false);
+          assert.equal(Number(solved.result.match(/★\s*(\d+)/)?.[1]), index + 1);
+          if (mode === 'future') assert.deepEqual(solved.summary, q.summary, `${label}: source summary unchanged`);
+          await page.locator('#quizNext').click();
+        }
+      }
+    } finally { await page.close(); }
+  }
+  assert.equal(tinyWaning, 2, 'both near-last-quarter source regressions exercised');
+  assert.deepEqual([...covered].sort(), ['current:after', 'current:before', 'current:new',
+    'future:after', 'future:before', 'future:new'], 'both sides and exact new exercised in each mode');
+  return { cases: checked, tinyWaning, wrongAnswersRejected: rejected };
+}
+
 (async () => {
   const browser = await chromium.launch({ headless: true,
     ...(process.env.CHROME_EXECUTABLE ? { executablePath: process.env.CHROME_EXECUTABLE } : {}) });
   try {
-    fs.mkdirSync(path.resolve(__dirname, '..', 'output'), { recursive: true });
+    if (screenshots) fs.mkdirSync(path.resolve(__dirname, '..', 'output'), { recursive: true });
     const errors = [];
+    const boundaries = await checkBoundaryPhases(browser, errors);
     const first = await checkDeck(browser, 12345, errors);
     const second = await checkDeck(browser, 98765, errors);
     for (const mode of Object.keys(modes)) {
@@ -396,7 +519,8 @@ async function checkDeck(browser, seed, errors) {
     assert.deepEqual(errors, [], 'no uncaught browser errors');
     console.log(JSON.stringify({ passed: true, questionsPerModePerSeed: 20, seeds: 2,
       correctAnswersAccepted: 80, wrongAnswersRejected: 80, canvasChecks: pixels.canvases,
-      delayedTextureChecks: 1, displayPixels: 40, minimumRenderedMaskDistance: pixels.minimum,
+      boundaries, delayedTextureChecks: 1, displayPixels: pixelSizes,
+      pixelChecksByResolution: pixels.byResolution, minimumRenderedMaskDistance: pixels.minimum,
       requiredRenderedMaskDistance: .15 }, null, 2));
   } finally {
     await browser.close();

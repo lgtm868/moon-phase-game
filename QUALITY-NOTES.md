@@ -31,10 +31,10 @@ Quiz phases are continuous angles across the entire lunar cycle, independently
 of the traditional calendar-day picker. Each mode has a shuffled 20-question
 deck: one random angle within each of 16 sectors, plus the four exact cardinal
 phases. Angles are sampled afresh for each deck, not rounded to fixed shapes.
-Find asks the current Earth-view appearance for sampled angles and uses name
-questions only for new/first-quarter/full/last-quarter anchors. Challenge asks
-about one week later for all angles. Future-shape questions never appear in
-Find. Each mode keeps its own question, deck, score and feedback; switching
+The visible `いまの形` mode asks the current Earth-view appearance for sampled angles and uses name
+questions only for new/first-quarter/full/last-quarter anchors. The explicitly
+selected `1週間後` mode asks about one week later for all angles. Future-shape questions never appear in
+the current-shape mode. Each mode keeps its own question, deck, score and feedback; switching
 modes restores that session, including incorrect-choice highlights.
 
 Every question has eight question-local options, one retaining the exact
@@ -44,6 +44,12 @@ binary-lit disks this gives at least 25% disk-area symmetric difference, even
 near new/full moon. Raster appearance is checked separately at thumbnail size.
 Intermediate phases use descriptive shape names, not exact calendar-day names.
 Accessible option names also include the approximate illuminated percentage.
+Non-cardinal moons with less than 1% illumination are named just before/after
+new moon, not new moon itself. Their accessible percentages say less than 1%,
+never rounded to 0%; likewise near-full non-full moons are not announced as 100%.
+Thumbnails are enlarged where layout permits, but the illuminated shape is not
+artificially thickened. At finite screen resolution a very thin crescent can
+still be subpixel; the phase angle and grading retain their exact values.
 One week is modeled as one quarter of the mean 29.53059-day cycle (7.38 days).
 The displayed orientation is the same northern-hemisphere convention as the
 main renderer; this is not an exact-date or observing-time prediction.
@@ -95,6 +101,9 @@ playback, and the file URL with external network blocked.
 correct answers, rendered illumination and bright-side direction, duplicate
 scoring, summary masking, frozen diagrams, tab/background persistence, and
 explicit rather than timed advancement.
+Boundary regressions cover exact new moon and both neighboring thin crescents
+in both modes, including all incorrect options and unchanged source diagrams.
+Moon option containment is checked at every supported test viewport.
 
 Run with Node and Playwright installed:
 

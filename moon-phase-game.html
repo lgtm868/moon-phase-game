@@ -74,7 +74,7 @@
     .quiz-prompt { border: 0; background: transparent; font-size: 16px; line-height: 1.3; font-weight: 800; color: #ffda80; padding: 0 2px; }
     .quiz-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 4px; }
     .quiz-options button { display: grid; place-items: center; min-height: 42px; padding: 0; overflow: hidden; }
-    .quiz-options canvas { width: 40px; height: 40px; }
+    .quiz-options canvas { width: 64px; height: 64px; }
     .quiz-options .correct { border-color: #b9edcc; background: #365c48; }
     .quiz-options .try-again { border-color: #f4b183; }
     .quiz-footer { display: grid; grid-template-columns: minmax(0, 1fr) 82px; gap: 8px; align-items: center; }
@@ -86,6 +86,7 @@
     body.in-quiz .phase-name { font-size: 18px; }
     .audio-status { position: fixed; bottom: 86px; left: 50%; transform: translateX(-50%); z-index: 3; background: #492f22; color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; max-width: 90%; }
     @media (max-width: 759px) {
+      .quiz-options canvas { width: 56px; height: 56px; }
       main { width: min(100%, 500px); grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(165px, 1fr) 94px 266px 54px; gap: 8px; }
       .scene { grid-column: 1; grid-row: 1; }
       .phase-strip { grid-column: 1; grid-row: 2; gap: 14px; padding: 0 8px; }
@@ -111,12 +112,14 @@
       .phase-choice canvas { width: 23px; height: 23px; }
     }
     @media (min-width: 760px) and (max-height: 650px) {
+      .quiz-options canvas { width: 40px; height: 40px; }
       main { min-height: 350px; grid-template-rows: minmax(80px, 1fr) 210px 48px; gap: 8px 20px; }
       #phaseMoon { width: 90px; height: 90px; }
       .quiz-mask { width: 90px; height: 90px; }
       .library { grid-template-rows: 22px minmax(0, 1fr); gap: 4px; }
     }
     @media (min-width: 560px) and (max-height: 500px) {
+      .quiz-options canvas { width: 40px; height: 40px; }
       body { padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
       main { width: 100%; min-height: 342px; height: calc(100svh - 8px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr); grid-template-rows: minmax(68px, 1fr) 210px 48px; gap: 8px 12px; }
       .scene { grid-column: 1; grid-row: 1 / 3; }
@@ -158,8 +161,8 @@
       <div class="library-tabs" role="tablist" aria-label="あそび">
         <button id="tabMoon" role="tab" aria-selected="true" aria-controls="phaseList" data-panel="phaseList">おつきさま</button>
         <button id="tabFriends" role="tab" aria-selected="false" aria-controls="sprunkiList" data-panel="sprunkiList" tabindex="-1">なかま</button>
-        <button id="tabQuiz" role="tab" aria-selected="false" aria-controls="quizPanel" data-panel="quizPanel" data-quiz-mode="current" tabindex="-1">みつけて</button>
-        <button id="tabChallenge" role="tab" aria-selected="false" aria-controls="quizPanel" data-panel="quizPanel" data-quiz-mode="future" tabindex="-1">チャレンジ</button>
+        <button id="tabQuiz" role="tab" aria-selected="false" aria-controls="quizPanel" data-panel="quizPanel" data-quiz-mode="current" tabindex="-1">いまの形</button>
+        <button id="tabChallenge" role="tab" aria-selected="false" aria-controls="quizPanel" data-panel="quizPanel" data-quiz-mode="future" tabindex="-1">1週間後</button>
       </div>
       <section class="phase-picker" id="phaseList" role="tabpanel" aria-labelledby="tabMoon"></section>
       <section class="sprunki-picker" id="sprunkiList" role="tabpanel" aria-labelledby="tabFriends" hidden></section>
@@ -1600,7 +1603,13 @@
           return Math.min(distance, TAU - distance) < 1e-9;
         });
         if (cardinal !== -1) return Object.freeze({ ...quizCardinals[cardinal], angle });
-        const waxing = angle < Math.PI, thin = (1 - Math.cos(angle)) / 2 < 0.5;
+        const waxing = angle < Math.PI, fraction = (1 - Math.cos(angle)) / 2, thin = fraction < 0.5;
+        // Near new moon the illuminated sliver can be subpixel at thumbnail size.
+        if (fraction < 0.01) return Object.freeze({
+          angle,
+          name: waxing ? "しんげつの すこしあと" : "しんげつの すこしまえ",
+          detail: (waxing ? "みぎが" : "ひだりが") + " ごくほそく ひかるね"
+        });
         return Object.freeze({
           angle,
           name: (waxing ? "ふくらむ" : "かけていく") + (thin ? "細い月" : "丸い月"),
@@ -1711,8 +1720,11 @@
           button.dataset.phase = String(id);
           button.dataset.angle = String(angle);
           button.dataset.name = name;
-          const percent = Math.round((1 - Math.cos(angle)) * 50);
-          button.setAttribute("aria-label", name + "、あかるいところ やく" + percent + "パーセント");
+          const percent = (1 - Math.cos(angle)) * 50;
+          const coverage = percent > 0 && percent < 1 ? "1パーセントより すくない"
+            : percent > 99 && percent < 100 ? "99パーセントより おおきい"
+            : "やく" + Math.round(percent) + "パーセント";
+          button.setAttribute("aria-label", name + "、あかるいところ " + coverage);
           canvas.width = canvas.height = 128;
           canvas.setAttribute("aria-hidden", "true");
           drawMoonPhase(canvas.getContext("2d"), 64, 64, 54, angle);

@@ -14,7 +14,14 @@ const shapeName = angle => {
   const names = ['しんげつ', 'じょうげん', 'まんげつ', 'かげん'];
   const cardinal = names.findIndex((_, i) => distance(angle, i * Math.PI / 2) < 1e-8);
   if (cardinal >= 0) return names[cardinal];
+  if ((1 - Math.cos(angle)) / 2 < .01) return angle < Math.PI ? 'しんげつの すこしあと' : 'しんげつの すこしまえ';
   return (angle < Math.PI ? 'ふくらむ' : 'かけていく') + ((1 - Math.cos(angle)) / 2 < .5 ? '細い月' : '丸い月');
+};
+const illuminationLabel = angle => {
+  const percent = (1 - Math.cos(angle)) * 50;
+  if (percent > 0 && percent < 1) return '1パーセントより すくない';
+  if (percent > 99 && percent < 100) return '99パーセントより おおきい';
+  return `やく${Math.round(percent)}パーセント`;
 };
 
 async function quizSnapshot(page) {
@@ -39,12 +46,17 @@ async function quizSnapshot(page) {
 
 async function checkQuizLayout(page, label) {
   const layout = await page.evaluate(() => {
-    const elements = [...document.querySelectorAll('[role="tab"], #quizPanel, #quizPrompt, #quizPanel button, #quizResult, #phaseName, #phaseMessage')];
+    const elements = [...document.querySelectorAll('[role="tab"], #quizPanel, #quizPrompt, #quizPanel button, #quizOptions canvas, #quizResult, #phaseName, #phaseMessage')];
     const overflow = elements.filter(el => {
       const rect = el.getBoundingClientRect();
       if (!(rect.width > 0 && rect.height > 0 && rect.left >= -1 && rect.top >= -1
         && rect.right <= innerWidth + 1 && rect.bottom <= innerHeight + 1
         && el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1)) return true;
+      if (el.matches('#quizOptions canvas')) {
+        const parent = el.parentElement.getBoundingClientRect();
+        if (rect.left < parent.left || rect.right > parent.right
+          || rect.top < parent.top || rect.bottom > parent.bottom) return true;
+      }
       return [...el.childNodes].filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim()).some(node => {
         const range = document.createRange();
         range.setStart(node, node.textContent.search(/\S/));
@@ -201,7 +213,7 @@ const server = http.createServer((req, res) => {
         const answer = answers[0], wrong = before.options.find(option => option.phase !== answer.phase);
         for (const option of before.options) {
           assert.equal(option.name, shapeName(option.angle));
-          assert.equal(option.label, `${option.name}、あかるいところ やく${Math.round((1 - Math.cos(option.angle)) * 50)}パーセント`);
+          assert.equal(option.label, `${option.name}、あかるいところ ${illuminationLabel(option.angle)}`);
         }
         const prefix = mode === 'current' ? 'quiz' : 'challenge';
         for (const state of ['question', 'wrong', 'solved']) {

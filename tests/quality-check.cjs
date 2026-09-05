@@ -5,6 +5,71 @@ const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = path.resolve(__dirname, '..');
 const artifacts = path.join(root, 'output');
+const quizModes = [['#tabQuiz', 'current'], ['#tabChallenge', 'future']];
+const tabIds = ['tabMoon', 'tabFriends', 'tabQuiz', 'tabChallenge'];
+
+async function quizSnapshot(page) {
+  return page.locator('#quizPanel').evaluate(panel => ({
+    dataset: { ...panel.dataset }, prompt: document.querySelector('#quizPrompt').textContent,
+    result: document.querySelector('#quizResult').textContent,
+    nextDisabled: document.querySelector('#quizNext').disabled,
+    options: [...document.querySelectorAll('#quizOptions button')].map(button => ({
+      phase: button.dataset.phase, className: button.className, disabled: button.disabled
+    })),
+    scene: document.querySelector('#space').getAttribute('aria-valuenow'),
+    summary: document.querySelector('#phaseSummary').textContent,
+    masked: document.querySelector('#phaseSummary').classList.contains('is-masked')
+  }));
+}
+
+async function checkQuizLayout(page, label) {
+  const layout = await page.evaluate(() => {
+    const elements = [...document.querySelectorAll('[role="tab"], #quizPanel, #quizPrompt, #quizPanel button, #quizResult, #phaseName, #phaseMessage')];
+    const overflow = elements.filter(el => {
+      const rect = el.getBoundingClientRect();
+      if (!(rect.width > 0 && rect.height > 0 && rect.left >= -1 && rect.top >= -1
+        && rect.right <= innerWidth + 1 && rect.bottom <= innerHeight + 1
+        && el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1)) return true;
+      return [...el.childNodes].filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim()).some(node => {
+        const range = document.createRange();
+        range.setStart(node, node.textContent.search(/\S/));
+        range.setEnd(node, node.textContent.trimEnd().length);
+        return [...range.getClientRects()].some(text => text.left < rect.left - 1 || text.right > rect.right + 1
+          || text.top < rect.top - 1 || text.bottom > rect.bottom + 1);
+      });
+    }).map(el => ({ id: el.id, text: el.textContent, rect: el.getBoundingClientRect().toJSON() }));
+    return { overflow, horizontal: document.documentElement.scrollWidth > innerWidth,
+      vertical: document.documentElement.scrollHeight > innerHeight + 2 };
+  });
+  assert.ok(!layout.overflow.length && !layout.horizontal && !layout.vertical, `${label}: ${JSON.stringify(layout)}`);
+}
+
+async function checkTabKeyboard(page) {
+  assert.deepEqual(await page.locator('[role="tab"]').evaluateAll(tabs => tabs.map(tab => tab.id)), tabIds,
+    'four library tabs in current-then-challenge order');
+  for (const [tab, mode] of quizModes) {
+    assert.equal(await page.locator(tab).getAttribute('data-panel'), 'quizPanel');
+    assert.equal(await page.locator(tab).getAttribute('data-quiz-mode'), mode);
+  }
+  for (let index = 0; index < tabIds.length; index++) {
+    for (const [key, target] of [['ArrowRight', (index + 1) % 4], ['ArrowLeft', (index + 3) % 4], ['Home', 0], ['End', 3]]) {
+      await page.locator(`#${tabIds[index]}`).click();
+      await page.locator(`#${tabIds[index]}`).press(key);
+      assert.equal(await page.evaluate(() => document.activeElement.id), tabIds[target], `${key}: focus`);
+      const selected = await page.locator('[role="tab"]').evaluateAll(tabs => tabs.map(tab => ({
+        selected: tab.getAttribute('aria-selected'), tabIndex: tab.tabIndex
+      })));
+      assert.deepEqual(selected, tabIds.map((_, i) => ({ selected: String(i === target), tabIndex: i === target ? 0 : -1 })), `${key}: roving focus and selection`);
+      const panel = await page.locator(`#${tabIds[target]}`).getAttribute('aria-controls');
+      assert.ok(await page.locator(`#${panel}`).isVisible(), `${key}: selected panel visible`);
+      assert.equal(await page.locator('[role="tabpanel"]:visible').count(), 1, `${key}: one panel visible`);
+      if (target >= 2) {
+        assert.equal(await page.locator('#quizPanel').getAttribute('data-mode'), target === 2 ? 'current' : 'future');
+        assert.equal(await page.locator('#quizPanel').getAttribute('aria-labelledby'), tabIds[target]);
+      }
+    }
+  }
+}
 fs.mkdirSync(artifacts, { recursive: true });
 const server = http.createServer((req, res) => {
   const target = path.resolve(root, '.' + decodeURIComponent(new URL(req.url, 'http://local').pathname));
@@ -34,6 +99,7 @@ const server = http.createServer((req, res) => {
         window.Audio = function(src) { const audio = new NativeAudio(src); window.__audios.push(audio); return audio; };
       });
       await page.goto(url);
+      await page.evaluate(() => document.fonts.ready);
       await page.locator('#voiceButton').click();
       await page.screenshot({ path: path.join(artifacts, `quality-${width}x${height}.png`) });
       const layout = await page.evaluate(() => ({
@@ -99,24 +165,34 @@ const server = http.createServer((req, res) => {
         assert.ok(await page.evaluate(() => window.__audios.every(a => a.paused)), 'audio off');
         report.push({ audio });
       }
-      await page.locator('#tabQuiz').click();
-      const question = await page.locator('#quizPanel').evaluate(el => ({ ...el.dataset }));
-      const target = (Number(question.source) + (question.kind === 'order' ? 2 : 0)) % 8;
-      assert.equal(await page.locator('#quizOptions button').count(), 8);
-      await page.screenshot({ path: path.join(artifacts, `quiz-question-${width}x${height}.png`) });
-      await page.locator(`#quizOptions button[data-phase="${target}"]`).click();
-      assert.match(await page.locator('#quizResult').textContent(), /みつけた/);
-      const quizLayout = await page.evaluate(() => {
-        const elements = [...document.querySelectorAll('#quizPanel button, #quizResult, #phaseName, #phaseMessage')];
-        const overflow = elements.filter(el => {
-          const rect = el.getBoundingClientRect();
-          return !(rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight
-            && el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1);
-        }).map(el => ({ id: el.id, text: el.textContent, width: el.clientWidth, height: el.clientHeight, scroll: [el.scrollWidth, el.scrollHeight], rect: el.getBoundingClientRect().toJSON() }));
-        return { overflow, horizontal: document.documentElement.scrollWidth > innerWidth, vertical: document.documentElement.scrollHeight > innerHeight + 2 };
-      });
-      assert.ok(!quizLayout.overflow.length && !quizLayout.horizontal && !quizLayout.vertical, `quiz overflow ${width}x${height}: ${JSON.stringify(quizLayout)}`);
-      await page.screenshot({ path: path.join(artifacts, `quiz-${width}x${height}.png`) });
+      const saved = {};
+      for (const [tab, mode] of quizModes) {
+        await page.locator(tab).click();
+        const question = await page.locator('#quizPanel').evaluate(el => ({ ...el.dataset }));
+        assert.equal(question.mode, mode);
+        assert.ok(mode === 'current' ? ['name', 'orbit'].includes(question.kind) : question.kind === 'order');
+        const target = (Number(question.source) + (mode === 'future' ? 2 : 0)) % 8;
+        assert.equal(await page.locator('#quizOptions button').count(), 8);
+        const prefix = mode === 'current' ? 'quiz' : 'challenge';
+        for (const state of ['question', 'wrong', 'solved']) {
+          if (state === 'wrong') {
+            await page.locator(`#quizOptions button[data-phase="${(target + 1) % 8}"]`).click();
+            assert.match(await page.locator('#quizResult').textContent(), /もういちど/);
+          } else if (state === 'solved') {
+            await page.locator(`#quizOptions button[data-phase="${target}"]`).click();
+            assert.match(await page.locator('#quizResult').textContent(), /★\s*1\s+みつけた/);
+          }
+          assert.equal(await page.locator('#quizNext').isDisabled(), state !== 'solved');
+          await checkQuizLayout(page, `${mode} ${state} ${width}x${height}`);
+          await page.screenshot({ path: path.join(artifacts, `${prefix}${state === 'solved' ? '' : `-${state}`}-${width}x${height}.png`) });
+        }
+        saved[mode] = await quizSnapshot(page);
+      }
+      await checkTabKeyboard(page);
+      for (const [tab, mode] of quizModes) {
+        await page.locator(tab).click();
+        assert.deepEqual(await quizSnapshot(page), saved[mode], `${mode}: keyboard and other tabs preserve solved state`);
+      }
       report.push({ width, height, layout });
       await page.close();
     }

@@ -28,9 +28,12 @@ image avoids remote image requests and file-origin canvas restrictions.
 ## Quiz model
 
 The quiz uses eight unambiguous astronomical representatives at 45-degree
-intervals, independently of the traditional calendar-day picker. Each shuffled
-24-question deck covers all eight shapes in three modes: names/descriptions,
-the shape about one week later, and Earth-view appearance from orbital position.
+intervals, independently of the traditional calendar-day picker. The default
+Find tab has a shuffled 16-question deck: names/descriptions and the current
+Earth-view appearance from orbital position. The separate Challenge tab has
+eight questions about the shape one week later. Future-shape questions never
+appear in Find. Each mode keeps its own question, deck, score and feedback;
+switching modes restores that session, including incorrect-choice highlights.
 One week is modeled as one quarter of the mean 29.53059-day cycle (7.38 days).
 The displayed orientation is the same northern-hemisphere convention as the
 main renderer; this is not an exact-date or observing-time prediction.
@@ -42,7 +45,9 @@ questions show the source Moon. Correct answers reveal the corresponding Moon.
 Only the explicit Next button advances. Tab changes and backgrounding retain
 the question, result and score. Leaving the quiz restores the previous
 exploration phase rather than leaking the quiz answer through the phase picker.
-Duplicate and stale answer events cannot score.
+Duplicate and stale answer events cannot score, including events from options
+detached during a mode change. Both quiz tabs share a panel whose accessible
+label tracks the selected tab; keyboard navigation includes all four tabs.
 
 ## Music and speech
 

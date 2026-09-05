@@ -48,8 +48,8 @@
     .phase-name { font-size: 27px; font-weight: 800; line-height: 1.4; overflow-wrap: anywhere; }
     .phase-message { font-size: 13px; line-height: 1.6; color: #c4d5cd; margin-top: 8px; }
     .library { grid-column: 2; grid-row: 2; min-width: 0; display: grid; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; }
-    .library-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; border-bottom: 1px solid var(--line); }
-    .library-tabs button { border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: 14px; font-weight: 700; }
+    .library-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; border-bottom: 1px solid var(--line); }
+    .library-tabs button { border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; padding: 0 2px; }
     .library-tabs button[aria-selected="true"] { color: #b9edcc; border-bottom: 3px solid #b9edcc; }
     .phase-picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 5px; }
     .phase-choice { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 2px; font-size: 11px; line-height: 1.25; }
@@ -156,7 +156,8 @@
       <div class="library-tabs" role="tablist" aria-label="あそび">
         <button id="tabMoon" role="tab" aria-selected="true" aria-controls="phaseList" data-panel="phaseList">おつきさま</button>
         <button id="tabFriends" role="tab" aria-selected="false" aria-controls="sprunkiList" data-panel="sprunkiList" tabindex="-1">なかま</button>
-        <button id="tabQuiz" role="tab" aria-selected="false" aria-controls="quizPanel" data-panel="quizPanel" tabindex="-1">みつけて</button>
+        <button id="tabQuiz" role="tab" aria-selected="false" aria-controls="quizPanel" data-panel="quizPanel" data-quiz-mode="current" tabindex="-1">みつけて</button>
+        <button id="tabChallenge" role="tab" aria-selected="false" aria-controls="quizPanel" data-panel="quizPanel" data-quiz-mode="future" tabindex="-1">チャレンジ</button>
       </div>
       <section class="phase-picker" id="phaseList" role="tabpanel" aria-labelledby="tabMoon"></section>
       <section class="sprunki-picker" id="sprunkiList" role="tabpanel" aria-labelledby="tabFriends" hidden></section>
@@ -1289,7 +1290,7 @@
 
       function speakCurrentPhaseName() {
         playTone();
-        if (isQuizActive()) { speakJapanese(quizSolved ? quizAnswerText() : quizQuestion.prompt); return; }
+        if (isQuizActive()) { speakJapanese(quizState.solved ? quizAnswerText() : quizState.question.prompt); return; }
         speakJapanese(phaseLabels[currentIndex()].name);
       }
 
@@ -1539,7 +1540,9 @@
           const selected = item === tab;
           item.setAttribute("aria-selected", String(selected));
           item.tabIndex = selected ? 0 : -1;
-          document.getElementById(item.dataset.panel).hidden = !selected;
+        });
+        new Set(tabs.map(item => item.dataset.panel)).forEach(id => {
+          document.getElementById(id).hidden = id !== tab.dataset.panel;
         });
         const quiz = tab.dataset.panel === "quizPanel";
         document.body.classList.toggle("in-quiz", quiz);
@@ -1551,8 +1554,12 @@
           setPlaying(false);
           if (drag && space.hasPointerCapture(drag.id)) space.releasePointerCapture(drag.id);
           drag = null;
-          if (!quizQuestion) nextQuiz();
-          else { syncQuizScene(); speakJapanese(quizSolved ? quizAnswerText() : quizQuestion.prompt); }
+          quizMode = tab.dataset.quizMode;
+          quizState = quizSessions[quizMode];
+          quizPanel.dataset.mode = quizMode;
+          quizPanel.setAttribute("aria-labelledby", tab.id);
+          if (!quizState.question) nextQuiz();
+          else { renderQuiz(); speakJapanese(quizState.solved ? quizAnswerText() : quizState.question.prompt); }
         } else {
           if (wasQuiz) snapPhase(explorationPhase);
           phaseSummary.querySelector(".small-label").textContent = "ちきゅうから みえる";
@@ -1565,7 +1572,7 @@
         tab.addEventListener("keydown", event => {
           if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
           event.preventDefault();
-          const next = event.key === "Home" ? 0 : event.key === "End" ? 2 : (index + (event.key === "ArrowRight" ? 1 : 2)) % 3;
+          const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
           tabs[next].focus(); selectPanel(tabs[next]);
         });
       });
@@ -1582,10 +1589,13 @@
         { name: "かげん", clue: "かげんの つき は どれ？", detail: "ひだり はんぶんが ひかるね" },
         { name: "かけていく細い月", clue: "しんげつに むかう、ほそいつき は？", detail: "ひだりが ほそく ひかるね" }
       ].map((shape, id) => Object.freeze({ ...shape, id, angle: id * TAU / 8 })));
-      let quizQuestion = null, quizSolved = false, quizStars = 0, quizSerial = 0;
+      // Each mode owns its progress; changing tabs never transfers a question or score.
+      const quizSessions = Object.fromEntries(["current", "future"].map(mode => [mode, {
+        question: null, solved: false, stars: 0, deck: [], wrong: new Set(), feedback: ""
+      }]));
+      let quizMode = "current", quizState = quizSessions.current, quizSerial = 0;
       let explorationPhase = phase;
-      let quizDeck = [];
-      function isQuizActive() { return !!quizQuestion && !quizPanel.hidden; }
+      function isQuizActive() { return !!quizState.question && !quizPanel.hidden; }
       function shuffleQuiz(items) {
         const result = [...items];
         for (let i = result.length - 1; i > 0; i--) {
@@ -1595,31 +1605,32 @@
         return result;
       }
       function quizAnswerText() {
-        const answer = quizShapes[quizQuestion.answer];
+        const answer = quizShapes[quizState.question.answer];
         return "みつけた！ " + answer.name + "。" + answer.detail;
       }
       function syncQuizScene() {
-        snapPhase(quizShapes[quizSolved ? quizQuestion.answer : quizQuestion.source].angle);
+        snapPhase(quizShapes[quizState.solved ? quizState.question.answer : quizState.question.source].angle);
         lastTextIndex = -1;
         draw();
       }
       function updateQuizSummary() {
-        const masked = !quizSolved && quizQuestion.kind !== "order";
+        const masked = !quizState.solved && quizState.question.kind !== "order";
         phaseSummary.classList.toggle("is-masked", masked);
-        const shape = quizShapes[quizSolved ? quizQuestion.answer : quizQuestion.source];
-        phaseSummary.querySelector(".small-label").textContent = quizSolved ? "こたえ" : quizQuestion.kind === "order" ? "いまのつき" : "ちきゅうから みえる";
+        const shape = quizShapes[quizState.solved ? quizState.question.answer : quizState.question.source];
+        phaseSummary.querySelector(".small-label").textContent = quizState.solved ? "こたえ" : quizState.question.kind === "order" ? "いまのつき" : "ちきゅうから みえる";
         phaseName.textContent = masked ? "どんな かたち？" : shape.name;
         phaseMessage.textContent = masked ? "にほんで みあげた むき" : shape.detail;
-        phaseSummary.setAttribute("aria-label", quizSolved ? quizAnswerText() : quizQuestion.prompt);
+        phaseSummary.setAttribute("aria-label", quizState.solved ? quizAnswerText() : quizState.question.prompt);
         phaseMoon.setAttribute("aria-label", masked ? "こたえは まだ ひみつ" : shape.name);
         space.setAttribute("aria-valuetext", "クイズの月の位置");
       }
       function nextQuiz() {
-        if (quizQuestion && !quizSolved) return;
-        if (!quizDeck.length) {
-          quizDeck = shuffleQuiz(["name", "order", "orbit"].flatMap(kind => quizShapes.map(shape => ({ kind, source: shape.id }))));
+        if (quizState.question && !quizState.solved) return;
+        if (!quizState.deck.length) {
+          const kinds = quizMode === "future" ? ["order"] : ["name", "orbit"];
+          quizState.deck = shuffleQuiz(kinds.flatMap(kind => quizShapes.map(shape => ({ kind, source: shape.id }))));
         }
-        const { kind, source } = quizDeck.pop();
+        const { kind, source } = quizState.deck.pop();
         // A quarter of the mean synodic month is about one week (7.38 days).
         const answer = kind === "order" ? (source + 2) % 8 : source;
         const prompt = kind === "name" ? quizShapes[source].clue
@@ -1629,14 +1640,21 @@
           id: ++quizSerial, kind, source, answer, prompt,
           options: Object.freeze(shuffleQuiz(quizShapes.map(shape => shape.id)))
         });
-        quizQuestion = question;
-        quizSolved = false;
-        quizNext.disabled = true;
+        quizState.question = question;
+        quizState.solved = false;
+        quizState.wrong.clear();
+        quizState.feedback = "★ " + quizState.stars;
+        renderQuiz();
+        speakJapanese(prompt);
+      }
+      function renderQuiz() {
+        const state = quizState, question = state.question;
+        quizNext.disabled = !state.solved;
         quizPanel.dataset.questionId = String(question.id);
-        quizPanel.dataset.kind = kind;
-        quizPanel.dataset.source = String(source);
-        document.getElementById("quizPrompt").textContent = prompt;
-        document.getElementById("quizResult").textContent = "★ " + quizStars;
+        quizPanel.dataset.kind = question.kind;
+        quizPanel.dataset.source = String(question.source);
+        document.getElementById("quizPrompt").textContent = question.prompt;
+        document.getElementById("quizResult").textContent = state.feedback;
         const container = document.getElementById("quizOptions");
         container.replaceChildren();
         question.options.forEach(id => {
@@ -1648,35 +1666,39 @@
           canvas.setAttribute("aria-hidden", "true");
           drawMoonPhase(canvas.getContext("2d"), 64, 64, 54, quizShapes[id].angle);
           button.append(canvas);
+          button.classList.toggle("try-again", state.wrong.has(id));
+          button.classList.toggle("correct", state.solved && id === question.answer);
           button.addEventListener("click", () => {
-            if (!isQuizActive() || quizQuestion !== question || quizSolved) return;
+            if (!button.isConnected || !isQuizActive() || quizState !== state || state.question !== question || state.solved) return;
             if (id === question.answer) {
-              quizSolved = true;
-              quizStars++;
+              quizState.solved = true;
+              quizState.stars++;
               button.classList.remove("try-again");
               button.classList.add("correct");
               quizNext.disabled = false;
               syncQuizScene(); triggerTapEffect("moon");
-              document.getElementById("quizResult").textContent = "★ " + quizStars + " みつけた！";
+              state.feedback = "★ " + state.stars + " みつけた！";
+              document.getElementById("quizResult").textContent = state.feedback;
               playTone(); speakJapanese(quizAnswerText());
             } else {
+              state.wrong.add(id);
               button.classList.add("try-again");
-              document.getElementById("quizResult").textContent = "もういちど";
+              state.feedback = "もういちど";
+              document.getElementById("quizResult").textContent = state.feedback;
               speakJapanese("もういちど");
             }
           });
           container.append(button);
         });
         syncQuizScene();
-        speakJapanese(prompt);
       }
       quizNext.addEventListener("click", () => {
-        if (!isQuizActive() || !quizSolved) return;
+        if (!isQuizActive() || !quizState.solved) return;
         nextQuiz();
         document.getElementById("quizPrompt").focus({ preventScroll: true });
       });
       document.getElementById("quizPrompt").addEventListener("click", () => {
-        if (quizQuestion) speakJapanese(quizQuestion.prompt);
+        if (quizState.question) speakJapanese(quizState.question.prompt);
       });
       document.getElementById("voiceButton").addEventListener("click", event => {
         voiceEnabled = !voiceEnabled;

@@ -5,8 +5,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 const url = pathToFileURL(path.resolve(__dirname, '..', 'moon-phase-game.html')).href;
 const phases = Array.from({ length: 8 }, (_, id) => id);
-const kinds = ['name', 'order', 'orbit'];
-const expectedDeck = kinds.flatMap(kind => phases.map(id => `${kind}:${id}`)).sort();
+const modes = {
+  current: { tab: '#tabQuiz', kinds: ['name', 'orbit'], size: 16 },
+  future: { tab: '#tabChallenge', kinds: ['order'], size: 8 }
+};
 const motionControls = '#playButton, #stepButton, #resetButton';
 const layoutViewports = [{ width: 320, height: 568 }, { width: 667, height: 375 }];
 
@@ -15,6 +17,7 @@ async function snapshot(page) {
     const panel = document.querySelector('#quizPanel');
     const buttons = [...document.querySelectorAll('#quizOptions button')];
     return {
+      mode: panel.dataset.mode,
       id: panel.dataset.questionId,
       kind: panel.dataset.kind,
       source: panel.dataset.source,
@@ -22,6 +25,10 @@ async function snapshot(page) {
       options: buttons.map(button => button.getAttribute('data-phase')),
       correct: buttons.filter(button => button.classList.contains('correct'))
         .map(button => button.getAttribute('data-phase')),
+      wrong: buttons.filter(button => button.classList.contains('try-again'))
+        .map(button => button.getAttribute('data-phase')),
+      buttonStates: buttons.map(button => ({ phase: button.dataset.phase,
+        className: button.className, disabled: button.disabled, label: button.getAttribute('aria-label') })),
       result: document.querySelector('#quizResult').textContent,
       nextDisabled: document.querySelector('#quizNext').disabled,
       scene: document.querySelector('#space').getAttribute('aria-valuenow'),
@@ -36,7 +43,7 @@ async function snapshot(page) {
 }
 
 function sameQuestion(actual, expected, label) {
-  for (const key of ['id', 'kind', 'source', 'prompt', 'options']) {
+  for (const key of ['mode', 'id', 'kind', 'source', 'prompt', 'options']) {
     assert.deepEqual(actual[key], expected[key], `${label}: ${key} changed`);
   }
 }
@@ -114,6 +121,7 @@ async function checkControls(page, question, exercise) {
 }
 
 async function checkPersistence(page, expected, label, exploration) {
+  const oldButtons = await page.locator('#quizOptions button').elementHandles();
   for (const tab of ['#tabMoon', '#tabFriends']) {
     await page.locator(tab).click();
     assert.ok(await page.locator('#quizPanel').isHidden(), `${label}: switched away`);
@@ -121,11 +129,13 @@ async function checkPersistence(page, expected, label, exploration) {
       `${label}: leaving quiz restores the exploration phase saved on entry`);
     const disabled = await page.locator(motionControls).evaluateAll(buttons => buttons.map(button => button.disabled));
     assert.deepEqual(disabled, [false, false, false], `${label}: exploration controls restored`);
+    for (const button of oldButtons) await button.evaluate(element => element.dispatchEvent(new MouseEvent('click')));
+    await page.locator('#quizNext').dispatchEvent('click');
     await page.locator('#space').press(expected.scene === '0' ? 'End' : 'Home');
     assert.notEqual(await page.locator('#space').getAttribute('aria-valuenow'), expected.scene,
       `${label}: exploration actually changes the scene`);
     exploration.scene = await page.locator('#space').getAttribute('aria-valuenow');
-    await page.locator('#tabQuiz').click();
+    await page.locator(modes[expected.mode].tab).click();
     assert.deepEqual(await snapshot(page), expected, `${label}: ${tab} round trip`);
     await checkSummary(page, expected, `${label}: ${tab} summary restored`);
   }
@@ -136,6 +146,39 @@ async function checkPersistence(page, expected, label, exploration) {
     document.dispatchEvent(new Event('visibilitychange'));
   });
   assert.deepEqual(await snapshot(page), expected, `${label}: foreground return`);
+  for (const button of oldButtons) await button.dispose();
+}
+
+async function checkModePersistence(page, expected, saved, label, exploration) {
+  const other = expected.mode === 'current' ? 'future' : 'current';
+  const oldButtons = await page.locator('#quizOptions button').elementHandles();
+  await page.locator(modes[other].tab).click();
+  const peer = await snapshot(page);
+  assert.equal(peer.mode, other, `${label}: switched quiz mode`);
+  if (saved[other]) assert.deepEqual(peer, saved[other], `${label}: inactive mode was not mutated`);
+  else {
+    assert.equal(peer.nextDisabled, true, `${label}: other mode starts unsolved`);
+    assert.match(peer.result, /★\s*0\s*$/, `${label}: other mode starts with its own zero score`);
+  }
+  saved[other] = peer;
+  await checkSummary(page, peer, `${label}: other mode summary`);
+  await checkControls(page, peer, false);
+  for (const button of oldButtons) {
+    assert.equal(await button.evaluate(element => element.isConnected), false, `${label}: old mode button detached`);
+    await button.evaluate(element => {
+      element.click();
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await button.dispose();
+  }
+  assert.deepEqual(await snapshot(page), peer, `${label}: stale old-mode buttons cannot grade active question`);
+  await page.clock.fastForward(5000);
+  assert.deepEqual(await snapshot(page), peer, `${label}: other mode has no timed transition`);
+  await checkPersistence(page, peer, `${label}: other mode`, exploration);
+  await page.locator(modes[expected.mode].tab).click();
+  assert.deepEqual(await snapshot(page), expected, `${label}: original mode fully restored`);
+  await checkSummary(page, expected, `${label}: original summary restored`);
+  saved[expected.mode] = expected;
 }
 
 async function checkLayout(page, question, state, report) {
@@ -161,7 +204,7 @@ async function checkLayout(page, question, state, report) {
         if (element.scrollWidth > innerWidth + tolerance) issues.add(`${describe(element)} horizontal scroll: ${element.scrollWidth} > ${innerWidth}`);
         if (element.scrollHeight > innerHeight + tolerance) issues.add(`${describe(element)} vertical scroll: ${element.scrollHeight} > ${innerHeight}`);
       }
-      for (const selector of ['#phaseSummary', '#quizPanel']) {
+      for (const selector of ['#phaseSummary', '#quizPanel', '[role="tablist"]']) {
         const region = document.querySelector(selector), bounds = region.getBoundingClientRect();
         if (!visible(region) || !bounds.width || !bounds.height) issues.add(`${selector} is not visible`);
         contains({ left: 0, top: 0, right: innerWidth, bottom: innerHeight }, bounds, `${selector} outside viewport`);
@@ -169,7 +212,10 @@ async function checkLayout(page, question, state, report) {
           const rect = element.getBoundingClientRect(), name = describe(element);
           contains(bounds, rect, `${name} outside ${selector}`);
           if (element.scrollWidth > element.clientWidth + tolerance) issues.add(`${name} horizontal content overflow: ${element.scrollWidth} > ${element.clientWidth}`);
-          if (element.scrollHeight > element.clientHeight + tolerance) issues.add(`${name} vertical content overflow: ${element.scrollHeight} > ${element.clientHeight}`);
+          // The visible tab underline spans the border box, not just its content box.
+          const height = element.matches('[role="tablist"]') && getComputedStyle(element).overflowY === 'visible'
+            ? rect.height : element.clientHeight;
+          if (element.scrollHeight > height + tolerance) issues.add(`${name} vertical content overflow: ${element.scrollHeight} > ${height}`);
           // DOM boxes alone miss text painted or clipped outside a fixed-height box.
           for (const node of element.childNodes) {
             if (node.nodeType !== Node.TEXT_NODE || !node.textContent.trim()) continue;
@@ -188,7 +234,8 @@ async function checkLayout(page, question, state, report) {
         ['#quizPrompt', '#quizOptions', '#quizPanel .quiz-footer'],
         ['#phaseMoon', '#phaseSummary .quiz-mask', '#phaseSummary .phase-copy'],
         ['#phaseSummary .small-label', '#phaseName', '#phaseMessage'],
-        ['#quizResult', '#quizNext']
+        ['#quizResult', '#quizNext'],
+        ['#tabMoon', '#tabFriends', '#tabQuiz', '#tabChallenge']
       ]) {
         const elements = selectors.map(selector => document.querySelector(selector)).filter(visible);
         for (let i = 0; i < elements.length; i++) for (let j = i + 1; j < elements.length; j++) {
@@ -203,7 +250,7 @@ async function checkLayout(page, question, state, report) {
     });
     report.checks++;
     if (issues.length) report.failures.push({ viewport: `${viewport.width}x${viewport.height}`,
-      question: `${question.kind}:${question.source}`, state, prompt: question.prompt,
+      question: `${question.mode}/${question.kind}:${question.source}`, state, prompt: question.prompt,
       result: await page.locator('#quizResult').textContent(), issues });
     sameQuestion(await snapshot(page), question, `${state}: resize preserves question`);
   }
@@ -229,20 +276,32 @@ async function checkDeck(browser, seed, exhaustive, errors, layout) {
     const exploration = { scene: await page.locator('#space').getAttribute('aria-valuenow') };
     await page.locator('#tabQuiz').click();
     await page.locator('#quizNext').waitFor({ state: 'visible' });
-    const ids = new Set(), exercisedKinds = new Set(), deck = [];
-    for (let index = 0; index < 24; index++) {
+    assert.equal((await snapshot(page)).mode, 'current', 'default quiz enters current mode');
+    assert.ok(modes.current.kinds.includes((await snapshot(page)).kind), 'default quiz excludes future/order questions');
+    const ids = { current: new Set(), future: new Set() }, exercisedKinds = new Set();
+    const deck = { current: [], future: [] }, saved = {};
+    // Interleave both modes through two complete decks, including independent refills.
+    const schedule = Array.from({ length: 2 }, () => Array.from({ length: 16 }, (_, index) =>
+      index < 8 ? ['current', 'future'] : ['current']).flat()).flat();
+    for (const mode of schedule) {
+      await page.locator(modes[mode].tab).click();
       const question = await snapshot(page);
-      const label = `seed ${seed}, question ${index + 1} (${question.kind}:${question.source})`;
-      assert.ok(question.id && !ids.has(question.id), `${label}: nonempty unique questionId`);
-      ids.add(question.id);
-      assert.ok(kinds.includes(question.kind), `${label}: valid kind`);
+      const index = deck[mode].length;
+      const label = `seed ${seed}, ${mode} question ${index + 1} (${question.kind}:${question.source})`;
+      if (saved[mode]) assert.deepEqual(question, saved[mode], `${label}: progress in other mode preserves queued question`);
+      saved[mode] = question;
+      assert.equal(question.mode, mode, `${label}: panel exposes selected mode`);
+      assert.ok(question.id && !ids[mode].has(question.id), `${label}: nonempty unique questionId`);
+      ids[mode].add(question.id);
+      assert.ok(modes[mode].kinds.includes(question.kind), `${label}: mode contains only its own question kinds`);
       assert.match(question.source ?? '', /^[0-7]$/, `${label}: integer source 0..7`);
       assert.ok(question.prompt.trim(), `${label}: nonempty prompt`);
       assert.deepEqual([...question.options].sort(), phases.map(String), `${label}: eight unique phase buttons`);
       assert.deepEqual(question.correct, [], `${label}: no answer preselected`);
+      assert.deepEqual(question.wrong, [], `${label}: wrong feedback cleared for new question`);
       assert.equal(question.nextDisabled, true, `${label}: next locked`);
       assert.equal(Number(question.result.match(/★\s*(\d+)/)?.[1]), index, `${label}: stars persist between questions`);
-      deck.push(`${question.kind}:${question.source}`);
+      deck[mode].push(`${question.kind}:${question.source}`);
       const answer = (Number(question.source) + (question.kind === 'order' ? 2 : 0)) % 8;
       const correct = page.locator(`#quizOptions button[data-phase="${answer}"]`);
       await checkPixels(page, label);
@@ -265,6 +324,7 @@ async function checkDeck(browser, seed, exhaustive, errors, layout) {
         await page.clock.fastForward(5000);
         assert.deepEqual(await snapshot(page), question, `${label}: no skipping/unsolved auto-next`);
         await checkPersistence(page, question, `${label}, unsolved`, exploration);
+        await checkModePersistence(page, question, saved, `${label}, unsolved`, exploration);
         for (const wrong of phases.filter(id => id !== answer)) {
           await page.locator(`#quizOptions button[data-phase="${wrong}"]`).click();
           const rejected = await snapshot(page);
@@ -272,10 +332,16 @@ async function checkDeck(browser, seed, exhaustive, errors, layout) {
           assert.match(rejected.result, /もういちど/, `${label}: wrong ${wrong} feedback`);
           assert.doesNotMatch(rejected.result, /みつけた/, `${label}: wrong ${wrong} not accepted`);
           assert.deepEqual(rejected.correct, [], `${label}: wrong ${wrong} not marked correct`);
+          assert.ok(rejected.wrong.includes(String(wrong)), `${label}: wrong ${wrong} marked for retry`);
           assert.equal(rejected.nextDisabled, true, `${label}: wrong ${wrong} cannot advance`);
           assert.equal(rejected.scene, question.scene, `${label}: wrong ${wrong} preserves source scene`);
           assert.deepEqual(rejected.summary, question.summary, `${label}: wrong ${wrong} preserves summary`);
         }
+        const rejected = await snapshot(page);
+        await page.clock.fastForward(5000);
+        assert.deepEqual(await snapshot(page), rejected, `${label}: wrong feedback has no timed transition`);
+        await checkPersistence(page, rejected, `${label}, wrong`, exploration);
+        await checkModePersistence(page, rejected, saved, `${label}, wrong`, exploration);
       }
 
       await correct.click();
@@ -298,17 +364,26 @@ async function checkDeck(browser, seed, exhaustive, errors, layout) {
         await page.clock.fastForward(5000);
         assert.deepEqual(await snapshot(page), solved, `${label}: no solved auto-next`);
         await checkPersistence(page, solved, `${label}, solved`, exploration);
+        await checkModePersistence(page, solved, saved, `${label}, solved`, exploration);
         await page.clock.fastForward(5000);
         assert.deepEqual(await snapshot(page), solved, `${label}: no delayed next after returning`);
         await checkControls(page, solved, false);
       }
       await page.locator('#quizNext').click();
       const next = await snapshot(page);
-      assert.ok(next.id && !ids.has(next.id), `${label}: explicit next produces a new ID, including deck refill`);
+      assert.ok(next.id && !ids[mode].has(next.id), `${label}: explicit next produces a new ID, including deck refill`);
       assert.equal(next.nextDisabled, true, `${label}: next question relocks next`);
       assert.deepEqual(next.correct, [], `${label}: next question clears success`);
+      assert.deepEqual(next.wrong, [], `${label}: next question clears wrong feedback`);
+      saved[mode] = next;
     }
-    assert.deepEqual([...deck].sort(), expectedDeck, 'deck contains each of the 3 kinds x 8 phases exactly once');
+    for (const [mode, config] of Object.entries(modes)) {
+      const expected = config.kinds.flatMap(kind => phases.map(id => `${kind}:${id}`)).sort();
+      for (let cycle = 0; cycle < 2; cycle++) {
+        assert.deepEqual(deck[mode].slice(cycle * config.size, (cycle + 1) * config.size).sort(), expected,
+          `${mode} deck ${cycle + 1}: every allowed kind/phase exactly once despite switching`);
+      }
+    }
     return deck;
   } finally {
     await page.close();
@@ -322,14 +397,18 @@ async function checkDeck(browser, seed, exhaustive, errors, layout) {
     const errors = [], layout = { checks: 0, failures: [] };
     const first = await checkDeck(browser, 12345, true, errors, layout);
     const second = await checkDeck(browser, 98765, false, errors, layout);
-    assert.notDeepEqual(first, second, 'different random seeds must shuffle the balanced question deck');
+    for (const mode of Object.keys(modes)) {
+      assert.notDeepEqual(first[mode].slice(0, modes[mode].size), second[mode].slice(0, modes[mode].size),
+        `${mode}: different random seeds must shuffle the balanced deck`);
+    }
     assert.deepEqual(errors, [], 'no uncaught browser errors');
-    assert.equal(layout.checks, 24 * 3 * layoutViewports.length, 'all question/state/viewport layouts checked');
+    assert.equal(layout.checks, 48 * 3 * layoutViewports.length, 'all question/state/viewport layouts checked');
     assert.equal(layout.failures.length, 0, JSON.stringify({ layoutChecks: layout.checks,
       failingLayouts: layout.failures.length, affected: layout.failures.map(({ viewport, question, state }) => `${viewport} ${question} ${state}`),
       examples: layout.failures.slice(0, 8) }, null, 2));
-    console.log(JSON.stringify({ passed: true, questionsPerDeck: 24, decks: 2, wrongAnswersRejected: 192,
-      correctAnswersAccepted: 48, canvasChecks: 384, layoutChecks: layout.checks, layoutViewports }, null, 2));
+    console.log(JSON.stringify({ passed: true, questionsPerDeck: { current: 16, future: 8 }, seeds: 2,
+      deckCyclesPerModePerSeed: 2, wrongAnswersRejected: 384, correctAnswersAccepted: 96,
+      canvasChecks: 768, layoutChecks: layout.checks, layoutViewports }, null, 2));
   } finally {
     await browser.close();
   }

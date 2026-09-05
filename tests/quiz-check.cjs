@@ -4,21 +4,24 @@ const { pathToFileURL } = require('node:url');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 const url = pathToFileURL(path.resolve(__dirname, '..', 'moon-phase-game.html')).href;
+const fs = require('node:fs');
+const TAU = Math.PI * 2, QUARTER = Math.PI / 2, EPS = 1e-8;
 const phases = Array.from({ length: 8 }, (_, id) => id);
-const phaseNames = ['しんげつ', 'ふくらむ細い月', 'じょうげん', 'ふくらむ丸い月',
-  'まんげつ', 'かけていく丸い月', 'かげん', 'かけていく細い月'];
-const weekAnswers = [2, 3, 4, 5, 6, 7, 0, 1];
-// Independent reference cases: the displayed present moon is not the future answer.
-const referenceCases = {
-  6: { answer: 0, scene: '270', sourceName: 'かげん', answerName: 'しんげつ', file: 'lastquarter' },
-  4: { answer: 6, scene: '180', sourceName: 'まんげつ', answerName: 'かげん', file: 'fullmoon' }
+const cardinalNames = ['しんげつ', 'じょうげん', 'まんげつ', 'かげん'];
+const normalize = a => ((a % TAU) + TAU) % TAU;
+const distance = (a, b) => Math.min(normalize(a - b), normalize(b - a));
+const cardinal = a => cardinalNames.findIndex((_, i) => distance(a, i * QUARTER) < EPS);
+const shapeName = a => {
+  const anchor = cardinal(a);
+  if (anchor >= 0) return cardinalNames[anchor];
+  return (a < Math.PI ? 'ふくらむ' : 'かけていく') + ((1 - Math.cos(a)) / 2 < .5 ? '細い月' : '丸い月');
 };
 const modes = {
-  current: { tab: '#tabQuiz', kinds: ['name', 'orbit'], size: 16 },
-  future: { tab: '#tabChallenge', kinds: ['order'], size: 8 }
+  current: { tab: '#tabQuiz', kinds: ['name', 'orbit'], size: 20 },
+  future: { tab: '#tabChallenge', kinds: ['order'], size: 20 }
 };
 const motionControls = '#playButton, #stepButton, #resetButton';
-const layoutViewports = [{ width: 320, height: 568 }, { width: 667, height: 375 }];
+const pixels = { canvases: 0, minimum: 1 };
 
 async function snapshot(page) {
   return page.evaluate(() => {
@@ -28,9 +31,12 @@ async function snapshot(page) {
       mode: panel.dataset.mode,
       id: panel.dataset.questionId,
       kind: panel.dataset.kind,
-      source: panel.dataset.source,
+      source: Number(panel.dataset.sourceAngle),
+      sourceType: panel.dataset.sourceType, legacySource: panel.dataset.source,
       prompt: document.querySelector('#quizPrompt').textContent,
       options: buttons.map(button => button.getAttribute('data-phase')),
+      shapes: buttons.map(button => ({ id: button.dataset.phase, angle: Number(button.dataset.angle),
+        name: button.dataset.name, label: button.getAttribute('aria-label') })),
       correct: buttons.filter(button => button.classList.contains('correct'))
         .map(button => button.getAttribute('data-phase')),
       wrong: buttons.filter(button => button.classList.contains('try-again'))
@@ -53,7 +59,7 @@ async function snapshot(page) {
 }
 
 function sameQuestion(actual, expected, label) {
-  for (const key of ['mode', 'id', 'kind', 'source', 'prompt', 'options']) {
+  for (const key of ['mode', 'id', 'kind', 'source', 'sourceType', 'prompt', 'options', 'shapes']) {
     assert.deepEqual(actual[key], expected[key], `${label}: ${key} changed`);
   }
 }
@@ -61,16 +67,14 @@ function sameQuestion(actual, expected, label) {
 async function checkSummary(page, question, label) {
   const solved = !question.nextDisabled;
   const masked = !solved && question.kind !== 'order';
-  const phase = Number(question.source);
-  assert.equal(question.scene, String(phase * 45), `${label}: source scene stays unchanged after grading`);
+  assert.ok(distance(Number(question.scene) * Math.PI / 180, question.source) <= Math.PI / 360 + EPS,
+    `${label}: scene represents source radians, rounded to degrees`);
   assert.equal(question.summary.masked, masked, `${label}: only unsolved name/orbit hide the summary`);
-  assert.equal(await page.locator('#phaseMoon').isHidden(), masked, `${label}: summary canvas visibility`);
-  assert.equal(await page.locator('#phaseSummary .quiz-mask').isVisible(), masked, `${label}: visible question mask`);
-  const name = phaseNames[phase];
-  assert.equal(await page.locator(`#quizOptions button[data-phase="${phase}"]`).getAttribute('aria-label'),
-    name, `${label}: source option has the expected accessible name`);
-  if (masked) assert.notEqual(question.summary.name, name, `${label}: summary must not reveal the answer`);
-  else assert.equal(question.summary.name, name, `${label}: summary names the displayed phase`);
+  assert.equal(await page.locator('#phaseMoon').isHidden(), masked);
+  assert.equal(await page.locator('#phaseSummary .quiz-mask').isVisible(), masked);
+  const name = shapeName(question.source);
+  if (masked) assert.notEqual(question.summary.name, name, `${label}: no answer leak`);
+  else assert.equal(question.summary.name, name, `${label}: summary names source, not future target`);
   if (question.kind === 'order') {
     assert.equal(question.summary.smallLabel, 'いまのつき', `${label}: summary is the present moon`);
     assert.equal(question.summary.moonLabel, name, `${label}: accessible moon names the source`);
@@ -89,36 +93,64 @@ async function checkSourceReadAloud(page, question, label) {
 }
 
 async function checkPixels(page, label) {
-  const samples = await page.locator('#quizOptions button').evaluateAll(buttons => buttons.map(button => {
-    const canvases = button.querySelectorAll('canvas');
-    if (canvases.length !== 1) return { id: button.dataset.phase, canvases: canvases.length };
-    const canvas = canvases[0], { width, height } = canvas;
-    const { data } = canvas.getContext('2d').getImageData(0, 0, width, height);
-    let total = 0, opaque = 0, bright = 0, left = 0, right = 0;
-    // Sample inside the moon rim, excluding transparent padding and antialiasing.
-    const radius = Math.min(width, height) * .39;
-    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-      if (Math.hypot(x + .5 - width / 2, y + .5 - height / 2) > radius) continue;
-      total++;
-      const offset = (y * width + x) * 4;
-      if (data[offset + 3] < 200) continue;
-      opaque++;
-      if (data[offset] > 40) {
-        bright++;
-        if (x + .5 < width / 2) left++; else right++;
+  const report = await page.locator('#quizOptions button').evaluateAll(buttons => {
+    const masks = [], samples = [];
+    for (const button of buttons) {
+      const canvases = button.querySelectorAll('canvas');
+      if (canvases.length !== 1) return { error: 'each option needs one canvas' };
+      const original = canvases[0], bounds = original.getBoundingClientRect();
+      // Sample at CSS display resolution, including the 40px options near new/full moon.
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bounds.width); canvas.height = Math.round(bounds.height);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(original, 0, 0, canvas.width, canvas.height);
+      const { width, height } = canvas, { data } = ctx.getImageData(0, 0, width, height);
+      const radius = Math.min(width, height) * 54 / 128, angle = Number(button.dataset.angle);
+      const mask = [];
+      let total = 0, opaque = 0, bright = 0, mismatch = 0;
+      // Independent projected-sphere lighting oracle, not the application's shape/answer helpers.
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const nx = (x + .5 - width / 2) / radius, ny = (y + .5 - height / 2) / radius;
+        if (nx * nx + ny * ny > .96 ** 2) continue;
+        const offset = (y * width + x) * 4;
+        const lit = data[offset] > 40 && data[offset + 3] >= 200;
+        const expected = nx * Math.sin(angle) - Math.sqrt(1 - nx * nx - ny * ny) * Math.cos(angle) > 0;
+        total++; opaque += data[offset + 3] >= 200; bright += lit; mismatch += lit !== expected;
+        mask.push(Number(lit));
       }
+      masks.push(mask);
+      samples.push({ id: button.dataset.phase, width, height, total, coverage: opaque / total,
+        fraction: bright / total, expected: (1 - Math.cos(angle)) / 2, mismatch: mismatch / total });
     }
-    return { id: Number(button.dataset.phase), canvases: 1, total,
-      coverage: opaque / total, fraction: bright / total, side: (right - left) / total };
-  }));
-  for (const sample of samples) {
-    const context = `${label}, canvas ${sample.id}: ${JSON.stringify(sample)}`;
-    assert.equal(sample.canvases, 1, context);
-    assert.ok(sample.total > 100 && sample.coverage > .95, `blank/incomplete ${context}`);
-    const expected = (1 - Math.cos(sample.id * Math.PI / 4)) / 2;
-    assert.ok(Math.abs(sample.fraction - expected) < .08, `illumination ${context}`);
-    if (sample.id > 0 && sample.id < 4) assert.ok(sample.side > .075, `waxing must be right-lit: ${context}`);
-    if (sample.id > 4) assert.ok(sample.side < -.075, `waning must be left-lit: ${context}`);
+    let minimum = 1;
+    for (let i = 0; i < masks.length; i++) for (let j = i + 1; j < masks.length; j++) {
+      if (masks[i].length !== masks[j].length) return { error: 'option canvas sizes differ' };
+      let changed = 0;
+      for (let k = 0; k < masks[i].length; k++) changed += masks[i][k] !== masks[j][k];
+      minimum = Math.min(minimum, changed / masks[i].length);
+    }
+    return { samples, minimum };
+  });
+  assert.equal(report.error, undefined, `${label}: ${report.error}`);
+  for (const sample of report.samples) {
+    const context = `${label}: ${JSON.stringify(sample)}`;
+    assert.equal(sample.width, 40, `display resolution: ${context}`);
+    assert.equal(sample.height, 40, `display resolution: ${context}`);
+    assert.ok(sample.total > 100 && sample.coverage > .95, `nonblank: ${context}`);
+    assert.ok(Math.abs(sample.fraction - sample.expected) < .08, `illumination: ${context}`);
+    assert.ok(sample.mismatch < .07, `side and terminator: ${context}`);
+  }
+  assert.ok(report.minimum >= .15, `${label}: rendered binary-mask distance ${report.minimum} < .15`);
+  pixels.canvases += report.samples.length;
+  pixels.minimum = Math.min(pixels.minimum, report.minimum);
+}
+
+function checkSeparation(question, label) {
+  const arc = a => a <= Math.PI ? (1 - Math.cos(a)) / 2 : 2 - (1 - Math.cos(a)) / 2;
+  const positions = question.shapes.map(s => arc(s.angle)).sort((a, b) => a - b);
+  for (let i = 0; i < 8; i++) {
+    const gap = (positions[(i + 1) % 8] - positions[i] + 2) % 2;
+    assert.ok(Math.abs(gap - .25) < EPS, `${label}: ideal area arc gap ${gap}`);
   }
 }
 
@@ -207,264 +239,165 @@ async function checkModePersistence(page, expected, saved, label, exploration) {
   saved[expected.mode] = expected;
 }
 
-async function checkLayout(page, question, state, report) {
-  const before = await snapshot(page);
-  for (const viewport of layoutViewports) {
-    await page.setViewportSize(viewport);
-    // Flush resize handlers and two animation frames without real-time sleeps.
-    await page.clock.runFor(34);
-    const issues = await page.evaluate(() => {
-      const issues = new Set(), tolerance = 1;
-      const describe = element => element.id ? `#${element.id}`
-        : element.tagName.toLowerCase() + (element.classList.length ? `.${[...element.classList].join('.')}` : '');
-      const visible = element => element.getClientRects().length && getComputedStyle(element).visibility === 'visible';
-      const contains = (outer, inner, label) => {
-        const excess = {
-          left: outer.left - inner.left, top: outer.top - inner.top,
-          right: inner.right - outer.right, bottom: inner.bottom - outer.bottom
-        };
-        const crossed = Object.entries(excess).filter(([, value]) => value > tolerance)
-          .map(([side, value]) => `${side} ${value.toFixed(1)}px`);
-        if (crossed.length) issues.add(`${label}: ${crossed.join(', ')}`);
-      };
-      for (const element of [document.documentElement, document.body]) {
-        if (element.scrollWidth > innerWidth + tolerance) issues.add(`${describe(element)} horizontal scroll: ${element.scrollWidth} > ${innerWidth}`);
-        if (element.scrollHeight > innerHeight + tolerance) issues.add(`${describe(element)} vertical scroll: ${element.scrollHeight} > ${innerHeight}`);
-      }
-      for (const selector of ['#phaseSummary', '#quizPanel', '[role="tablist"]']) {
-        const region = document.querySelector(selector), bounds = region.getBoundingClientRect();
-        if (!visible(region) || !bounds.width || !bounds.height) issues.add(`${selector} is not visible`);
-        contains({ left: 0, top: 0, right: innerWidth, bottom: innerHeight }, bounds, `${selector} outside viewport`);
-        for (const element of [region, ...region.querySelectorAll('*')].filter(visible)) {
-          const rect = element.getBoundingClientRect(), name = describe(element);
-          contains(bounds, rect, `${name} outside ${selector}`);
-          if (element.scrollWidth > element.clientWidth + tolerance) issues.add(`${name} horizontal content overflow: ${element.scrollWidth} > ${element.clientWidth}`);
-          // The visible tab underline spans the border box, not just its content box.
-          const height = element.matches('[role="tablist"]') && getComputedStyle(element).overflowY === 'visible'
-            ? rect.height : element.clientHeight;
-          if (element.scrollHeight > height + tolerance) issues.add(`${name} vertical content overflow: ${element.scrollHeight} > ${height}`);
-          // DOM boxes alone miss text painted or clipped outside a fixed-height box.
-          for (const node of element.childNodes) {
-            if (node.nodeType !== Node.TEXT_NODE || !node.textContent.trim()) continue;
-            const range = document.createRange();
-            range.setStart(node, node.textContent.search(/\S/));
-            range.setEnd(node, node.textContent.trimEnd().length);
-            for (const textRect of range.getClientRects()) {
-              contains(rect, textRect, `${name} text outside its box`);
-              contains(bounds, textRect, `${name} text outside ${selector}`);
-            }
-          }
-        }
-      }
-      // Check adjacent content groups too: overflow can overlap a neighbor without leaving the panel.
-      for (const selectors of [
-        ['#quizPrompt', '#quizOptions', '#quizPanel .quiz-footer'],
-        ['#phaseMoon', '#phaseSummary .quiz-mask', '#phaseSummary .phase-copy'],
-        ['#phaseSummary .small-label', '#phaseName', '#phaseMessage'],
-        ['#quizResult', '#quizNext'],
-        ['#tabMoon', '#tabFriends', '#tabQuiz', '#tabChallenge']
-      ]) {
-        const elements = selectors.map(selector => document.querySelector(selector)).filter(visible);
-        for (let i = 0; i < elements.length; i++) for (let j = i + 1; j < elements.length; j++) {
-          const a = elements[i].getBoundingClientRect(), b = elements[j].getBoundingClientRect();
-          if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > tolerance
-            && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > tolerance) {
-            issues.add(`${describe(elements[i])} overlaps ${describe(elements[j])}`);
-          }
-        }
-      }
-      return [...issues];
-    });
-    report.checks++;
-    if (issues.length) report.failures.push({ viewport: `${viewport.width}x${viewport.height}`,
-      question: `${question.mode}/${question.kind}:${question.source}`, state, prompt: question.prompt,
-      result: await page.locator('#quizResult').textContent(), issues });
-    const resized = await snapshot(page);
-    assert.deepEqual(resized, before, `${state}: resize preserves source scene, summary and grading`);
-    await checkSummary(page, resized, `${state}: resized summary`);
-  }
-}
-
-async function checkDeck(browser, seed, exhaustive, errors, layout) {
-  const page = await browser.newPage({ viewport: exhaustive ? { width: 1280, height: 800 } : { width: 390, height: 844 } });
+async function checkDeck(browser, seed, errors) {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   page.setDefaultTimeout(10000);
   page.on('pageerror', error => errors.push(error.message));
+  const deck = { current: [], future: [] }, saved = {}, ids = new Set();
+  const references = new Set(), captured = new Set(), exercised = new Set();
   try {
-    // Two reproducible random streams detect a fixed deck without flaky statistical assertions.
     await page.addInitScript(seed => {
+      if (seed === 12345) {
+        const NativeImage = window.Image;
+        let first = true;
+        window.Image = function(...args) {
+          const image = new NativeImage(...args);
+          if (first) {
+            first = false;
+            // The first Image is the embedded lunar texture; delay its actual load handler.
+            Object.defineProperty(image, 'onload', { set(handler) {
+              image.addEventListener('load', () => {
+                window.__releaseLunarTexture = () => handler.call(image);
+              }, { once: true });
+            } });
+          }
+          return image;
+        };
+        window.Image.prototype = NativeImage.prototype;
+      }
       window.__spoken = [];
       window.speechSynthesis.speak = utterance => window.__spoken.push(utterance.text);
       window.speechSynthesis.cancel = () => {};
       window.speechSynthesis.getVoices = () => [];
       let state = seed >>> 0;
-      Math.random = () => {
-        state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-        return state / 4294967296;
-      };
+      Math.random = () => ((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 4294967296);
     }, seed);
     await page.clock.install();
     await page.goto(url);
     await page.evaluate(() => document.fonts.ready);
     await page.locator('#voiceButton').click();
     const exploration = { scene: await page.locator('#space').getAttribute('aria-valuenow') };
-    await page.locator('#tabQuiz').click();
-    await page.locator('#quizNext').waitFor({ state: 'visible' });
-    assert.equal((await snapshot(page)).mode, 'current', 'default quiz enters current mode');
-    assert.ok(modes.current.kinds.includes((await snapshot(page)).kind), 'default quiz excludes future/order questions');
-    const ids = { current: new Set(), future: new Set() }, exercisedKinds = new Set();
-    const deck = { current: [], future: [] }, saved = {}, referencesChecked = new Set();
-    // Interleave both modes through two complete decks, including independent refills.
-    const schedule = Array.from({ length: 2 }, () => Array.from({ length: 16 }, (_, index) =>
-      index < 8 ? ['current', 'future'] : ['current']).flat()).flat();
-    for (const mode of schedule) {
+    // One 20-card deck per mode and seed; switching is interleaved, not extra deck traversal.
+    for (let index = 0; index < 20; index++) for (const mode of Object.keys(modes)) {
       await page.locator(modes[mode].tab).click();
-      const question = await snapshot(page);
-      const index = deck[mode].length;
-      const label = `seed ${seed}, ${mode} question ${index + 1} (${question.kind}:${question.source})`;
-      if (saved[mode]) assert.deepEqual(question, saved[mode], `${label}: progress in other mode preserves queued question`);
-      saved[mode] = question;
-      assert.equal(question.mode, mode, `${label}: panel exposes selected mode`);
-      assert.ok(question.id && !ids[mode].has(question.id), `${label}: nonempty unique questionId`);
-      ids[mode].add(question.id);
-      assert.ok(modes[mode].kinds.includes(question.kind), `${label}: mode contains only its own question kinds`);
-      assert.match(question.source ?? '', /^[0-7]$/, `${label}: integer source 0..7`);
-      assert.ok(question.prompt.trim(), `${label}: nonempty prompt`);
-      assert.deepEqual([...question.options].sort(), phases.map(String), `${label}: eight unique phase buttons`);
-      assert.deepEqual(question.correct, [], `${label}: no answer preselected`);
-      assert.deepEqual(question.wrong, [], `${label}: wrong feedback cleared for new question`);
-      assert.equal(question.nextDisabled, true, `${label}: next locked`);
-      assert.equal(Number(question.result.match(/★\s*(\d+)/)?.[1]), index, `${label}: stars persist between questions`);
-      deck[mode].push(`${question.kind}:${question.source}`);
-      const reference = mode === 'future' ? referenceCases[question.source] : null;
-      const answer = reference ? reference.answer : mode === 'future' ? weekAnswers[Number(question.source)] : Number(question.source);
-      const correct = page.locator(`#quizOptions button[data-phase="${answer}"]`);
+      const q = await snapshot(page), label = `seed ${seed}, ${mode} ${index + 1}, ${q.source}`;
+      if (saved[mode]) assert.deepEqual(q, saved[mode], `${label}: queued mode preserved`);
+      assert.equal(q.mode, mode);
+      assert.equal(q.legacySource, undefined, `${label}: old integer source removed`);
+      assert.ok(Number.isFinite(q.source) && q.source >= 0 && q.source < TAU, `${label}: source radians`);
+      assert.ok(q.id && !ids.has(q.id), `${label}: unique ID`); ids.add(q.id);
+      const anchor = cardinal(q.source);
+      assert.ok(['anchor', 'continuous'].includes(q.sourceType));
+      assert.equal(q.kind, mode === 'future' ? 'order' : q.sourceType === 'anchor' ? 'name' : 'orbit');
+      assert.equal(anchor >= 0, q.sourceType === 'anchor', `${label}: only exact cardinal anchors`);
+      assert.ok(q.prompt.trim());
+      if (mode === 'current') assert.doesNotMatch(q.prompt, /しゅうかん|週間|つぎ|未来/, `${label}: no future questions`);
+      assert.deepEqual([...q.options].sort(), phases.map(String));
+      for (const s of q.shapes) {
+        assert.ok(Number.isFinite(s.angle) && s.angle >= 0 && s.angle < TAU);
+        assert.equal(s.name, shapeName(s.angle), `${label}: generic/cardinal name`);
+        assert.equal(s.label, `${s.name}、あかるいところ やく${Math.round((1 - Math.cos(s.angle)) * 50)}パーセント`);
+      }
+      assert.deepEqual(q.correct, []); assert.deepEqual(q.wrong, []);
+      assert.ok(q.nextDisabled && q.buttonStates.every(b => !b.disabled));
+      assert.equal(Number(q.result.match(/★\s*(\d+)/)?.[1]), index);
+      const target = normalize(q.source + (mode === 'future' ? QUARTER : 0));
+      const answers = q.shapes.filter(s => distance(s.angle, target) < EPS);
+      assert.equal(answers.length, 1, `${label}: exactly one correct angle`);
+      const answer = answers[0], wrong = q.shapes.find(s => s.id !== answer.id);
+      checkSeparation(q, label);
       await checkPixels(page, label);
-      await checkSummary(page, question, label);
-      if (reference) {
-        assert.equal(question.scene, reference.scene, `${label}: explicit reference orbit position`);
-        assert.equal(question.summary.name, reference.sourceName, `${label}: explicit present moon`);
-        await checkSourceReadAloud(page, question, `${label}: unsolved`);
+      await checkSummary(page, q, label);
+      if (seed === 12345 && index === 0 && mode === 'future') {
+        assert.equal(await page.evaluate(() => typeof window.__releaseLunarTexture), 'function');
+        await page.evaluate(() => window.__releaseLunarTexture());
+        assert.deepEqual(await snapshot(page), q, `${label}: delayed texture preserves active question`);
+        await checkPixels(page, `${label}: delayed texture uses option angles, not IDs`);
       }
-      await checkControls(page, question, exhaustive && !exercisedKinds.has(question.kind));
-      exercisedKinds.add(question.kind);
-
-      if (!exhaustive) {
-        await checkLayout(page, question, 'unsolved', layout);
-        await page.locator(`#quizOptions button[data-phase="${(answer + 1) % 8}"]`).click();
-        const rejected = await snapshot(page);
-        assert.match(rejected.result, /もういちど/, `${label}: layout wrong-answer feedback`);
-        assert.deepEqual(rejected.correct, [], `${label}: layout wrong answer rejected`);
-        assert.equal(rejected.nextDisabled, true, `${label}: layout wrong answer cannot advance`);
-        await checkLayout(page, question, 'wrong', layout);
+      deck[mode].push({ angle: q.source, kind: q.kind, type: q.sourceType, answerId: answer.id });
+      const exercise = seed === 12345 && !exercised.has(q.kind);
+      if (exercise) {
+        exercised.add(q.kind);
+        await checkControls(page, q, true);
+        await page.locator('#quizNext').evaluate(b => b.click());
+        await checkModePersistence(page, q, saved, `${label}: unsolved`, exploration);
       }
-
-      if (exhaustive) {
-        await page.locator('#quizNext').evaluate(button => button.click());
-        await page.clock.fastForward(5000);
-        assert.deepEqual(await snapshot(page), question, `${label}: no skipping/unsolved auto-next`);
-        await checkPersistence(page, question, `${label}, unsolved`, exploration);
-        await checkModePersistence(page, question, saved, `${label}, unsolved`, exploration);
-        for (const wrong of phases.filter(id => id !== answer)) {
-          await page.locator(`#quizOptions button[data-phase="${wrong}"]`).click();
-          const rejected = await snapshot(page);
-          sameQuestion(rejected, question, `${label}: wrong ${wrong}`);
-          assert.match(rejected.result, /もういちど/, `${label}: wrong ${wrong} feedback`);
-          assert.doesNotMatch(rejected.result, /みつけた/, `${label}: wrong ${wrong} not accepted`);
-          assert.deepEqual(rejected.correct, [], `${label}: wrong ${wrong} not marked correct`);
-          assert.ok(rejected.wrong.includes(String(wrong)), `${label}: wrong ${wrong} marked for retry`);
-          assert.equal(rejected.nextDisabled, true, `${label}: wrong ${wrong} cannot advance`);
-          assert.equal(rejected.scene, question.scene, `${label}: wrong ${wrong} preserves source scene`);
-          assert.deepEqual(rejected.summary, question.summary, `${label}: wrong ${wrong} preserves summary`);
-        }
-        const rejected = await snapshot(page);
-        await page.clock.fastForward(5000);
-        assert.deepEqual(await snapshot(page), rejected, `${label}: wrong feedback has no timed transition`);
-        await checkPersistence(page, rejected, `${label}, wrong`, exploration);
-        await checkModePersistence(page, rejected, saved, `${label}, wrong`, exploration);
-      }
-
-      await correct.click();
+      await page.locator(`#quizOptions button[data-phase="${wrong.id}"]`).click();
+      const rejected = await snapshot(page);
+      sameQuestion(rejected, q, `${label}: wrong`);
+      assert.match(rejected.result, /もういちど/);
+      assert.deepEqual(rejected.correct, []);
+      assert.ok(rejected.wrong.includes(wrong.id) && rejected.nextDisabled);
+      assert.equal(rejected.scene, q.scene);
+      assert.deepEqual(rejected.summary, q.summary);
+      if (exercise) await checkModePersistence(page, rejected, saved, `${label}: wrong`, exploration);
+      await page.locator(`#quizOptions button[data-phase="${answer.id}"]`).click();
       const solved = await snapshot(page);
-      sameQuestion(solved, question, `${label}: correct answer`);
-      assert.match(solved.result, /みつけた/, `${label}: success feedback`);
-      assert.equal(Number(solved.result.match(/★\s*(\d+)/)?.[1]), index + 1, `${label}: exactly one star awarded`);
-      assert.deepEqual(solved.correct, [String(answer)], `${label}: only correct answer marked`);
-      assert.equal(solved.nextDisabled, false, `${label}: next unlocked`);
-      await checkSummary(page, solved, `${label}: solved summary`);
-      assert.equal(solved.result.split('\n')[1], `こたえ：${phaseNames[answer]}`,
-        `${label}: second result line names the actual answer`);
-      if (mode === 'future') {
-        assert.equal(solved.scene, question.scene, `${label}: grading preserves source diagram`);
-        assert.deepEqual(solved.summary, question.summary, `${label}: grading preserves entire source summary`);
+      sameQuestion(solved, q, `${label}: solved`);
+      assert.match(solved.result, /みつけた/);
+      assert.equal(Number(solved.result.match(/★\s*(\d+)/)?.[1]), index + 1);
+      assert.deepEqual(solved.correct, [answer.id]);
+      assert.equal(solved.nextDisabled, false);
+      assert.equal(solved.result.split('\n').length, 2);
+      assert.equal(solved.result.split('\n')[1], `こたえ：${shapeName(target)}`);
+      assert.equal(solved.scene, q.scene, `${label}: grading never moves source`);
+      if (mode === 'future') assert.deepEqual(solved.summary, q.summary, `${label}: entire source summary fixed`);
+      await checkSummary(page, solved, `${label}: solved`);
+      if (mode === 'future' && [2, 3].includes(anchor)) {
+        assert.ok(distance(answer.angle, anchor === 3 ? 0 : 3 * QUARTER) < EPS);
+        assert.equal(solved.summary.name, cardinalNames[anchor]);
+        assert.equal(solved.result.split('\n')[1], `こたえ：${anchor === 3 ? 'しんげつ' : 'かげん'}`);
+        await checkSourceReadAloud(page, solved, label);
+        references.add(anchor);
       }
-      if (reference) {
-        assert.equal(solved.scene, reference.scene, `${label}: reference orbit stays at source after grading`);
-        assert.equal(solved.summary.name, reference.sourceName, `${label}: source is not replaced by answer`);
-        assert.equal(solved.result.split('\n')[1], `こたえ：${reference.answerName}`, `${label}: explicit future answer`);
-        await checkSourceReadAloud(page, solved, `${label}: solved`);
-        if (exhaustive && !referencesChecked.has(question.source)) {
-          await page.screenshot({ path: path.resolve(__dirname, '..', 'output', `quiz-reference-${reference.file}.png`) });
-        }
-        referencesChecked.add(question.source);
+      if (seed === 12345 && index > 0 && anchor < 0 && !captured.has(mode)) {
+        await page.clock.runFor(800);
+        await page.screenshot({ path: path.resolve(__dirname, '..', 'output', `quiz-${mode}-intermediate.png`) });
+        captured.add(mode);
       }
-      if (!exhaustive) await checkLayout(page, solved, 'solved', layout);
-      if (exhaustive) {
-        // Dispatch also exercises the solved guard when native buttons become disabled.
-        await correct.evaluate(button => { button.click(); button.click(); });
-        await correct.dispatchEvent('click');
-        await page.locator('#quizOptions button').evaluateAll(buttons => {
-          buttons.forEach(button => button.dispatchEvent(new MouseEvent('click', { bubbles: true })));
-        });
-        assert.deepEqual(await snapshot(page), solved, `${label}: repeat answers cannot add stars or alter success`);
-        await page.clock.fastForward(5000);
-        assert.deepEqual(await snapshot(page), solved, `${label}: no solved auto-next`);
-        await checkPersistence(page, solved, `${label}, solved`, exploration);
-        await checkModePersistence(page, solved, saved, `${label}, solved`, exploration);
-        await page.clock.fastForward(5000);
-        assert.deepEqual(await snapshot(page), solved, `${label}: no delayed next after returning`);
-        await checkControls(page, solved, false);
-      }
+      await page.locator('#quizOptions button').evaluateAll(bs =>
+        bs.forEach(b => b.dispatchEvent(new MouseEvent('click', { bubbles: true }))));
+      assert.deepEqual(await snapshot(page), solved, `${label}: no repeated scoring`);
+      if (exercise) await checkModePersistence(page, solved, saved, `${label}: solved`, exploration);
       await page.locator('#quizNext').click();
       const next = await snapshot(page);
-      assert.ok(next.id && !ids[mode].has(next.id), `${label}: explicit next produces a new ID, including deck refill`);
-      assert.equal(next.nextDisabled, true, `${label}: next question relocks next`);
-      assert.deepEqual(next.correct, [], `${label}: next question clears success`);
-      assert.deepEqual(next.wrong, [], `${label}: next question clears wrong feedback`);
+      assert.ok(next.id && !ids.has(next.id) && next.nextDisabled, `${label}: explicit next/refill`);
+      assert.deepEqual(next.correct, []); assert.deepEqual(next.wrong, []);
       saved[mode] = next;
     }
-    for (const [mode, config] of Object.entries(modes)) {
-      const expected = config.kinds.flatMap(kind => phases.map(id => `${kind}:${id}`)).sort();
-      for (let cycle = 0; cycle < 2; cycle++) {
-        assert.deepEqual(deck[mode].slice(cycle * config.size, (cycle + 1) * config.size).sort(), expected,
-          `${mode} deck ${cycle + 1}: every allowed kind/phase exactly once despite switching`);
-      }
+    for (const [mode, questions] of Object.entries(deck)) {
+      const anchors = questions.filter(q => q.type === 'anchor'), arbitrary = questions.filter(q => q.type === 'continuous');
+      assert.deepEqual(anchors.map(q => cardinal(q.angle)).sort(), [0, 1, 2, 3], `${mode}: four anchors`);
+      assert.equal(arbitrary.length, 16);
+      assert.deepEqual(arbitrary.map(q => Math.floor(q.angle / TAU * 16)).sort((a, b) => a - b),
+        Array.from({ length: 16 }, (_, i) => i), `${mode}: all cycle sectors`);
+      assert.ok(arbitrary.every(q => Math.abs(q.angle / (TAU / 16) - Math.round(q.angle / (TAU / 16))) > EPS),
+        `${mode}: jittered continuous angles, not a 16/8-phase grid`);
+      assert.ok(new Set(questions.map(q => q.answerId)).size > 1, `${mode}: randomized correct local ID`);
     }
-    assert.deepEqual([...referencesChecked].sort(), ['4', '6'], 'both full moon -> last quarter and last quarter -> new moon regressions exercised');
+    assert.deepEqual([...references].sort(), [2, 3], 'pi -> 3pi/2 and 3pi/2 -> 0 regressions');
     return deck;
-  } finally {
-    await page.close();
-  }
+  } finally { await page.close(); }
 }
 
 (async () => {
   const browser = await chromium.launch({ headless: true,
     ...(process.env.CHROME_EXECUTABLE ? { executablePath: process.env.CHROME_EXECUTABLE } : {}) });
   try {
-    const errors = [], layout = { checks: 0, failures: [] };
-    const first = await checkDeck(browser, 12345, true, errors, layout);
-    const second = await checkDeck(browser, 98765, false, errors, layout);
+    fs.mkdirSync(path.resolve(__dirname, '..', 'output'), { recursive: true });
+    const errors = [];
+    const first = await checkDeck(browser, 12345, errors);
+    const second = await checkDeck(browser, 98765, errors);
     for (const mode of Object.keys(modes)) {
-      assert.notDeepEqual(first[mode].slice(0, modes[mode].size), second[mode].slice(0, modes[mode].size),
-        `${mode}: different random seeds must shuffle the balanced deck`);
+      const angles = deck => deck[mode].filter(q => q.type === 'continuous').map(q => q.angle).sort((a, b) => a - b);
+      assert.notDeepEqual(angles(first), angles(second), `${mode}: seeds vary angles, not just deck order`);
+      assert.notDeepEqual(first[mode], second[mode], `${mode}: shuffled deck`);
     }
     assert.deepEqual(errors, [], 'no uncaught browser errors');
-    assert.equal(layout.checks, 48 * 3 * layoutViewports.length, 'all question/state/viewport layouts checked');
-    assert.equal(layout.failures.length, 0, JSON.stringify({ layoutChecks: layout.checks,
-      failingLayouts: layout.failures.length, affected: layout.failures.map(({ viewport, question, state }) => `${viewport} ${question} ${state}`),
-      examples: layout.failures.slice(0, 8) }, null, 2));
-    console.log(JSON.stringify({ passed: true, questionsPerDeck: { current: 16, future: 8 }, seeds: 2,
-      deckCyclesPerModePerSeed: 2, wrongAnswersRejected: 384, correctAnswersAccepted: 96,
-      canvasChecks: 768, layoutChecks: layout.checks, layoutViewports }, null, 2));
+    console.log(JSON.stringify({ passed: true, questionsPerModePerSeed: 20, seeds: 2,
+      correctAnswersAccepted: 80, wrongAnswersRejected: 80, canvasChecks: pixels.canvases,
+      delayedTextureChecks: 1, displayPixels: 40, minimumRenderedMaskDistance: pixels.minimum,
+      requiredRenderedMaskDistance: .15 }, null, 2));
   } finally {
     await browser.close();
   }

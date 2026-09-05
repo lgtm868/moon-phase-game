@@ -7,9 +7,15 @@ const root = path.resolve(__dirname, '..');
 const artifacts = path.join(root, 'output');
 const quizModes = [['#tabQuiz', 'current'], ['#tabChallenge', 'future']];
 const tabIds = ['tabMoon', 'tabFriends', 'tabQuiz', 'tabChallenge'];
-const phaseNames = ['しんげつ', 'ふくらむ細い月', 'じょうげん', 'ふくらむ丸い月',
-  'まんげつ', 'かけていく丸い月', 'かげん', 'かけていく細い月'];
-const weekAnswers = [2, 3, 4, 5, 6, 7, 0, 1];
+const TAU = 2 * Math.PI;
+const normalize = a => ((a % TAU) + TAU) % TAU;
+const distance = (a, b) => Math.min(normalize(a - b), normalize(b - a));
+const shapeName = angle => {
+  const names = ['しんげつ', 'じょうげん', 'まんげつ', 'かげん'];
+  const cardinal = names.findIndex((_, i) => distance(angle, i * Math.PI / 2) < 1e-8);
+  if (cardinal >= 0) return names[cardinal];
+  return (angle < Math.PI ? 'ふくらむ' : 'かけていく') + ((1 - Math.cos(angle)) / 2 < .5 ? '細い月' : '丸い月');
+};
 
 async function quizSnapshot(page) {
   return page.locator('#quizPanel').evaluate(panel => ({
@@ -17,7 +23,8 @@ async function quizSnapshot(page) {
     result: document.querySelector('#quizResult').textContent,
     nextDisabled: document.querySelector('#quizNext').disabled,
     options: [...document.querySelectorAll('#quizOptions button')].map(button => ({
-      phase: button.dataset.phase, className: button.className, disabled: button.disabled
+      phase: button.dataset.phase, angle: Number(button.dataset.angle), name: button.dataset.name,
+      label: button.getAttribute('aria-label'), className: button.className, disabled: button.disabled
     })),
     scene: document.querySelector('#space').getAttribute('aria-valuenow'),
     summary: document.querySelector('#phaseSummary').textContent,
@@ -102,6 +109,8 @@ const server = http.createServer((req, res) => {
       const page = await browser.newPage({ viewport: { width, height } });
       page.on('pageerror', error => failures.push(error.message));
       await page.addInitScript(() => {
+        let seed = 12345;
+        Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
         window.__audios = [];
         const NativeAudio = window.Audio;
         window.Audio = function(src) { const audio = new NativeAudio(src); window.__audios.push(audio); return audio; };
@@ -179,32 +188,48 @@ const server = http.createServer((req, res) => {
         const question = await page.locator('#quizPanel').evaluate(el => ({ ...el.dataset }));
         assert.equal(question.mode, mode);
         assert.ok(mode === 'current' ? ['name', 'orbit'].includes(question.kind) : question.kind === 'order');
-        const source = Number(question.source);
-        const target = mode === 'future' ? weekAnswers[source] : source;
+        const source = Number(question.sourceAngle);
+        assert.ok(Number.isFinite(source) && source >= 0 && source < TAU);
+        assert.equal(question.source, undefined, 'legacy integer source removed');
+        assert.ok(['anchor', 'continuous'].includes(question.sourceType));
+        const target = normalize(source + (mode === 'future' ? Math.PI / 2 : 0));
         const before = await quizSnapshot(page);
         assert.equal(await page.locator('#quizOptions button').count(), 8);
+        assert.deepEqual(before.options.map(option => option.phase).sort(), Array.from({ length: 8 }, (_, i) => String(i)));
+        const answers = before.options.filter(option => distance(option.angle, target) < 1e-8);
+        assert.equal(answers.length, 1, 'unique correct option determined by angle, not local ID');
+        const answer = answers[0], wrong = before.options.find(option => option.phase !== answer.phase);
+        for (const option of before.options) {
+          assert.equal(option.name, shapeName(option.angle));
+          assert.equal(option.label, `${option.name}、あかるいところ やく${Math.round((1 - Math.cos(option.angle)) * 50)}パーセント`);
+        }
         const prefix = mode === 'current' ? 'quiz' : 'challenge';
         for (const state of ['question', 'wrong', 'solved']) {
           if (state === 'wrong') {
-            await page.locator(`#quizOptions button[data-phase="${(target + 1) % 8}"]`).click();
+            await page.locator(`#quizOptions button[data-phase="${wrong.phase}"]`).click();
             assert.match(await page.locator('#quizResult').textContent(), /もういちど/);
           } else if (state === 'solved') {
-            await page.locator(`#quizOptions button[data-phase="${target}"]`).click();
+            await page.locator(`#quizOptions button[data-phase="${answer.phase}"]`).click();
             assert.match(await page.locator('#quizResult').textContent(), /★\s*1\s+みつけた/);
           }
           const current = await quizSnapshot(page);
-          assert.equal(current.scene, String(source * 45), `${mode} ${state}: diagram stays at source`);
+          assert.equal(current.scene, before.scene, `${mode} ${state}: diagram stays at source`);
+          assert.ok(distance(Number(current.scene) * Math.PI / 180, source) <= Math.PI / 360 + 1e-8);
+          assert.deepEqual(current.dataset, before.dataset, `${mode} ${state}: question fixed`);
+          assert.deepEqual(current.options.map(({ phase, angle, name, label }) => ({ phase, angle, name, label })),
+            before.options.map(({ phase, angle, name, label }) => ({ phase, angle, name, label })), 'options fixed after grading');
           if (mode === 'future') {
-            assert.equal(current.sourceName, phaseNames[source], `${state}: summary names the source`);
-            assert.equal(current.moonLabel, phaseNames[source], `${state}: accessible moon names the source`);
+            assert.equal(current.sourceName, shapeName(source), `${state}: summary names the source`);
+            assert.equal(current.moonLabel, shapeName(source), `${state}: accessible moon names the source`);
             assert.equal(current.smallLabel, 'いまのつき', `${state}: summary remains present tense`);
-            assert.equal(current.sourceLabel, `いまのつきは、${phaseNames[source]}。${current.sourceMessage}`,
+            assert.equal(current.sourceLabel, `いまのつきは、${shapeName(source)}。${current.sourceMessage}`,
               `${state}: accessible summary describes the source`);
             assert.equal(current.summary, before.summary, `${state}: grading preserves source summary`);
             assert.equal(current.sourceLabel, before.sourceLabel, `${state}: grading preserves accessible source description`);
           }
           if (state === 'solved') {
-            assert.equal(current.result.split('\n')[1], `こたえ：${phaseNames[target]}`,
+            assert.equal(current.result.split('\n').length, 2, 'two-line answer');
+            assert.equal(current.result.split('\n')[1], `こたえ：${shapeName(target)}`,
               `${mode}: second result line names the actual answer`);
           }
           assert.equal(await page.locator('#quizNext').isDisabled(), state !== 'solved');

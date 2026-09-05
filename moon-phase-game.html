@@ -237,7 +237,7 @@
         moonSurfaces.clear(); moonFrames.clear();
         buildPhasePicker();
         document.querySelectorAll("#quizOptions button").forEach(button => {
-          drawMoonPhase(button.firstChild.getContext("2d"), 64, 64, 54, quizShapes[Number(button.dataset.phase)].angle);
+          drawMoonPhase(button.firstChild.getContext("2d"), 64, 64, 54, Number(button.dataset.angle));
         });
         lastTextIndex = -1; draw();
       };
@@ -1583,17 +1583,43 @@
       });
       const quizPanel = document.getElementById("quizPanel");
       const quizNext = document.getElementById("quizNext");
-      // Use eight astronomical shapes, not calendar-day names with ambiguous ages.
-      const quizShapes = Object.freeze([
+      const quizCardinals = Object.freeze([
         { name: "しんげつ", clue: "しんげつ は どれ？", detail: "ひかる がわが みえないね" },
-        { name: "ふくらむ細い月", clue: "まんげつに むかう、ほそいつき は？", detail: "みぎが ほそく ひかるね" },
         { name: "じょうげん", clue: "じょうげんの つき は どれ？", detail: "みぎ はんぶんが ひかるね" },
-        { name: "ふくらむ丸い月", clue: "まんげつに むかう、はんぶんより まるいつき は？", detail: "みぎから まるくなるね" },
         { name: "まんげつ", clue: "まんげつ は どれ？", detail: "ぜんぶ まるく ひかるね" },
-        { name: "かけていく丸い月", clue: "まんげつの あと、まだ はんぶんより まるいつき は？", detail: "みぎから かけていくね" },
-        { name: "かげん", clue: "かげんの つき は どれ？", detail: "ひだり はんぶんが ひかるね" },
-        { name: "かけていく細い月", clue: "しんげつに むかう、ほそいつき は？", detail: "ひだりが ほそく ひかるね" }
-      ].map((shape, id) => Object.freeze({ ...shape, id, angle: id * TAU / 8 })));
+        { name: "かげん", clue: "かげんの つき は どれ？", detail: "ひだり はんぶんが ひかるね" }
+      ].map(Object.freeze));
+      function normalizeQuizAngle(angle) {
+        const value = angle % TAU;
+        return value < 0 ? value + TAU : value;
+      }
+      function quizShapeAt(value) {
+        const angle = normalizeQuizAngle(value);
+        const cardinal = quizCardinals.findIndex((shape, index) => {
+          const distance = Math.abs(angle - index * TAU / 4);
+          return Math.min(distance, TAU - distance) < 1e-9;
+        });
+        if (cardinal !== -1) return Object.freeze({ ...quizCardinals[cardinal], angle });
+        const waxing = angle < Math.PI, thin = (1 - Math.cos(angle)) / 2 < 0.5;
+        return Object.freeze({
+          angle,
+          name: (waxing ? "ふくらむ" : "かけていく") + (thin ? "細い月" : "丸い月"),
+          detail: (waxing ? "みぎが" : "ひだりが") + (thin ? " ほそく ひかるね" : " おおきく ひかるね")
+        });
+      }
+      function quizOptionsFor(answer) {
+        const lit = (1 - Math.cos(answer.angle)) / 2;
+        const start = answer.angle <= Math.PI ? lit : 2 - lit;
+        // Equal steps in illuminated area keep near-new/full distractors distinguishable.
+        const shapes = Array.from({ length: 8 }, (_, index) => {
+          if (!index) return answer;
+          const position = (start + index / 4) % 2;
+          const fraction = position <= 1 ? position : 2 - position;
+          const angle = Math.acos(Math.max(-1, Math.min(1, 1 - 2 * fraction)));
+          return quizShapeAt(position <= 1 ? angle : TAU - angle);
+        });
+        return Object.freeze(shuffleQuiz(shapes).map((shape, id) => Object.freeze({ ...shape, id })));
+      }
       // Each mode owns its progress; changing tabs never transfers a question or score.
       const quizSessions = Object.fromEntries(["current", "future"].map(mode => [mode, {
         question: null, solved: false, stars: 0, deck: [], wrong: new Set(), feedback: ""
@@ -1610,23 +1636,22 @@
         return result;
       }
       function quizAnswerText() {
-        const answer = quizShapes[quizState.question.answer];
-        if (quizState.question.kind === "order") {
-          const source = quizShapes[quizState.question.source];
+        const { source, answer, kind } = quizState.question;
+        if (kind === "order") {
           return "みつけた！ " + source.name + "の、やく１しゅうかんごは、" + answer.name + "。";
         }
         return "みつけた！ " + answer.name + "。" + answer.detail;
       }
       function syncQuizScene() {
         // The diagram is the question's reference, never the future answer.
-        snapPhase(quizShapes[quizState.question.source].angle);
+        snapPhase(quizState.question.source.angle);
         lastTextIndex = -1;
         draw();
       }
       function updateQuizSummary() {
         const masked = !quizState.solved && quizState.question.kind !== "order";
         phaseSummary.classList.toggle("is-masked", masked);
-        const shape = quizShapes[quizState.question.source];
+        const shape = quizState.question.source;
         const future = quizState.question.kind === "order";
         phaseSummary.querySelector(".small-label").textContent = future ? "いまのつき" : quizState.solved ? "こたえ" : "ちきゅうから みえる";
         phaseName.textContent = masked ? "どんな かたち？" : shape.name;
@@ -1638,18 +1663,28 @@
       function nextQuiz() {
         if (quizState.question && !quizState.solved) return;
         if (!quizState.deck.length) {
-          const kinds = quizMode === "future" ? ["order"] : ["name", "orbit"];
-          quizState.deck = shuffleQuiz(kinds.flatMap(kind => quizShapes.map(shape => ({ kind, source: shape.id }))));
+          // Sample the entire cycle afresh, including very thin and almost-full moons.
+          const samples = Array.from({ length: 16 }, (_, sector) => ({
+            kind: quizMode === "future" ? "order" : "orbit",
+            sourceAngle: (sector + Math.random()) * TAU / 16, sourceType: "continuous"
+          }));
+          const anchors = quizCardinals.map((shape, index) => ({
+            kind: quizMode === "future" ? "order" : "name",
+            sourceAngle: index * TAU / 4, sourceType: "anchor"
+          }));
+          quizState.deck = shuffleQuiz([...samples, ...anchors]);
         }
-        const { kind, source } = quizState.deck.pop();
+        const { kind, sourceAngle, sourceType } = quizState.deck.pop();
+        const source = quizShapeAt(sourceAngle);
         // A quarter of the mean synodic month is about one week (7.38 days).
-        const answer = kind === "order" ? (source + 2) % 8 : source;
-        const prompt = kind === "name" ? quizShapes[source].clue
+        const answer = kind === "order" ? quizShapeAt(source.angle + TAU / 4) : source;
+        const options = quizOptionsFor(answer);
+        const prompt = kind === "name" ? source.clue
           : kind === "order" ? "いまのつきの、やく１しゅうかんごの かたちは？"
           : "ずの いちで、ちきゅうから みえる つきは？";
         const question = Object.freeze({
-          id: ++quizSerial, kind, source, answer, prompt,
-          options: Object.freeze(shuffleQuiz(quizShapes.map(shape => shape.id)))
+          id: ++quizSerial, kind, source, sourceType, answer, prompt, options,
+          correctOption: options.find(option => option.angle === answer.angle).id
         });
         quizState.question = question;
         quizState.solved = false;
@@ -1663,32 +1698,37 @@
         quizNext.disabled = !state.solved;
         quizPanel.dataset.questionId = String(question.id);
         quizPanel.dataset.kind = question.kind;
-        quizPanel.dataset.source = String(question.source);
+        quizPanel.dataset.sourceAngle = String(question.source.angle);
+        quizPanel.dataset.sourceType = question.sourceType;
         document.getElementById("quizPrompt").textContent = question.prompt;
         document.getElementById("quizResult").textContent = state.feedback;
         const container = document.getElementById("quizOptions");
         container.replaceChildren();
-        question.options.forEach(id => {
+        question.options.forEach(option => {
+          const { id, angle, name } = option;
           const button = document.createElement("button"), canvas = document.createElement("canvas");
           button.type = "button";
           button.dataset.phase = String(id);
-          button.setAttribute("aria-label", quizShapes[id].name);
+          button.dataset.angle = String(angle);
+          button.dataset.name = name;
+          const percent = Math.round((1 - Math.cos(angle)) * 50);
+          button.setAttribute("aria-label", name + "、あかるいところ やく" + percent + "パーセント");
           canvas.width = canvas.height = 128;
           canvas.setAttribute("aria-hidden", "true");
-          drawMoonPhase(canvas.getContext("2d"), 64, 64, 54, quizShapes[id].angle);
+          drawMoonPhase(canvas.getContext("2d"), 64, 64, 54, angle);
           button.append(canvas);
           button.classList.toggle("try-again", state.wrong.has(id));
-          button.classList.toggle("correct", state.solved && id === question.answer);
+          button.classList.toggle("correct", state.solved && id === question.correctOption);
           button.addEventListener("click", () => {
             if (!button.isConnected || !isQuizActive() || quizState !== state || state.question !== question || state.solved) return;
-            if (id === question.answer) {
-              quizState.solved = true;
-              quizState.stars++;
+            if (id === question.correctOption) {
+              state.solved = true;
+              state.stars++;
               button.classList.remove("try-again");
               button.classList.add("correct");
               quizNext.disabled = false;
               syncQuizScene(); triggerTapEffect("moon");
-              state.feedback = "★ " + state.stars + " みつけた！\nこたえ：" + quizShapes[question.answer].name;
+              state.feedback = "★ " + state.stars + " みつけた！\nこたえ：" + question.answer.name;
               document.getElementById("quizResult").textContent = state.feedback;
               playTone(); speakJapanese(quizAnswerText());
             } else {

@@ -27,13 +27,23 @@ image avoids remote image requests and file-origin canvas restrictions.
 
 ## Quiz model
 
-The quiz uses eight unambiguous astronomical representatives at 45-degree
-intervals, independently of the traditional calendar-day picker. The default
-Find tab has a shuffled 16-question deck: names/descriptions and the current
-Earth-view appearance from orbital position. The separate Challenge tab has
-eight questions about the shape one week later. Future-shape questions never
-appear in Find. Each mode keeps its own question, deck, score and feedback;
-switching modes restores that session, including incorrect-choice highlights.
+Quiz phases are continuous angles across the entire lunar cycle, independently
+of the traditional calendar-day picker. Each mode has a shuffled 20-question
+deck: one random angle within each of 16 sectors, plus the four exact cardinal
+phases. Angles are sampled afresh for each deck, not rounded to fixed shapes.
+Find asks the current Earth-view appearance for sampled angles and uses name
+questions only for new/first-quarter/full/last-quarter anchors. Challenge asks
+about one week later for all angles. Future-shape questions never appear in
+Find. Each mode keeps its own question, deck, score and feedback; switching
+modes restores that session, including incorrect-choice highlights.
+
+Every question has eight question-local options, one retaining the exact
+answer angle. Distractors are spaced by 0.25 along a length-2 illumination
+coordinate: f for waxing, 2-f for waning, where f=(1-cos(angle))/2. For ideal
+binary-lit disks this gives at least 25% disk-area symmetric difference, even
+near new/full moon. Raster appearance is checked separately at thumbnail size.
+Intermediate phases use descriptive shape names, not exact calendar-day names.
+Accessible option names also include the approximate illuminated percentage.
 One week is modeled as one quarter of the mean 29.53059-day cycle (7.38 days).
 The displayed orientation is the same northern-hemisphere convention as the
 main renderer; this is not an exact-date or observing-time prediction.

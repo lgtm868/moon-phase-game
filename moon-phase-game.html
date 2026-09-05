@@ -137,8 +137,8 @@
 </head>
 <body>
   <main aria-label="月の満ち欠けをみるゲーム">
-    <section class="scene" aria-label="太陽、地球、月の動き">
-      <canvas id="space" role="slider" tabindex="0" aria-label="月の位置" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0"></canvas>
+    <section class="scene" aria-label="北極側から見た太陽、地球、月の動き">
+      <canvas id="space" role="slider" tabindex="0" aria-label="月の位置（北極側から見た図）" title="北極側から見た図。月は反時計回りに進みます。" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0"></canvas>
       <div class="scene-actions">
         <button id="voiceButton" type="button" aria-label="読み上げをオフにする" aria-pressed="true" title="読み上げ">♬</button>
         <a class="game-link guess-link" href="index.html?game=guess" target="_top" aria-label="あてっこで あそぶ">あてっこ</a>
@@ -1132,7 +1132,8 @@
         const sunRadius = Math.max(19, Math.min(w, h) * 0.065);
         const p = normalizedPhase();
         const moonX = centerX - Math.cos(p) * orbitRadius;
-        const moonY = centerY - Math.sin(p) * orbitRadius;
+        // North-pole view: waxing travels along the lower arc, counterclockwise.
+        const moonY = centerY + Math.sin(p) * orbitRadius;
         const sunTap = tapEffects.sun;
         const moonTap = tapEffects.moon;
         const moonDrawRadius = Math.round(moonRadius * (1 + 0.2 * moonTap));
@@ -1211,6 +1212,19 @@
         ctx.beginPath();
         ctx.arc(centerX, centerY, orbitRadius, 0, TAU);
         ctx.stroke();
+        // Tangent arrows use screen coordinates (positive y points down).
+        ctx.fillStyle = "rgba(255, 248, 223, 0.55)";
+        for (const a of [Math.PI / 4, Math.PI * 5 / 4]) {
+          const x = centerX + Math.cos(a) * orbitRadius;
+          const y = centerY + Math.sin(a) * orbitRadius;
+          const tx = Math.sin(a), ty = -Math.cos(a);
+          const length = Math.max(5, Math.min(9, orbitRadius * 0.07));
+          ctx.beginPath();
+          ctx.moveTo(x + tx * length, y + ty * length);
+          ctx.lineTo(x - tx * length - ty * length * 0.5, y - ty * length + tx * length * 0.5);
+          ctx.lineTo(x - tx * length + ty * length * 0.5, y - ty * length - tx * length * 0.5);
+          ctx.closePath(); ctx.fill();
+        }
         ctx.restore();
 
         const earthGradient = ctx.createRadialGradient(centerX - earthRadius * 0.35, centerY - earthRadius * 0.45, 2, centerX, centerY, earthRadius);
@@ -1500,7 +1514,7 @@
         const rect = space.getBoundingClientRect(), orbit = sceneHitAreas.orbit;
         const dx = event.clientX - rect.left - orbit.x, dy = event.clientY - rect.top - orbit.y;
         if (Math.hypot(dx, dy) < 10) return;
-        snapPhase(Math.atan2(-dy, -dx));
+        snapPhase(Math.atan2(dy, -dx));
         draw();
       }
       space.addEventListener("pointerdown", event => {

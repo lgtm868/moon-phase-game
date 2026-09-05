@@ -8,6 +8,16 @@ light vector `(sin(phase), 0, -cos(phase))`. New moon, first quarter, full moon,
 and last quarter occur at 0, 90, 180, and 270 degrees. The northern-hemisphere
 view shows waxing light on the right and waning light on the left.
 
+The orbital diagram is explicitly viewed from the north-pole side. With the
+Sun at the left, new/first-quarter/full/last-quarter positions are left/bottom/
+right/top. Screen coordinates are `x = cx - r*cos(phase)` and
+`y = cy + r*sin(phase)`: increasing phase moves counterclockwise. Dragging uses
+the inverse `atan2(dy, -dx)`. The former negative-y mapping mirrored the orbit
+relative to the northern-upright Earth view. Tests must check actual drawn
+Moon positions, not just phase values or the separately rendered summary.
+The orbit's sun-facing half remains lit on the left at every position; do not
+substitute the Earth-view phase rendering for this top-down view.
+
 Traditional lunar-day names have approximate positions in a mean 29.53059-day
 cycle, not 16 equal angular sectors. These are illustrative positions, not a
 calendar or an ephemeris. Actual lunar age and traditional calendar dates vary.
@@ -105,15 +115,24 @@ Boundary regressions cover exact new moon and both neighboring thin crescents
 in both modes, including all incorrect options and unchanged source diagrams.
 Moon option containment is checked at every supported test viewport.
 
+`tests/orbit-check.cjs` locates the drawn Moon from canvas pixels, checks its
+cardinal positions against the north-side view, and derives the Earth-view
+lighting from that measured position. It also checks eight-direction dragging
+and counterclockwise progression rather than trusting the phase label alone.
+
 Run with Node and Playwright installed:
 
 ```sh
 node tests/quality-check.cjs
 node tests/quiz-check.cjs
+node tests/orbit-check.cjs
 ```
 
 Optional `PLAYWRIGHT_MODULE` selects an installed Playwright module path;
 `CHROME_EXECUTABLE` selects a Chrome binary. Screenshots are written to output/.
+The orbital test uses a temporary screenshot directory unless `ORBIT_ARTIFACTS`
+is set. `ORBIT_MIRRORED_FIXTURE=1` serves the former mirrored geometry without
+editing the app: that negative-control run must fail the position assertions.
 These checks exercise desktop Chromium at mobile sizes, not a physical iPhone.
 Device-specific audio routing, system voices, and fullscreen support still
 depend on the browser and operating system. Fullscreen hides when unsupported.

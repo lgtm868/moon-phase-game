@@ -62,7 +62,7 @@
     .sprunki-choice.is-active { border-color: #b9edcc; background: #284338; }
     .sprunki-choice.is-active::after { content: "✓"; position: absolute; top: 1px; right: 3px; color: #b9edcc; font-size: 10px; }
     [hidden] { display: none !important; }
-    .controls { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 64px; gap: 8px; align-items: stretch; }
+    .controls { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) repeat(2, 64px); gap: 8px; align-items: stretch; }
     .controls button, .game-link { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 700; min-height: 48px; }
     #playButton { background: #b9edcc; color: #14271f; border-color: #b9edcc; }
     #musicButton[aria-pressed="true"] { background: #493b22; color: #ffda80; border-color: #a08242; }
@@ -94,7 +94,7 @@
       .phase-message { margin-top: 2px; font-size: 12px; }
       .small-label { font-size: 11px; margin-bottom: 2px; }
       .library { grid-column: 1; grid-row: 3; grid-template-rows: 36px minmax(0, 1fr); gap: 8px; }
-      .controls { grid-column: 1; grid-row: 4; grid-template-columns: repeat(4, minmax(0, 1fr)) 46px; gap: 5px; }
+      .controls { grid-column: 1; grid-row: 4; grid-template-columns: repeat(4, minmax(0, 1fr)) repeat(2, 46px); gap: 5px; }
       .controls button { flex-direction: column; gap: 3px; font-size: 11px; }
       .controls .button-icon { font-size: 19px; }
     }
@@ -125,7 +125,7 @@
       .small-label { margin-bottom: 0; font-size: 10px; }
       .phase-message { margin-top: 0; font-size: 11px; }
       .library { grid-column: 2; grid-row: 2; grid-template-rows: 22px minmax(0, 1fr); gap: 4px; }
-      .controls { grid-column: 1 / -1; grid-row: 3; grid-template-columns: repeat(4, minmax(0, 1fr)) 46px; }
+      .controls { grid-column: 1 / -1; grid-row: 3; grid-template-columns: repeat(4, minmax(0, 1fr)) repeat(2, 46px); }
       .controls button { flex-direction: row; gap: 6px; font-size: 11px; }
     }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
@@ -191,6 +191,9 @@
       </button>
       <a class="game-link" href="index.html?game=piano" target="_top" aria-label="Switch to Sprunki piano rhythm game">
         <span><span class="button-icon" aria-hidden="true">PI</span>PIANO</span>
+      </a>
+      <a class="game-link" href="index.html?game=addition" target="_top" aria-label="さんすうで あそぶ">
+        <span><span class="button-icon" aria-hidden="true">＋−</span>さんすう</span>
       </a>
     </nav>
   </main>

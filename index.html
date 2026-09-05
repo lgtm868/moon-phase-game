@@ -79,9 +79,9 @@
     .tabs {
       justify-self: end;
       display: grid;
-      grid-template-columns: repeat(2, minmax(92px, 148px));
+      grid-template-columns: repeat(4, minmax(0, 148px));
       gap: 8px;
-      width: min(100%, 312px);
+      width: min(100%, 610px);
     }
 
     .tab {
@@ -109,6 +109,9 @@
       color: #102125;
       border-color: transparent;
     }
+
+    .tab.is-active[data-game="addition"] { background: #ffe09b; color: #293746; }
+    .tab.is-active[data-game="guess"] { background: #d5efc3; color: #29463f; }
 
     .game-frame {
       width: 100%;
@@ -141,17 +144,21 @@
     <nav class="tabs" aria-label="ゲーム切り替え">
       <button class="tab" type="button" data-game="moon" aria-pressed="true">MOON</button>
       <button class="tab" type="button" data-game="piano" aria-pressed="false">PIANO</button>
+      <button class="tab" type="button" data-game="addition" aria-pressed="false">さんすう</button>
+      <button class="tab" type="button" data-game="guess" aria-pressed="false">あてっこ</button>
     </nav>
   </header>
-  <iframe class="game-frame" id="gameFrame" title="月の満ち欠けゲーム" src="moon-phase-game.html?v=20260905-quiz-modes" allow="autoplay; fullscreen" allowfullscreen></iframe>
+  <iframe class="game-frame" id="gameFrame" title="月の満ち欠けゲーム" src="moon-phase-game.html?v=20260905-math-merged" allow="autoplay; fullscreen" allowfullscreen></iframe>
 
   <script>
     (() => {
       "use strict";
 
       const games = {
-        moon: { title: "MOON", src: "moon-phase-game.html?v=20260905-quiz-modes" },
-        piano: { title: "PIANO", src: "sprunki-piano-game.html?v=20260506-clean-playfield" }
+        moon: { title: "MOON", src: "moon-phase-game.html?v=20260905-math-merged" },
+        piano: { title: "PIANO", src: "sprunki-piano-game.html?v=20260506-clean-playfield" },
+        addition: { title: "スプランキーと さんすう", src: "sprunki-addition-game.html" },
+        guess: { title: "すぷらんきー あてっこ", src: "sprunki-guess-game.html" }
       };
       const frame = document.getElementById("gameFrame");
       const status = document.getElementById("status");
@@ -159,17 +166,18 @@
 
       function selectedGameFromUrl() {
         const params = new URLSearchParams(location.search);
-        return games[params.get("game")] ? params.get("game") : "moon";
+        return Object.prototype.hasOwnProperty.call(games, params.get("game")) ? params.get("game") : "moon";
       }
 
       function selectGame(game, replace = false) {
-        const target = games[game] ? game : "moon";
+        const target = Object.prototype.hasOwnProperty.call(games, game) ? game : "moon";
         document.body.classList.toggle("moon-mode", target === "moon");
         const currentSrc = frame.getAttribute("src");
         if (currentSrc !== games[target].src) {
           frame.src = games[target].src;
         }
         status.textContent = games[target].title;
+        frame.title = games[target].title;
         tabs.forEach((tab) => {
           const isActive = tab.dataset.game === target;
           tab.classList.toggle("is-active", isActive);

@@ -38,6 +38,7 @@
     #space:active { cursor: grabbing; }
     .scene-actions { position: absolute; left: 8px; right: 8px; top: 8px; display: flex; justify-content: space-between; pointer-events: none; }
     .scene-actions button { pointer-events: auto; width: 44px; height: 44px; font-size: 22px; background: #18221fd9; }
+    .scene-actions .guess-link { pointer-events: auto; align-self: flex-start; display: inline-flex; align-items: center; justify-content: center; min-width: 100px; min-height: 44px; padding: 8px 15px; font-size: 15px; font-weight: 800; background: #d5efc3; color: #29463f; border-color: #d5efc3; }
     .progress-dots { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: none; }
     .progress-dots i { width: 5px; height: 5px; border-radius: 50%; background: #64746e; }
     .progress-dots i.active { background: #f9ce6b; box-shadow: 0 0 0 3px #f9ce6b22; }
@@ -137,6 +138,7 @@
       <canvas id="space" role="slider" tabindex="0" aria-label="月の位置" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0"></canvas>
       <div class="scene-actions">
         <button id="voiceButton" type="button" aria-label="読み上げをオフにする" aria-pressed="true" title="読み上げ">♬</button>
+        <a class="game-link guess-link" href="index.html?game=guess" target="_top" aria-label="あてっこで あそぶ">あてっこ</a>
         <button id="fullscreenButton" type="button" aria-label="全画面表示" title="全画面表示">⛶</button>
       </div>
       <div class="progress-dots" id="progressDots" aria-hidden="true"></div>

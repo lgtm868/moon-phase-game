@@ -139,25 +139,25 @@
   <header class="switcher">
     <div class="brand">
       <h1>Moon Games</h1>
-      <div class="status" id="status">MOON</div>
+      <div class="status" id="status">おつきさま</div>
     </div>
     <nav class="tabs" aria-label="ゲーム切り替え">
-      <button class="tab" type="button" data-game="moon" aria-pressed="true">MOON</button>
-      <button class="tab" type="button" data-game="piano" aria-pressed="false">PIANO</button>
+      <button class="tab" type="button" data-game="moon" aria-pressed="true">つき</button>
+      <button class="tab" type="button" data-game="piano" aria-pressed="false">ぴあの</button>
       <button class="tab" type="button" data-game="addition" aria-pressed="false">さんすう</button>
       <button class="tab" type="button" data-game="guess" aria-pressed="false">あてっこ</button>
     </nav>
   </header>
-  <iframe class="game-frame" id="gameFrame" title="月の満ち欠けゲーム" src="moon-phase-game.html?v=20260905-quiz-reference" allow="autoplay; fullscreen" allowfullscreen></iframe>
+  <iframe class="game-frame" id="gameFrame" title="おつきさま" src="moon-phase-game.html?v=20260905-quiz-reference" allow="autoplay; fullscreen" allowfullscreen></iframe>
 
   <script>
     (() => {
       "use strict";
 
       const games = {
-        moon: { title: "MOON", src: "moon-phase-game.html?v=20260905-quiz-reference" },
-        piano: { title: "PIANO", src: "sprunki-piano-game.html?v=20260506-clean-playfield" },
-        addition: { title: "スプランキーと さんすう", src: "sprunki-addition-game.html" },
+        moon: { title: "おつきさま", src: "moon-phase-game.html?v=20260905-quiz-reference" },
+        piano: { title: "すぷらんきー ぴあの", src: "sprunki-piano-game.html?v=20260506-clean-playfield" },
+        addition: { title: "すぷらんきーと さんすう", src: "sprunki-addition-game.html" },
         guess: { title: "すぷらんきー あてっこ", src: "sprunki-guess-game.html" }
       };
       const frame = document.getElementById("gameFrame");

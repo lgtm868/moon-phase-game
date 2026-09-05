@@ -38,6 +38,9 @@
       grid-template-rows: auto minmax(0, 1fr);
     }
 
+    body.moon-mode { grid-template-rows: minmax(0, 1fr); }
+    body.moon-mode .switcher { display: none; }
+
     .switcher {
       min-height: 58px;
       display: grid;
@@ -140,14 +143,14 @@
       <button class="tab" type="button" data-game="piano" aria-pressed="false">PIANO</button>
     </nav>
   </header>
-  <iframe class="game-frame" id="gameFrame" title="Selected game" src="moon-phase-game.html" allow="autoplay"></iframe>
+  <iframe class="game-frame" id="gameFrame" title="月の満ち欠けゲーム" src="moon-phase-game.html?v=20260905" allow="autoplay; fullscreen" allowfullscreen></iframe>
 
   <script>
     (() => {
       "use strict";
 
       const games = {
-        moon: { title: "MOON", src: "moon-phase-game.html" },
+        moon: { title: "MOON", src: "moon-phase-game.html?v=20260905" },
         piano: { title: "PIANO", src: "sprunki-piano-game.html?v=20260506-clean-playfield" }
       };
       const frame = document.getElementById("gameFrame");
@@ -161,6 +164,7 @@
 
       function selectGame(game, replace = false) {
         const target = games[game] ? game : "moon";
+        document.body.classList.toggle("moon-mode", target === "moon");
         const currentSrc = frame.getAttribute("src");
         if (currentSrc !== games[target].src) {
           frame.src = games[target].src;

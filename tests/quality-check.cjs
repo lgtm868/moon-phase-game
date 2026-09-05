@@ -25,7 +25,7 @@ const server = http.createServer((req, res) => {
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_EXECUTABLE ? { executablePath: process.env.CHROME_EXECUTABLE } : {}) });
   const failures = [], report = [];
   try {
-    for (const [width, height] of [[390, 844], [375, 667], [320, 568], [1280, 800], [844, 390]]) {
+    for (const [width, height] of [[390, 844], [375, 667], [320, 568], [1280, 800], [844, 390], [667, 375], [740, 360]]) {
       const page = await browser.newPage({ viewport: { width, height } });
       page.on('pageerror', error => failures.push(error.message));
       await page.addInitScript(() => {
@@ -100,9 +100,22 @@ const server = http.createServer((req, res) => {
         report.push({ audio });
       }
       await page.locator('#tabQuiz').click();
-      const target = (await page.locator('#quizPrompt').textContent()).split(' は ')[0];
-      await page.locator('#quizOptions').getByRole('button', { name: target, exact: true }).click();
+      const question = await page.locator('#quizPanel').evaluate(el => ({ ...el.dataset }));
+      const target = (Number(question.source) + (question.kind === 'order' ? 2 : 0)) % 8;
+      assert.equal(await page.locator('#quizOptions button').count(), 8);
+      await page.screenshot({ path: path.join(artifacts, `quiz-question-${width}x${height}.png`) });
+      await page.locator(`#quizOptions button[data-phase="${target}"]`).click();
       assert.match(await page.locator('#quizResult').textContent(), /みつけた/);
+      const quizLayout = await page.evaluate(() => {
+        const elements = [...document.querySelectorAll('#quizPanel button, #quizResult, #phaseName, #phaseMessage')];
+        const overflow = elements.filter(el => {
+          const rect = el.getBoundingClientRect();
+          return !(rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight
+            && el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1);
+        }).map(el => ({ id: el.id, text: el.textContent, width: el.clientWidth, height: el.clientHeight, scroll: [el.scrollWidth, el.scrollHeight], rect: el.getBoundingClientRect().toJSON() }));
+        return { overflow, horizontal: document.documentElement.scrollWidth > innerWidth, vertical: document.documentElement.scrollHeight > innerHeight + 2 };
+      });
+      assert.ok(!quizLayout.overflow.length && !quizLayout.horizontal && !quizLayout.vertical, `quiz overflow ${width}x${height}: ${JSON.stringify(quizLayout)}`);
       await page.screenshot({ path: path.join(artifacts, `quiz-${width}x${height}.png`) });
       report.push({ width, height, layout });
       await page.close();

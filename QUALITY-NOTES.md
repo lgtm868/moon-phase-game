@@ -25,13 +25,32 @@ It is projected onto a sphere in Canvas. Geometry and texture samples are
 cached separately from phase lighting. Cache sizes are bounded. The embedded
 image avoids remote image requests and file-origin canvas restrictions.
 
+## Quiz model
+
+The quiz uses eight unambiguous astronomical representatives at 45-degree
+intervals, independently of the traditional calendar-day picker. Each shuffled
+24-question deck covers all eight shapes in three modes: names/descriptions,
+the shape about one week later, and Earth-view appearance from orbital position.
+One week is modeled as one quarter of the mean 29.53059-day cycle (7.38 days).
+The displayed orientation is the same northern-hemisphere convention as the
+main renderer; this is not an exact-date or observing-time prediction.
+
+Questions and options are immutable. The diagram is frozen to the question,
+not the previously explored Moon. Unsolved name/orbit questions mask the
+Earth-view answer, including its accessible and spoken labels; sequence
+questions show the source Moon. Correct answers reveal the corresponding Moon.
+Only the explicit Next button advances. Tab changes and backgrounding retain
+the question, result and score. Leaving the quiz restores the previous
+exploration phase rather than leaking the quiz answer through the phase picker.
+Duplicate and stale answer events cannot score.
+
 ## Music and speech
 
 Music starts off. The ON action invokes each selected HTML media element's
 play method inside the user gesture, with real existing audio files and no
 substitute synthesized character music. Selection changes do not restart
 already-playing tracks. Stale play failures are ignored after a newer attempt
-or OFF action. Backgrounding stops music, motion and queued quiz transitions.
+or OFF action. Backgrounding stops music and motion, while preserving the quiz.
 The read-aloud toggle is separate from music; character names use English for
 Sprunki and Japanese for the existing Japanese characters.
 
@@ -45,16 +64,22 @@ loop stems, not a guess from file length or trailing silence.
 ## Verification
 
 `tests/quality-check.cjs` uses Playwright and a temporary HTTP server. It checks
-five viewports (320x568, 375x667, 390x844, 844x390 and 1280x800), overflow, all
+seven viewports (320x568, 375x667, 390x844, 667x375, 740x360, 844x390 and 1280x800), overflow, all
 images, 16 phase selections, drag/keyboard control, phase pixel illumination,
 30 character choices, actual media time progression, OFF, and quiz answers.
 It also checks the index wrapper and piano navigation, delayed/rejected media
 playback, and the file URL with external network blocked.
 
+`tests/quiz-check.cjs` exercises complete quiz decks, every incorrect choice,
+correct answers, rendered illumination and bright-side direction, duplicate
+scoring, summary masking, frozen diagrams, tab/background persistence, and
+explicit rather than timed advancement.
+
 Run with Node and Playwright installed:
 
 ```sh
 node tests/quality-check.cjs
+node tests/quiz-check.cjs
 ```
 
 Optional `PLAYWRIGHT_MODULE` selects an installed Playwright module path;

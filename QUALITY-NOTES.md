@@ -41,7 +41,13 @@ main renderer; this is not an exact-date or observing-time prediction.
 Questions and options are immutable. The diagram is frozen to the question,
 not the previously explored Moon. Unsolved name/orbit questions mask the
 Earth-view answer, including its accessible and spoken labels; sequence
-questions show the source Moon. Correct answers reveal the corresponding Moon.
+questions show the source Moon. After answering a sequence question, both the
+diagram and the "current Moon" summary still show the original source. The
+answer is identified separately by the selected option and result label.
+Replacing the source with the future answer would change the visible question
+while retaining the old grading result, so tests explicitly forbid that change.
+In particular, last quarter leads to new moon, and full moon leads to last
+quarter after about one week. Summary speech always describes its shown Moon.
 Only the explicit Next button advances. Tab changes and backgrounding retain
 the question, result and score. Leaving the quiz restores the previous
 exploration phase rather than leaking the quiz answer through the phase picker.

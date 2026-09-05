@@ -5,6 +5,14 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 const url = pathToFileURL(path.resolve(__dirname, '..', 'moon-phase-game.html')).href;
 const phases = Array.from({ length: 8 }, (_, id) => id);
+const phaseNames = ['しんげつ', 'ふくらむ細い月', 'じょうげん', 'ふくらむ丸い月',
+  'まんげつ', 'かけていく丸い月', 'かげん', 'かけていく細い月'];
+const weekAnswers = [2, 3, 4, 5, 6, 7, 0, 1];
+// Independent reference cases: the displayed present moon is not the future answer.
+const referenceCases = {
+  6: { answer: 0, scene: '270', sourceName: 'かげん', answerName: 'しんげつ', file: 'lastquarter' },
+  4: { answer: 6, scene: '180', sourceName: 'まんげつ', answerName: 'かげん', file: 'fullmoon' }
+};
 const modes = {
   current: { tab: '#tabQuiz', kinds: ['name', 'orbit'], size: 16 },
   future: { tab: '#tabChallenge', kinds: ['order'], size: 8 }
@@ -36,7 +44,9 @@ async function snapshot(page) {
         masked: document.querySelector('#phaseSummary').classList.contains('is-masked'),
         name: document.querySelector('#phaseName').textContent,
         message: document.querySelector('#phaseMessage').textContent,
-        label: document.querySelector('#phaseSummary').getAttribute('aria-label')
+        label: document.querySelector('#phaseSummary').getAttribute('aria-label'),
+        smallLabel: document.querySelector('#phaseSummary .small-label').textContent,
+        moonLabel: document.querySelector('#phaseMoon').getAttribute('aria-label')
       }
     };
   });
@@ -51,15 +61,31 @@ function sameQuestion(actual, expected, label) {
 async function checkSummary(page, question, label) {
   const solved = !question.nextDisabled;
   const masked = !solved && question.kind !== 'order';
-  const phase = (Number(question.source) + (solved && question.kind === 'order' ? 2 : 0)) % 8;
-  assert.equal(question.scene, String(phase * 45), `${label}: source scene before solving, answer scene after`);
+  const phase = Number(question.source);
+  assert.equal(question.scene, String(phase * 45), `${label}: source scene stays unchanged after grading`);
   assert.equal(question.summary.masked, masked, `${label}: only unsolved name/orbit hide the summary`);
   assert.equal(await page.locator('#phaseMoon').isHidden(), masked, `${label}: summary canvas visibility`);
   assert.equal(await page.locator('#phaseSummary .quiz-mask').isVisible(), masked, `${label}: visible question mask`);
-  const name = await page.locator(`#quizOptions button[data-phase="${phase}"]`).getAttribute('aria-label');
-  assert.ok(name, `${label}: phase option has an accessible name`);
+  const name = phaseNames[phase];
+  assert.equal(await page.locator(`#quizOptions button[data-phase="${phase}"]`).getAttribute('aria-label'),
+    name, `${label}: source option has the expected accessible name`);
   if (masked) assert.notEqual(question.summary.name, name, `${label}: summary must not reveal the answer`);
   else assert.equal(question.summary.name, name, `${label}: summary names the displayed phase`);
+  if (question.kind === 'order') {
+    assert.equal(question.summary.smallLabel, 'いまのつき', `${label}: summary is the present moon`);
+    assert.equal(question.summary.moonLabel, name, `${label}: accessible moon names the source`);
+    assert.equal(question.summary.label, `いまのつきは、${name}。${question.summary.message}`,
+      `${label}: accessible summary describes the source, not the future answer`);
+  }
+}
+
+async function checkSourceReadAloud(page, question, label) {
+  await page.locator('#voiceButton').click();
+  await page.evaluate(() => { window.__spoken.length = 0; });
+  await page.locator('#phaseSummary').click();
+  assert.deepEqual(await page.evaluate(() => window.__spoken), [question.summary.label],
+    `${label}: tapping source summary reads its accessible source description`);
+  await page.locator('#voiceButton').click();
 }
 
 async function checkPixels(page, label) {
@@ -182,6 +208,7 @@ async function checkModePersistence(page, expected, saved, label, exploration) {
 }
 
 async function checkLayout(page, question, state, report) {
+  const before = await snapshot(page);
   for (const viewport of layoutViewports) {
     await page.setViewportSize(viewport);
     // Flush resize handlers and two animation frames without real-time sleeps.
@@ -252,7 +279,9 @@ async function checkLayout(page, question, state, report) {
     if (issues.length) report.failures.push({ viewport: `${viewport.width}x${viewport.height}`,
       question: `${question.mode}/${question.kind}:${question.source}`, state, prompt: question.prompt,
       result: await page.locator('#quizResult').textContent(), issues });
-    sameQuestion(await snapshot(page), question, `${state}: resize preserves question`);
+    const resized = await snapshot(page);
+    assert.deepEqual(resized, before, `${state}: resize preserves source scene, summary and grading`);
+    await checkSummary(page, resized, `${state}: resized summary`);
   }
 }
 
@@ -263,6 +292,10 @@ async function checkDeck(browser, seed, exhaustive, errors, layout) {
   try {
     // Two reproducible random streams detect a fixed deck without flaky statistical assertions.
     await page.addInitScript(seed => {
+      window.__spoken = [];
+      window.speechSynthesis.speak = utterance => window.__spoken.push(utterance.text);
+      window.speechSynthesis.cancel = () => {};
+      window.speechSynthesis.getVoices = () => [];
       let state = seed >>> 0;
       Math.random = () => {
         state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
@@ -279,7 +312,7 @@ async function checkDeck(browser, seed, exhaustive, errors, layout) {
     assert.equal((await snapshot(page)).mode, 'current', 'default quiz enters current mode');
     assert.ok(modes.current.kinds.includes((await snapshot(page)).kind), 'default quiz excludes future/order questions');
     const ids = { current: new Set(), future: new Set() }, exercisedKinds = new Set();
-    const deck = { current: [], future: [] }, saved = {};
+    const deck = { current: [], future: [] }, saved = {}, referencesChecked = new Set();
     // Interleave both modes through two complete decks, including independent refills.
     const schedule = Array.from({ length: 2 }, () => Array.from({ length: 16 }, (_, index) =>
       index < 8 ? ['current', 'future'] : ['current']).flat()).flat();
@@ -302,10 +335,16 @@ async function checkDeck(browser, seed, exhaustive, errors, layout) {
       assert.equal(question.nextDisabled, true, `${label}: next locked`);
       assert.equal(Number(question.result.match(/★\s*(\d+)/)?.[1]), index, `${label}: stars persist between questions`);
       deck[mode].push(`${question.kind}:${question.source}`);
-      const answer = (Number(question.source) + (question.kind === 'order' ? 2 : 0)) % 8;
+      const reference = mode === 'future' ? referenceCases[question.source] : null;
+      const answer = reference ? reference.answer : mode === 'future' ? weekAnswers[Number(question.source)] : Number(question.source);
       const correct = page.locator(`#quizOptions button[data-phase="${answer}"]`);
       await checkPixels(page, label);
       await checkSummary(page, question, label);
+      if (reference) {
+        assert.equal(question.scene, reference.scene, `${label}: explicit reference orbit position`);
+        assert.equal(question.summary.name, reference.sourceName, `${label}: explicit present moon`);
+        await checkSourceReadAloud(page, question, `${label}: unsolved`);
+      }
       await checkControls(page, question, exhaustive && !exercisedKinds.has(question.kind));
       exercisedKinds.add(question.kind);
 
@@ -352,6 +391,22 @@ async function checkDeck(browser, seed, exhaustive, errors, layout) {
       assert.deepEqual(solved.correct, [String(answer)], `${label}: only correct answer marked`);
       assert.equal(solved.nextDisabled, false, `${label}: next unlocked`);
       await checkSummary(page, solved, `${label}: solved summary`);
+      assert.equal(solved.result.split('\n')[1], `こたえ：${phaseNames[answer]}`,
+        `${label}: second result line names the actual answer`);
+      if (mode === 'future') {
+        assert.equal(solved.scene, question.scene, `${label}: grading preserves source diagram`);
+        assert.deepEqual(solved.summary, question.summary, `${label}: grading preserves entire source summary`);
+      }
+      if (reference) {
+        assert.equal(solved.scene, reference.scene, `${label}: reference orbit stays at source after grading`);
+        assert.equal(solved.summary.name, reference.sourceName, `${label}: source is not replaced by answer`);
+        assert.equal(solved.result.split('\n')[1], `こたえ：${reference.answerName}`, `${label}: explicit future answer`);
+        await checkSourceReadAloud(page, solved, `${label}: solved`);
+        if (exhaustive && !referencesChecked.has(question.source)) {
+          await page.screenshot({ path: path.resolve(__dirname, '..', 'output', `quiz-reference-${reference.file}.png`) });
+        }
+        referencesChecked.add(question.source);
+      }
       if (!exhaustive) await checkLayout(page, solved, 'solved', layout);
       if (exhaustive) {
         // Dispatch also exercises the solved guard when native buttons become disabled.
@@ -384,6 +439,7 @@ async function checkDeck(browser, seed, exhaustive, errors, layout) {
           `${mode} deck ${cycle + 1}: every allowed kind/phase exactly once despite switching`);
       }
     }
+    assert.deepEqual([...referencesChecked].sort(), ['4', '6'], 'both full moon -> last quarter and last quarter -> new moon regressions exercised');
     return deck;
   } finally {
     await page.close();

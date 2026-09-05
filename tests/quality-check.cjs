@@ -7,6 +7,9 @@ const root = path.resolve(__dirname, '..');
 const artifacts = path.join(root, 'output');
 const quizModes = [['#tabQuiz', 'current'], ['#tabChallenge', 'future']];
 const tabIds = ['tabMoon', 'tabFriends', 'tabQuiz', 'tabChallenge'];
+const phaseNames = ['しんげつ', 'ふくらむ細い月', 'じょうげん', 'ふくらむ丸い月',
+  'まんげつ', 'かけていく丸い月', 'かげん', 'かけていく細い月'];
+const weekAnswers = [2, 3, 4, 5, 6, 7, 0, 1];
 
 async function quizSnapshot(page) {
   return page.locator('#quizPanel').evaluate(panel => ({
@@ -18,6 +21,11 @@ async function quizSnapshot(page) {
     })),
     scene: document.querySelector('#space').getAttribute('aria-valuenow'),
     summary: document.querySelector('#phaseSummary').textContent,
+    sourceName: document.querySelector('#phaseName').textContent,
+    sourceMessage: document.querySelector('#phaseMessage').textContent,
+    sourceLabel: document.querySelector('#phaseSummary').getAttribute('aria-label'),
+    moonLabel: document.querySelector('#phaseMoon').getAttribute('aria-label'),
+    smallLabel: document.querySelector('#phaseSummary .small-label').textContent,
     masked: document.querySelector('#phaseSummary').classList.contains('is-masked')
   }));
 }
@@ -171,7 +179,9 @@ const server = http.createServer((req, res) => {
         const question = await page.locator('#quizPanel').evaluate(el => ({ ...el.dataset }));
         assert.equal(question.mode, mode);
         assert.ok(mode === 'current' ? ['name', 'orbit'].includes(question.kind) : question.kind === 'order');
-        const target = (Number(question.source) + (mode === 'future' ? 2 : 0)) % 8;
+        const source = Number(question.source);
+        const target = mode === 'future' ? weekAnswers[source] : source;
+        const before = await quizSnapshot(page);
         assert.equal(await page.locator('#quizOptions button').count(), 8);
         const prefix = mode === 'current' ? 'quiz' : 'challenge';
         for (const state of ['question', 'wrong', 'solved']) {
@@ -181,6 +191,21 @@ const server = http.createServer((req, res) => {
           } else if (state === 'solved') {
             await page.locator(`#quizOptions button[data-phase="${target}"]`).click();
             assert.match(await page.locator('#quizResult').textContent(), /★\s*1\s+みつけた/);
+          }
+          const current = await quizSnapshot(page);
+          assert.equal(current.scene, String(source * 45), `${mode} ${state}: diagram stays at source`);
+          if (mode === 'future') {
+            assert.equal(current.sourceName, phaseNames[source], `${state}: summary names the source`);
+            assert.equal(current.moonLabel, phaseNames[source], `${state}: accessible moon names the source`);
+            assert.equal(current.smallLabel, 'いまのつき', `${state}: summary remains present tense`);
+            assert.equal(current.sourceLabel, `いまのつきは、${phaseNames[source]}。${current.sourceMessage}`,
+              `${state}: accessible summary describes the source`);
+            assert.equal(current.summary, before.summary, `${state}: grading preserves source summary`);
+            assert.equal(current.sourceLabel, before.sourceLabel, `${state}: grading preserves accessible source description`);
+          }
+          if (state === 'solved') {
+            assert.equal(current.result.split('\n')[1], `こたえ：${phaseNames[target]}`,
+              `${mode}: second result line names the actual answer`);
           }
           assert.equal(await page.locator('#quizNext').isDisabled(), state !== 'solved');
           await checkQuizLayout(page, `${mode} ${state} ${width}x${height}`);
@@ -201,7 +226,7 @@ const server = http.createServer((req, res) => {
     const frame = wrapper.frameLocator('#gameFrame');
     await frame.locator('#phaseName').waitFor();
     assert.ok(await frame.locator('body').evaluate(() => document.documentElement.scrollHeight <= innerHeight + 2));
-    await frame.locator('.game-link').click();
+    await frame.locator('.game-link[href="index.html?game=piano"]').click();
     await wrapper.waitForURL(/game=piano/);
     assert.match(await wrapper.locator('#gameFrame').getAttribute('src'), /sprunki-piano-game/);
     await wrapper.close();

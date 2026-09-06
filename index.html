@@ -79,9 +79,9 @@
     .tabs {
       justify-self: end;
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 148px));
+      grid-template-columns: repeat(5, minmax(0, 148px));
       gap: 8px;
-      width: min(100%, 610px);
+      width: min(100%, 772px);
     }
 
     .tab {
@@ -112,6 +112,7 @@
 
     .tab.is-active[data-game="addition"] { background: #ffe09b; color: #293746; }
     .tab.is-active[data-game="guess"] { background: #d5efc3; color: #29463f; }
+    .tab.is-active[data-game="food"] { background: #ffd0a1; color: #653c26; }
 
     .game-frame {
       width: 100%;
@@ -131,6 +132,7 @@
       .tabs {
         justify-self: stretch;
         width: 100%;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
   </style>
@@ -146,6 +148,7 @@
       <button class="tab" type="button" data-game="piano" aria-pressed="false">ぴあの</button>
       <button class="tab" type="button" data-game="addition" aria-pressed="false">さんすう</button>
       <button class="tab" type="button" data-game="guess" aria-pressed="false">あてっこ</button>
+      <button class="tab" type="button" data-game="food" aria-pressed="false">ごはん</button>
     </nav>
   </header>
   <iframe class="game-frame" id="gameFrame" title="おつきさま" src="moon-phase-game.html?v=20260906-science-audit" allow="autoplay; fullscreen" allowfullscreen></iframe>
@@ -158,7 +161,8 @@
         moon: { title: "おつきさま", src: "moon-phase-game.html?v=20260906-science-audit" },
         piano: { title: "すぷらんきー ぴあの", src: "sprunki-piano-game.html?v=20260506-clean-playfield" },
         addition: { title: "すぷらんきーと さんすう", src: "sprunki-addition-game.html" },
-        guess: { title: "すぷらんきー あてっこ", src: "sprunki-guess-game.html" }
+        guess: { title: "すぷらんきー あてっこ", src: "sprunki-guess-game.html" },
+        food: { title: "ごはんクイズ", src: "food-quiz-game.html" }
       };
       const frame = document.getElementById("gameFrame");
       const status = document.getElementById("status");

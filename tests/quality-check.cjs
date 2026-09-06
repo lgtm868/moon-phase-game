@@ -326,7 +326,7 @@ const server = http.createServer((req, res) => {
   if (!target.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
   fs.readFile(target, (error, data) => {
     if (error) { res.writeHead(404).end(); return; }
-    const type = { '.html': 'text/html; charset=utf-8', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.png': 'image/png' }[path.extname(target)] || 'application/octet-stream';
+    const type = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.png': 'image/png' }[path.extname(target)] || 'application/octet-stream';
     const range = req.headers.range?.match(/bytes=(\d+)-(\d*)/);
     if (range) {
       const start = Number(range[1]), end = range[2] ? Number(range[2]) : data.length - 1;
@@ -336,7 +336,7 @@ const server = http.createServer((req, res) => {
 });
 (async () => {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  const url = `http://127.0.0.1:${server.address().port}/moon-phase-game.html`;
+  const url = `http://127.0.0.1:${server.address().port}/moon-phase-game.html?standalone=1`;
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_EXECUTABLE ? { executablePath: process.env.CHROME_EXECUTABLE } : {}) });
   const failures = [], report = [];
   try {
@@ -489,13 +489,31 @@ const server = http.createServer((req, res) => {
       await page.close();
     }
     const wrapper = await browser.newPage({ viewport: { width: 320, height: 568 } });
-    await wrapper.goto(url.replace('moon-phase-game.html', 'index.html'));
+    wrapper.on('pageerror', error => failures.push(error.message));
+    await wrapper.goto(new URL('index.html', url).href);
     const frame = wrapper.frameLocator('#gameFrame');
     await frame.locator('#phaseName').waitFor();
     assert.ok(await frame.locator('body').evaluate(() => document.documentElement.scrollHeight <= innerHeight + 2));
-    await frame.locator('.game-link[href="index.html?game=piano"]').click();
+    const menuToggle = wrapper.locator('#gameMenuToggle');
+    const menuLinks = wrapper.locator('.game-menu-card[data-nav-game]');
+    const gameKeys = ['moon', 'piano', 'addition', 'guess', 'baibain', 'food', 'english'];
+    assert.ok(await menuToggle.isVisible(), 'shared navigation remains available in Moon');
+    assert.equal(await menuToggle.getAttribute('aria-expanded'), 'false');
+    assert.ok(await wrapper.locator('#gameMenu').isHidden(), 'game menu starts closed');
+    await menuToggle.click();
+    assert.equal(await menuToggle.getAttribute('aria-expanded'), 'true');
+    assert.equal(await wrapper.locator('.game-menu-card[data-nav-game]:visible').count(), 7, 'all seven registry links are visible in the open menu');
+    assert.deepEqual(await menuLinks.evaluateAll(links => links.map(link => ({
+      game: link.dataset.navGame, href: link.getAttribute('href'), current: link.getAttribute('aria-current')
+    }))), gameKeys.map(game => ({ game, href: `?game=${game}`, current: game === 'moon' ? 'page' : null })));
+    assert.ok(await frame.locator('.game-link[href="index.html?game=piano"]').isHidden(), 'embedded Moon does not duplicate navigation');
+    await wrapper.locator('.game-menu-card[data-nav-game="piano"]').click();
     await wrapper.waitForURL(/game=piano/);
     assert.match(await wrapper.locator('#gameFrame').getAttribute('src'), /sprunki-piano-game/);
+    assert.equal(await menuToggle.getAttribute('aria-expanded'), 'false');
+    assert.ok(await wrapper.locator('#gameMenu').isHidden(), 'choosing a game closes the menu');
+    assert.deepEqual(await menuLinks.evaluateAll(links => links.map(link => link.getAttribute('aria-current'))),
+      gameKeys.map(game => game === 'piano' ? 'page' : null), 'current-page selection follows navigation');
     await wrapper.close();
 
     const race = await browser.newPage();

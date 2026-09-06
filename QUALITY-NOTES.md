@@ -186,5 +186,7 @@ depend on the browser and operating system. Fullscreen hides when unsupported.
 ## Local use
 
 Open moon-phase-game.html alongside the existing character images and sounds/
-folder. The lunar texture itself is embedded. index.html retains piano routing
-and uses the full frame for the moon game. No build step or runtime CDN is used.
+folder, games-theme.css and games-theme.js. The lunar texture itself is embedded.
+index.html retains all six game routes and reserves a shared navigation row;
+Moon sizes itself to the remaining iframe viewport. Embedded cross-game links
+are hidden because the shared navigation replaces them. No build step or runtime CDN is used.

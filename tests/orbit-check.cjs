@@ -29,7 +29,7 @@ const server = http.createServer((req, res) => {
   }
   fs.readFile(target, (error, data) => {
     if (error) { res.writeHead(404).end(); return; }
-    const type = { '.html': 'text/html; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg',
+    const type = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.jpg': 'image/jpeg',
       '.webp': 'image/webp', '.wav': 'audio/wav', '.mp3': 'audio/mpeg' }[path.extname(target)] || 'application/octet-stream';
     res.writeHead(200, { 'Content-Type': type }).end(data);
   });
@@ -237,7 +237,7 @@ async function checkQuizCardinals(page) {
 (async () => {
   fs.mkdirSync(artifacts, { recursive: true });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  url = `http://127.0.0.1:${server.address().port}/moon-phase-game.html`;
+  url = `http://127.0.0.1:${server.address().port}/moon-phase-game.html?standalone=1`;
   const browser = await chromium.launch({ headless: true,
     ...(process.env.CHROME_EXECUTABLE ? { executablePath: process.env.CHROME_EXECUTABLE } : {}) });
   const errors = [], report = [];

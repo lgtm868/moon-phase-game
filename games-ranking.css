@@ -1,0 +1,46 @@
+/* Scoped ranking UI; native dialog handles focus containment and inert backdrop. */
+.moon-ranking-dialog{--mr-bg:var(--game-bg,#151918);--mr-surface:var(--game-surface,#202824);--mr-ink:var(--game-ink,#f4f7f3);--mr-muted:var(--game-muted,#a9b7b0);--mr-line:var(--game-line,#3b4942);--mr-primary:var(--game-primary,#b9edcc);box-sizing:border-box;width:min(680px,calc(100vw - 28px));height:auto;max-width:none;max-height:calc(100dvh - 28px);margin:auto;padding:0;border:1px solid var(--mr-line);border-radius:8px;background:var(--mr-bg);color:var(--mr-ink);font:16px/1.55 var(--game-font,-apple-system,BlinkMacSystemFont,"Yu Gothic",sans-serif);box-shadow:0 20px 80px #0007;overflow:hidden;text-align:left}
+.moon-ranking-dialog::backdrop{background:#07130fc9;backdrop-filter:blur(3px)}
+.moon-ranking-dialog:not([open]){display:none!important}
+.moon-ranking-dialog *{box-sizing:border-box;letter-spacing:normal}
+.moon-ranking-dialog [hidden]{display:none!important}
+.moon-ranking-dialog .mr-shell{display:flex;flex-direction:column;max-height:calc(100dvh - 30px);min-height:0}
+.moon-ranking-dialog .mr-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:19px 24px;border:0;border-bottom:1px solid var(--mr-line);background:var(--mr-surface);flex-shrink:0}
+.moon-ranking-dialog .mr-kicker{font-size:10px;letter-spacing:.17em;color:var(--mr-muted);margin:0 0 3px;font-weight:800}
+.moon-ranking-dialog h2{font-size:25px;line-height:1.35;margin:0;color:var(--mr-ink)}
+.moon-ranking-dialog h3{font-size:17px;line-height:1.5;margin:0;color:var(--mr-ink)}
+.moon-ranking-dialog button,.moon-ranking-dialog select{font-family:inherit;font-size:15px;font-weight:700;line-height:1.35;touch-action:manipulation;min-height:44px;cursor:pointer;border:1px solid var(--mr-line);border-radius:8px;box-shadow:none;max-width:100%;margin:0;letter-spacing:0;transition:none;transform:none}
+.moon-ranking-dialog button:disabled,.moon-ranking-dialog select:disabled{cursor:default;opacity:.62}
+.moon-ranking-dialog button:focus-visible,.moon-ranking-dialog select:focus-visible,.moon-ranking-launch:focus-visible{outline:3px solid var(--game-gold,#f4cc72);outline-offset:3px}
+.moon-ranking-dialog .mr-close{flex:0 0 46px;min-width:46px;height:46px;background:var(--mr-bg);color:var(--mr-ink);font-size:29px;line-height:1;padding:0;display:grid;place-items:center}
+.moon-ranking-dialog .mr-content{padding:20px 24px 24px;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.moon-ranking-dialog .mr-intro{font-size:14px;line-height:1.6;color:var(--mr-muted);margin:0 0 18px}
+.moon-ranking-dialog .mr-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:13px;margin:0 0 18px}
+.moon-ranking-dialog label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:var(--mr-muted);min-width:0}
+.moon-ranking-dialog select{display:block;width:100%;min-width:0;background:var(--mr-surface);color:var(--mr-ink);padding:10px 30px 10px 12px;appearance:auto;color-scheme:dark}
+.moon-ranking-dialog .mr-publish{margin:0 0 22px;padding:18px;background:#b9edcc0d;border:1px solid #b9edcc42;border-radius:8px;text-align:left}
+.moon-ranking-dialog .mr-alias-label{margin-top:13px}
+.moon-ranking-dialog .mr-note{font-size:12px;line-height:1.6;margin:12px 0;color:var(--mr-muted)}
+.moon-ranking-dialog .mr-primary{background:var(--mr-primary);color:#183426;border-color:var(--mr-primary);padding:12px 20px;min-height:49px;font-size:17px;width:100%}
+.moon-ranking-dialog .mr-secondary{background:var(--mr-surface);color:var(--mr-ink);padding:10px 14px}
+.moon-ranking-dialog .mr-list-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}
+.moon-ranking-dialog .mr-list-heading .mr-secondary{font-size:13px}
+.moon-ranking-dialog .mr-message{font-size:14px;line-height:1.7;white-space:normal;overflow-wrap:anywhere;margin:12px 0;color:var(--mr-muted)}
+.moon-ranking-dialog .mr-message:empty{display:none}
+.moon-ranking-dialog .mr-list{list-style:none;counter-reset:none;padding:0;margin:0;display:grid;gap:7px}
+.moon-ranking-dialog .mr-entry{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:10px;border:1px solid var(--mr-line);border-radius:8px;padding:13px 14px;min-height:57px;background:var(--mr-surface);text-align:left}
+.moon-ranking-dialog .mr-rank{font-size:15px;font-weight:800;color:var(--game-gold,#f4cc72);text-align:center}
+.moon-ranking-dialog .mr-player{font-size:15px;font-weight:700;overflow-wrap:anywhere}
+.moon-ranking-dialog .mr-score{font-size:15px;font-weight:800;color:var(--mr-primary);white-space:nowrap}
+.moon-ranking-dialog .mr-footer{display:flex;justify-content:center;padding:12px 24px;border-top:1px solid var(--mr-line);background:var(--mr-bg);margin:0;flex-shrink:0}
+.moon-ranking-dialog .mr-return{width:100%}
+.moon-ranking-launch{position:static;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;margin:0;min-height:44px;padding:8px 12px;border:1px solid #71877a;border-radius:8px;background:var(--game-surface,#202824);color:var(--game-ink,#f4f7f3);font:700 13px/1.4 var(--game-font,-apple-system,BlinkMacSystemFont,"Yu Gothic",sans-serif);cursor:pointer;touch-action:manipulation}
+.scene-actions .moon-ranking-launch{font-size:0;padding:0;width:44px;flex:0 0 44px}
+.scene-actions .moon-ranking-launch::before{content:'★';font-size:22px}
+.moon-ranking-launch[hidden]{display:none!important}
+[data-ranking-open][data-ranking-pending="true"],.moon-ranking-launch[data-ranking-pending="true"]{color:var(--game-gold,#f4cc72);border-color:var(--game-gold,#f4cc72)}
+@media(max-width:520px){.moon-ranking-dialog{width:100%;max-height:100dvh;height:100dvh;border-radius:0;border:0}.moon-ranking-dialog .mr-shell{height:100%;max-height:100dvh}.moon-ranking-dialog .mr-header{padding:calc(13px + env(safe-area-inset-top)) 15px 13px}.moon-ranking-dialog h2{font-size:22px}.moon-ranking-dialog .mr-content{padding:17px 15px 20px;flex:1}.moon-ranking-dialog .mr-filters{gap:9px;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}.moon-ranking-dialog .mr-entry{gap:7px;padding:11px 8px;grid-template-columns:26px minmax(0,1fr) auto}.moon-ranking-dialog .mr-player,.moon-ranking-dialog .mr-score{font-size:13px}.moon-ranking-dialog .mr-publish{padding:14px}.moon-ranking-dialog .mr-footer{padding:10px 15px calc(10px + env(safe-area-inset-bottom))}}
+@media(max-height:500px){.moon-ranking-dialog .mr-header{padding-block:10px}.moon-ranking-dialog .mr-kicker{display:none}.moon-ranking-dialog .mr-footer{padding-block:8px}.moon-ranking-dialog .mr-content{padding-top:12px}}
+@media(prefers-reduced-motion:reduce){.moon-ranking-dialog,.moon-ranking-dialog *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+.moon-ranking-nav{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;max-width:100%;padding:8px 12px;border:1px solid var(--game-line,#3b4942);border-radius:8px;background:var(--game-surface,#202824);color:var(--game-ink,#f4f7f3);font:700 13px/1.35 var(--game-font,-apple-system,BlinkMacSystemFont,"Yu Gothic",sans-serif);text-align:center;white-space:normal;touch-action:manipulation;cursor:pointer}
+.moon-ranking-nav:focus-visible{outline:3px solid var(--game-gold,#f4cc72);outline-offset:3px}

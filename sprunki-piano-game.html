@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#11151d">
+  <meta name="theme-color" content="#151918">
   <title>スプランキー ピアノ音ゲー</title>
   <style>
     :root {
       color-scheme: dark;
-      --bg: #11151d;
-      --panel: #1d2430;
-      --panel-2: #262f3d;
-      --ink: #f7f1de;
-      --muted: #b7c0ce;
-      --line: rgba(247, 241, 222, 0.2);
-      --accent: #50d4c6;
-      --accent-2: #ffc85a;
-      --danger: #ff6d6d;
+      --bg: var(--game-bg, #151918);
+      --panel: var(--game-surface, #202824);
+      --panel-2: var(--game-line, #3b4942);
+      --ink: var(--game-ink, #f4f7f3);
+      --muted: var(--game-muted, #a9b7b0);
+      --line: var(--game-line, #3b4942);
+      --accent: var(--game-primary, #b9edcc);
+      --accent-2: var(--game-gold, #f4cc72);
+      --danger: var(--game-coral, #f4a996);
       --white-key: #fffaf0;
       --white-key-edge: #cfc7b6;
       --black-key: #16191f;
@@ -36,7 +36,7 @@
       margin: 0;
       background: var(--bg);
       color: var(--ink);
-      overflow-x: hidden;
+      overflow-x: auto;
       overflow-y: auto;
     }
 
@@ -92,7 +92,7 @@
 
     h1 {
       margin: 0;
-      font-size: clamp(22px, 5.4vw, 36px);
+      font-size: 26px;
       line-height: 1;
       letter-spacing: 0;
     }
@@ -100,7 +100,7 @@
     .subtitle {
       margin: 4px 0 0;
       color: var(--muted);
-      font-size: clamp(12px, 2.8vw, 15px);
+      font-size: 14px;
       line-height: 1.25;
     }
 
@@ -127,7 +127,7 @@
 
     .hud-value {
       margin-top: 4px;
-      font-size: clamp(18px, 4vw, 25px);
+      font-size: 24px;
       font-weight: 900;
       line-height: 1;
       font-variant-numeric: tabular-nums;
@@ -278,7 +278,7 @@
       border-radius: 8px;
       background: rgba(17, 21, 29, 0.72);
       color: var(--accent-2);
-      font-size: clamp(22px, 5vw, 34px);
+      font-size: 28px;
       font-weight: 900;
       line-height: 1;
       text-align: center;
@@ -351,7 +351,7 @@
     .result-title {
       margin: 0;
       color: #50ffd9;
-      font-size: clamp(46px, 13vw, 86px);
+      font-size: 44px;
       font-weight: 900;
       line-height: 0.9;
     }
@@ -367,7 +367,7 @@
 
     .result-detail {
       color: var(--ink);
-      font-size: clamp(13px, 3.2vw, 17px);
+      font-size: 15px;
       font-weight: 900;
       line-height: 1.35;
     }
@@ -405,7 +405,7 @@
 
     .menu-title {
       color: var(--ink);
-      font-size: clamp(22px, 5vw, 36px);
+      font-size: 26px;
       font-weight: 1000;
       line-height: 1;
     }
@@ -587,7 +587,7 @@
 
     .song-picker-title {
       color: var(--ink);
-      font-size: clamp(22px, 5vw, 36px);
+      font-size: 26px;
       font-weight: 1000;
       line-height: 1;
     }
@@ -735,7 +735,7 @@
       grid-template-columns: repeat(12, minmax(0, 1fr));
       gap: 3px;
       color: var(--muted);
-      font-size: clamp(8px, 1.75vw, 11px);
+      font-size: 11px;
       text-align: center;
       font-weight: 800;
       line-height: 1;
@@ -833,7 +833,7 @@
 
     .note-label {
       bottom: 22px;
-      font-size: clamp(11px, 2.5vw, 15px);
+      font-size: 15px;
       font-weight: 900;
       line-height: 1;
     }
@@ -841,14 +841,14 @@
     .key-label {
       bottom: 7px;
       color: rgba(24, 33, 43, 0.62);
-      font-size: clamp(8px, 1.9vw, 11px);
+      font-size: 11px;
       font-weight: 900;
       line-height: 1;
     }
 
     .black-key .note-label {
       bottom: 25px;
-      font-size: clamp(8px, 1.8vw, 11px);
+      font-size: 11px;
       line-height: 1.05;
       padding: 0 2px;
     }
@@ -856,7 +856,7 @@
     .black-key .key-label {
       bottom: 8px;
       color: rgba(247, 241, 222, 0.72);
-      font-size: clamp(7px, 1.65vw, 10px);
+      font-size: 10px;
     }
 
     .character-strip {
@@ -901,7 +901,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      font-size: clamp(9px, 2vw, 12px);
+      font-size: 12px;
       text-align: left;
     }
 
@@ -1024,9 +1024,185 @@
         min-height: 38px;
       }
     }
+    /* The iframe owns its viewport; the host navigation is already outside it. */
+    body.game-page[data-game="piano"] {
+      --page-top: max(8px, env(safe-area-inset-top));
+      --page-bottom: max(8px, env(safe-area-inset-bottom));
+      padding: var(--page-top) max(12px, env(safe-area-inset-right)) var(--page-bottom) max(12px, env(safe-area-inset-left));
+      background: var(--bg);
+      letter-spacing: 0;
+      overflow: visible;
+    }
+
+    .game-page[data-game="piano"] main {
+      width: min(100%, 1240px);
+      height: calc(100svh - var(--page-top) - var(--page-bottom));
+      min-height: 480px;
+      grid-template-rows: auto auto minmax(180px, 1fr) auto;
+      gap: 8px;
+    }
+
+    .game-page .title-block,
+    .game-page .hud,
+    .game-page .piano-shell {
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .game-page .title-block { padding: 0; gap: 8px; }
+    .game-page .hero-face { width: 48px; height: 48px; }
+    .game-page h1 { font-size: 26px; line-height: 1.2; }
+    .game-page .hud { min-width: 450px; overflow: visible; }
+    .game-page .hud-item { padding: 6px; }
+    .game-page .hud-value { font-size: 22px; }
+    .game-page .judge-counts { min-height: 28px; }
+    .game-page .judge-count { padding: 5px; }
+    .game-page .judge-count.great strong { color: var(--accent); }
+    .game-page .judge-count.good strong { color: var(--accent-2); }
+    .game-page .judge-count.ok strong { color: var(--game-cyan, #8edce2); }
+    .game-page .judge-count.miss strong { color: var(--danger); }
+
+    .game-page .transport {
+      width: 100%;
+      grid-template-columns: minmax(240px, 1fr) repeat(5, minmax(76px, auto));
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    html.is-embedded .game-page .transport {
+      grid-template-columns: minmax(240px, 1fr) repeat(4, minmax(76px, auto));
+    }
+
+    html.is-embedded .game-page .transport .switch-link { display: none; }
+
+    .game-page .song-control { border: 0; padding: 0; background: transparent; }
+    .game-page .song-current { background: var(--panel); color: var(--ink); box-shadow: none; }
+    .game-page .song-current-name { color: var(--ink); font-size: 13px; line-height: 1.3; }
+    .game-page .song-current-category { color: var(--muted); }
+    .game-page .song-current-name,
+    .game-page .song-card-title,
+    .game-page .character-button span {
+      white-space: normal;
+      overflow: visible;
+      overflow-wrap: anywhere;
+      text-overflow: clip;
+    }
+
+    .game-page .control-button,
+    .game-page .menu-button,
+    .game-page .song-picker-close {
+      min-height: 44px;
+      padding: 8px 10px;
+      background: var(--accent);
+      color: #151918;
+      font-size: 13px;
+      box-shadow: none;
+    }
+
+    .game-page .control-button.secondary { background: var(--panel); color: var(--ink); border: 1px solid var(--line); }
+    .game-page .control-button:active { transform: none; box-shadow: none; }
+    .game-page .hud .menu-button { border-radius: 6px; margin-left: 4px; }
+    .game-page .stage { min-height: 180px; border: 0; border-radius: 0; background: var(--panel); overflow: visible; }
+    .game-page .piano-shell { padding: 0; gap: 0; }
+    .melody-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 54px;
+      padding-bottom: 8px;
+    }
+    .melody-controls button {
+      min-width: 88px;
+      min-height: 44px;
+      padding: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      font-size: 14px;
+    }
+    .melody-controls button:disabled { opacity: 0.4; cursor: default; }
+    .melody-controls button[aria-pressed="true"] { background: var(--danger); color: #151918; }
+    .melody-controls #melodyPlay[aria-pressed="true"] { background: var(--accent); opacity: 1; }
+    .melody-icon { display: inline-block; width: 20px; font-size: 18px; vertical-align: middle; }
+    .melody-info { min-width: 0; margin-left: auto; text-align: right; font-size: 13px; }
+    #melodyStatus { display: block; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+    .melody-studio .judge-zone,
+    .melody-studio .judge-line { display: none; }
+    @media (max-width: 480px) {
+      .melody-controls { gap: 4px; }
+      .melody-controls button { min-width: 68px; font-size: 12px; padding: 4px; }
+      .melody-info { font-size: 11px; }
+      #melodyStatus { font-size: 10px; }
+    }
+    .game-page .piano { height: 148px; }
+    .game-page .result-overlay { padding: 8px; background: rgba(21, 25, 24, 0.94); }
+    .game-page .result-card { width: min(100%, 560px); padding: 8px; gap: 8px; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+    .game-page .result-title { color: var(--accent); font-size: 40px; line-height: 1.4; }
+    .game-page .result-detail { font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
+    .game-page .result-overlay.is-failed .result-card { box-shadow: none; }
+    .game-page .result-overlay.is-failed .result-title { color: var(--danger); }
+    .game-page .controls,
+    .game-page .song-picker { background: var(--bg); padding: 12px; }
+    .game-page .controls { grid-template-rows: auto minmax(0, 1fr); overflow: visible; }
+    .game-page .character-strip { align-content: start; min-height: 0; overflow: auto; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .game-page .character-button { min-height: 64px; overflow: visible; background: var(--panel); }
+    .game-page .character-button.is-active { background: #304b3b; border-color: var(--accent); }
+    .game-page .character-button img { width: 34px; height: 42px; }
+    .game-page .category-tabs { align-content: start; min-height: 0; overflow: auto; }
+    .game-page .category-tab { min-height: 44px; }
+    .game-page .category-tab.is-active { background: var(--accent); box-shadow: none; }
+    .game-page .category-tab-count { border-radius: 4px; }
+    .game-page .song-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 2px; }
+    .game-page .song-card { min-height: 64px; background: var(--panel); box-shadow: none; }
+    .game-page .song-card-title { font-size: 14px; line-height: 1.3; }
+    .game-page .song-card.is-active { color: #151918; background: var(--accent); box-shadow: none; }
+    .game-page .difficulty-pill { background: var(--accent); }
+    .game-page .difficulty-pill[data-level="4"],
+    .game-page .difficulty-pill[data-level="5"],
+    .game-page .difficulty-pill[data-level="6"] { background: var(--accent-2); }
+    .game-page .difficulty-pill[data-level="7"],
+    .game-page .difficulty-pill[data-level="8"],
+    .game-page .difficulty-pill[data-level="9"],
+    .game-page .difficulty-pill[data-level="10"] { background: var(--danger); }
+    .game-page button:focus-visible,
+    .game-page a:focus-visible { outline: 2px solid var(--game-cyan, #8edce2); outline-offset: 2px; }
+
+    @media (max-height: 650px) and (min-width: 721px) {
+      .game-page .piano { height: 124px; }
+      .game-page .hero-face { width: 44px; height: 44px; }
+      .game-page h1 { font-size: 24px; }
+    }
+
+    @media (max-width: 720px) {
+      .game-page[data-game="piano"] main { min-height: 640px; }
+      .game-page h1 { font-size: 22px; }
+      .game-page .hero-face { width: 36px; height: 36px; }
+      .game-page .hud { min-width: 0; }
+      .game-page .hud-value { font-size: 18px; }
+      .game-page .transport { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+      html.is-embedded .game-page .transport { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .game-page .song-control { min-height: 44px; }
+      .game-page .control-button { font-size: 11px; padding: 6px 2px; overflow-wrap: anywhere; }
+      .game-page .piano { height: 132px; }
+      .game-page .note-label { font-size: 11px; }
+      .game-page .key-label { font-size: 9px; }
+      .game-page .black-key .note-label { font-size: 8px; }
+      .game-page .black-key .key-label { font-size: 8px; }
+      .game-page .character-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .game-page .song-picker-body { grid-template-rows: auto minmax(0, 1fr); }
+      .game-page .category-tabs { max-height: 160px; }
+      .game-page .song-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .game-page .result-title { font-size: 32px; }
+      .game-page .result-detail { font-size: 12px; }
+    }
   </style>
+  <link rel="stylesheet" href="games-theme.css?v=20260907-fun">
+  <script src="games-theme.js?v=20260907-fun"></script>
+  <script src="game-navigation.js?v=20260907-fun" defer></script>
 </head>
-<body>
+<body class="game-page" data-game="piano">
   <main aria-label="スプランキーのピアノ音ゲー">
     <section class="topbar" aria-label="ゲーム情報">
       <div class="title-block">
@@ -1039,8 +1215,8 @@
         <div class="hud-item"><span class="hud-label">Score</span><strong class="hud-value" id="score">0</strong></div>
         <div class="hud-item"><span class="hud-label">Combo</span><strong class="hud-value" id="combo">0</strong></div>
         <div class="hud-item"><span class="hud-label">Best</span><strong class="hud-value" id="best">0</strong></div>
-        <button class="menu-button" id="songButton" type="button">SONG</button>
-        <button class="menu-button" id="menuButton" type="button">MENU</button>
+        <button class="menu-button" id="songButton" type="button" aria-haspopup="dialog" aria-controls="songPicker">SONG</button>
+        <button class="menu-button" id="menuButton" type="button" aria-haspopup="dialog" aria-controls="gameMenu">MENU</button>
         <div class="judge-counts" id="stats" aria-label="Judgment counts">
           <div class="judge-count perfect"><span>Perfect</span><strong id="countPerfect">0</strong></div>
           <div class="judge-count great"><span>Great</span><strong id="countGreat">0</strong></div>
@@ -1050,6 +1226,15 @@
         </div>
       </div>
     </section>
+
+    <div class="menu-grid transport" aria-label="演奏の操作">
+      <div class="song-control"><span>SONG</span><select class="visually-hidden" id="songSelect" aria-label="Song" tabindex="-1"></select><button class="song-current" id="songCurrent" type="button"><span class="song-current-name" id="songCurrentName">Twinkle</span><span class="song-current-category" id="songCurrentCategory">Starter</span></button><strong class="difficulty-pill" id="difficultyLabel" data-level="1">Lv.1</strong></div>
+      <button class="control-button" id="startButton" type="button">START</button>
+      <button class="control-button secondary" id="pauseButton" type="button">PAUSE</button>
+      <button class="control-button secondary" id="resetButton" type="button">RESET</button>
+      <button class="control-button secondary" id="soundButton" type="button" aria-pressed="true">SOUND ON</button>
+      <a class="control-button secondary switch-link" href="index.html?game=moon" target="_top" aria-label="Switch to moon phase game">MOON</a>
+    </div>
 
     <section class="stage" id="stage" aria-label="落下ノーツ">
       <canvas id="noteCanvas"></canvas>
@@ -1065,23 +1250,15 @@
       </div>
     </section>
 
-    <section class="controls" id="gameMenu" aria-label="Game menu" aria-hidden="true">
+    <section class="controls" id="gameMenu" role="dialog" aria-modal="true" aria-label="Game menu" aria-hidden="true">
       <div class="menu-header">
         <div class="menu-title">Menu</div>
         <button class="menu-button" id="menuCloseButton" type="button">PLAY</button>
       </div>
-      <div class="menu-grid">
-      <div class="song-control"><span>SONG</span><select class="visually-hidden" id="songSelect" aria-label="Song"></select><button class="song-current" id="songCurrent" type="button"><span class="song-current-name" id="songCurrentName">Twinkle</span><span class="song-current-category" id="songCurrentCategory">Starter</span></button><strong class="difficulty-pill" id="difficultyLabel" data-level="1">Lv.1</strong></div>
-      <button class="control-button" id="startButton" type="button">START</button>
-      <button class="control-button secondary" id="pauseButton" type="button">PAUSE</button>
-      <button class="control-button secondary" id="resetButton" type="button">RESET</button>
-      <button class="control-button secondary" id="soundButton" type="button" aria-pressed="true">SOUND ON</button>
-      <a class="control-button secondary switch-link" href="index.html?game=moon" target="_top" aria-label="Switch to moon phase game">MOON</a>
-      </div>
       <div class="character-strip" id="characterStrip" aria-label="スプランキーを選ぶ"></div>
     </section>
 
-    <section class="song-picker" id="songPicker" aria-label="Song picker" aria-hidden="true">
+    <section class="song-picker" id="songPicker" role="dialog" aria-modal="true" aria-label="Song picker" aria-hidden="true">
       <div class="song-picker-header">
         <div class="song-picker-title">Select Song</div>
         <button class="song-picker-close" id="songPickerClose" type="button">PLAY</button>
@@ -1093,6 +1270,12 @@
     </section>
 
     <section class="piano-shell" aria-label="ピアノ鍵盤">
+      <div class="melody-controls" role="group" aria-label="じぶんのうた">
+        <button id="melodyRecord" type="button" aria-pressed="false" title="あたらしく ろくおん"><span class="melody-icon" aria-hidden="true">●</span>とる</button>
+        <button id="melodyPlay" type="button" aria-pressed="false" title="じぶんのうたを きく" disabled><span class="melody-icon" aria-hidden="true">▶</span>きく</button>
+        <button id="melodyStop" type="button" title="ろくおん・さいせいを とめる" disabled><span class="melody-icon" aria-hidden="true">■</span>とめる</button>
+        <div class="melody-info"><strong>じぶんのうた</strong><span id="melodyStatus" role="status">まだ 0 おん</span></div>
+      </div>
       <div class="keyboard-help" id="keyboardHelp" aria-hidden="true"></div>
       <div class="piano" id="piano">
         <div class="white-keys" id="whiteKeys"></div>
@@ -1143,6 +1326,10 @@
       const pauseButton = document.getElementById("pauseButton");
       const resetButton = document.getElementById("resetButton");
       const soundButton = document.getElementById("soundButton");
+      const melodyRecord = document.getElementById("melodyRecord");
+      const melodyPlay = document.getElementById("melodyPlay");
+      const melodyStop = document.getElementById("melodyStop");
+      const melodyStatus = document.getElementById("melodyStatus");
       const ctx = noteCanvas.getContext("2d");
 
       const TRAVEL_MS = 1800;
@@ -1500,6 +1687,12 @@
       const activeKeys = new Map();
       const audioBuffers = new Map();
       const pressedVisualTimers = new Map();
+      const activeVoices = new Set();
+      const MELODY_MAX_MS = 20000;
+      const MELODY_MAX_EVENTS = 128;
+      const melody = { mode: "idle", studio: false, events: [], startedAt: 0,
+        firstAt: null, playbackAt: 0, duration: 0, generation: 0, timers: new Set() };
+      let audioGeneration = 0;
 
       let audioContext = null;
       let animationId = 0;
@@ -1515,6 +1708,7 @@
 
       function makeInitialState() {
         return {
+          runId: globalThis.crypto?.randomUUID?.() || `piano-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           running: false,
           paused: false,
           startAt: 0,
@@ -1645,28 +1839,43 @@
       }
 
       function openSongPicker() {
+        stopMelody();
         closeGameMenu();
         selectedCategoryId = categoryForSong(selectedSongId).id;
         updateSongUi();
         songPicker.classList.add("is-open");
         songPicker.setAttribute("aria-hidden", "false");
+        updateDialogAccess();
         songPickerClose.focus({ preventScroll: true });
       }
 
       function closeSongPicker() {
         songPicker.classList.remove("is-open");
         songPicker.setAttribute("aria-hidden", "true");
+        updateDialogAccess();
+        if (songPicker.contains(document.activeElement)) songButton.focus({ preventScroll: true });
       }
 
       function openGameMenu() {
+        stopMelody();
         gameMenu.classList.add("is-open");
         gameMenu.setAttribute("aria-hidden", "false");
+        updateDialogAccess();
         menuCloseButton.focus({ preventScroll: true });
       }
 
       function closeGameMenu() {
         gameMenu.classList.remove("is-open");
         gameMenu.setAttribute("aria-hidden", "true");
+        updateDialogAccess();
+        if (gameMenu.contains(document.activeElement)) menuButton.focus({ preventScroll: true });
+      }
+
+      function updateDialogAccess() {
+        const active = [gameMenu, songPicker].find((dialog) => dialog.classList.contains("is-open"));
+        for (const section of document.querySelector("main").children) {
+          section.inert = Boolean(active && section !== active);
+        }
       }
 
       function buildCategoryTabs() {
@@ -1740,31 +1949,37 @@
         return context;
       }
 
-      function playPianoTone(note, velocity = 0.75) {
+      function pianoTimbre() {
+        const strict = selectedSong().strictTone === true;
+        const timbre = strict ? strictSongTimbres[selectedCharacter] : characters[selectedCharacter].timbre;
+        return { ...timbre, highDetune: strict ? 0 : -timbre.detune * 0.6 };
+      }
+
+      function playPianoTone(note, velocity = 0.75, scheduledAt = null, timbre = pianoTimbre(), generation = audioGeneration) {
         if (!soundEnabled) return;
         try {
           const context = getAudioContext();
           if (context.state === "suspended") {
-            context.resume().then(() => playPianoTone(note, velocity)).catch(() => {
+            context.resume().then(() => {
+              if (generation === audioGeneration && !document.hidden) playPianoTone(note, velocity, scheduledAt, timbre, generation);
+            }).catch(() => {
+              if (generation !== audioGeneration) return;
               soundEnabled = false;
               updateSoundButton();
             });
             return;
           }
-          const now = context.currentTime;
+          const now = scheduledAt ?? context.currentTime;
           const master = context.createGain();
           const low = context.createOscillator();
           const high = context.createOscillator();
           const filter = context.createBiquadFilter();
-          const song = selectedSong();
-          const strictTone = song && song.strictTone === true;
-          const timbre = strictTone ? strictSongTimbres[selectedCharacter] : characters[selectedCharacter].timbre;
           low.type = timbre.low;
           high.type = timbre.high;
           low.frequency.setValueAtTime(note.frequency, now);
           high.frequency.setValueAtTime(note.frequency * (timbre.highRatio || 2.01), now);
           low.detune.setValueAtTime(timbre.detune, now);
-          high.detune.setValueAtTime(strictTone ? 0 : -timbre.detune * 0.6, now);
+          high.detune.setValueAtTime(timbre.highDetune, now);
           filter.type = "lowpass";
           filter.frequency.setValueAtTime(timbre.filter, now);
           filter.frequency.exponentialRampToValueAtTime(Math.max(420, timbre.filter * 0.28), now + Math.min(0.45, timbre.decay));
@@ -1775,6 +1990,10 @@
           low.connect(filter);
           high.connect(filter);
           filter.connect(master).connect(context.destination);
+          const voice = { stop() { low.stop(); high.stop(); master.disconnect(); },
+            disconnect() { low.disconnect(); high.disconnect(); filter.disconnect(); master.disconnect(); } };
+          activeVoices.add(voice);
+          high.onended = () => { voice.disconnect(); activeVoices.delete(voice); };
           low.start(now);
           high.start(now);
           low.stop(now + timbre.decay + 0.04);
@@ -1812,6 +2031,9 @@
           gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.01);
           gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.28);
           source.connect(gain).connect(context.destination);
+          const voice = { stop() { source.stop(); gain.disconnect(); } };
+          activeVoices.add(voice);
+          source.onended = () => { source.disconnect(); gain.disconnect(); activeVoices.delete(voice); };
           source.start(context.currentTime, 0, Math.min(0.32, buffer.duration));
         } catch (error) {
           // Character samples are decorative; piano tone remains the playable source.
@@ -1857,6 +2079,7 @@
       }
 
       function startGame() {
+        stopMelody(true);
         try {
           unlockAudio();
           characters.forEach((character) => loadCharacterBuffer(character));
@@ -1888,6 +2111,7 @@
       }
 
       function pauseGame() {
+        stopMelody();
         if (!state.running) return;
         if (state.paused) {
           startGame();
@@ -1902,6 +2126,7 @@
       }
 
       function resetGame() {
+        stopMelody(true);
         state = makeInitialState();
         startButton.textContent = "START";
         pauseButton.textContent = "PAUSE";
@@ -1917,6 +2142,13 @@
       function showResult() {
         if (state.resultShown) return;
         state.resultShown = true;
+        try {
+          window.MoonRanking?.complete({ game: "piano", mode: selectedSong().id, runId: state.runId,
+            metrics: { perfect: state.perfect, great: state.great, good: state.good, ok: state.ok,
+              miss: state.miss, maxCombo: state.best, noteCount: state.chart.length } });
+        } catch (error) {
+          // Optional ranking must never interrupt the local result screen.
+        }
         const totalHits = state.perfect + state.great + state.good + state.ok;
         const totalNotes = Math.max(1, state.chart.length);
         const hitRate = Math.round((totalHits / totalNotes) * 100);
@@ -2044,19 +2276,132 @@
         countMissEl.textContent = String(state.miss);
       }
 
+      function silenceInputs() {
+        audioGeneration += 1;
+        for (const voice of activeVoices) voice.stop();
+        activeVoices.clear();
+        for (const timer of pressedVisualTimers.values()) clearTimeout(timer);
+        pressedVisualTimers.clear();
+        for (const key of keyElements.values()) key.classList.remove("is-active");
+        for (const pointer of activePointers.keys()) {
+          if (typeof pointer === "number" && piano.hasPointerCapture?.(pointer)) piano.releasePointerCapture(pointer);
+        }
+        activePointers.clear();
+        activeKeys.clear();
+      }
+
+      function updateMelodyUi(now = performance.now()) {
+        const recording = melody.mode === "recording";
+        const playing = melody.mode === "playing";
+        melodyRecord.setAttribute("aria-pressed", String(recording));
+        melodyPlay.setAttribute("aria-pressed", String(playing));
+        melodyRecord.disabled = playing;
+        melodyPlay.disabled = recording || playing || !melody.events.length;
+        melodyStop.disabled = melody.mode === "idle";
+        const status = recording
+          ? `ろくおん ${Math.min(20, Math.floor((now - melody.startedAt) / 1000))}/20びょう・${melody.events.length}おん`
+          : playing ? `さいせい ${Math.min(Math.floor(melody.duration / 1000), Math.max(0, Math.floor((now - melody.playbackAt) / 1000)))}びょう`
+          : melody.events.length ? `${melody.events.length} おん・できた！` : "まだ 0 おん";
+        if (melodyStatus.textContent !== status) melodyStatus.textContent = status;
+      }
+
+      function stopMelody(exitStudio = false) {
+        melody.generation += 1;
+        for (const timer of melody.timers) clearTimeout(timer);
+        melody.timers.clear();
+        melody.mode = "idle";
+        if (exitStudio) melody.studio = false;
+        stage.classList.toggle("melody-studio", melody.studio);
+        silenceInputs();
+        updateMelodyUi();
+      }
+
+      function melodyLater(callback, delay) {
+        const generation = melody.generation;
+        const timer = setTimeout(() => {
+          melody.timers.delete(timer);
+          if (generation === melody.generation && !document.hidden) callback();
+        }, delay);
+        melody.timers.add(timer);
+      }
+
+      function enterMelody() {
+        if (state.running && !state.paused) pauseGame();
+        stopMelody();
+        melody.studio = true;
+        stage.classList.add("melody-studio");
+        state.feedbackUntil = 0;
+        hideResult();
+      }
+
+      function recordMelody() {
+        if (melody.mode === "recording") { stopMelody(); return; }
+        enterMelody();
+        melody.events = [];
+        melody.firstAt = null;
+        melody.duration = 0;
+        melody.startedAt = performance.now();
+        melody.mode = "recording";
+        melodyLater(stopMelody, MELODY_MAX_MS);
+        updateMelodyUi();
+      }
+
+      async function replayMelody() {
+        if (!melody.events.length || melody.mode !== "idle") return;
+        enterMelody();
+        melody.mode = "playing";
+        melody.playbackAt = performance.now();
+        const generation = melody.generation;
+        updateMelodyUi();
+        let context = null;
+        try {
+          if (soundEnabled) context = await unlockAudio();
+        } catch (error) {
+          if (generation !== melody.generation) return;
+          soundEnabled = false;
+          updateSoundButton();
+        }
+        if (generation !== melody.generation || document.hidden) return;
+        const leadMs = 60;
+        const audioStart = context ? context.currentTime + leadMs / 1000 : 0;
+        melody.playbackAt = performance.now() + leadMs;
+        // One Web Audio clock for every onset: timer delays cannot accumulate in the music.
+        for (const event of melody.events) {
+          if (context) playPianoTone(noteById.get(event.noteId), 0.75, audioStart + event.at / 1000, event.timbre);
+          melodyLater(() => showKey(event.noteId, true), leadMs + event.at);
+        }
+        melodyLater(stopMelody, leadMs + melody.duration + 30);
+      }
+
       function showKey(noteId, on) {
         const element = keyElements.get(noteId);
         if (!element) return;
         element.classList.toggle("is-active", on);
+        clearTimeout(pressedVisualTimers.get(noteId));
+        pressedVisualTimers.delete(noteId);
         if (on) {
-          clearTimeout(pressedVisualTimers.get(noteId));
           pressedVisualTimers.set(noteId, setTimeout(() => showKey(noteId, false), 140));
         }
       }
 
       function playInput(noteId, now = performance.now()) {
         const note = noteById.get(noteId);
-        if (!note) return;
+        if (!note || melody.mode === "playing" || document.hidden) return;
+        if (melody.studio) {
+          if (melody.mode === "recording") {
+            if (now - melody.startedAt >= MELODY_MAX_MS) { stopMelody(); return; }
+            if (melody.firstAt === null) melody.firstAt = now;
+            const timbre = { ...pianoTimbre() };
+            const at = now - melody.firstAt;
+            melody.events.push({ noteId, at, timbre });
+            melody.duration = Math.max(melody.duration, at + (timbre.decay + 0.04) * 1000);
+            if (melody.events.length >= MELODY_MAX_EVENTS) stopMelody();
+            updateMelodyUi(now);
+          }
+          showKey(noteId, true);
+          playPianoTone(note);
+          return;
+        }
         if (!state.running) {
           startGame();
           showKey(noteId, true);
@@ -2102,9 +2447,10 @@
       }
 
       function handlePointerDown(event) {
+        if (melody.mode === "playing") { event.preventDefault(); return; }
         if (event.button !== undefined && event.button !== 0 && event.pointerType === "mouse") return;
         const now = performance.now();
-        if (now - lastCoordinateInputAt < 80) {
+        if (activePointers.has(event.pointerId)) {
           event.preventDefault();
           return;
         }
@@ -2118,6 +2464,7 @@
       }
 
       function handleMouseDown(event) {
+        if (melody.mode === "playing") { event.preventDefault(); return; }
         if (event.button !== 0) return;
         const now = performance.now();
         const noteId = noteFromClientPoint(event.clientX, event.clientY);
@@ -2136,6 +2483,7 @@
       }
 
       function handleTouchStart(event) {
+        if (melody.mode === "playing") { event.preventDefault(); return; }
         for (const touch of Array.from(event.changedTouches || [])) {
           const now = performance.now();
           const noteId = noteFromClientPoint(touch.clientX, touch.clientY);
@@ -2174,6 +2522,7 @@
 
       function drawNotes(now = performance.now()) {
         ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        if (melody.studio) { drawMelody(now); return; }
         const currentTime = songTime(now);
         const laneWidth = canvasWidth / notes.length;
         const hitY = canvasHeight - 20;
@@ -2261,6 +2610,48 @@
         context.quadraticCurveTo(x, y, x + r, y);
       }
 
+      function drawMelody(now) {
+        const colors = ["#b9edcc", "#8edce2", "#f4cc72", "#f4a996"];
+        const names = ["ド", "ド♯", "レ", "レ♯", "ミ", "ファ", "ファ♯", "ソ", "ソ♯", "ラ", "ラ♯", "シ"];
+        const shown = melody.events.slice(-48);
+        const span = Math.max(3000, melody.duration);
+        const left = 24;
+        const width = Math.max(1, canvasWidth - 48);
+        ctx.save();
+        ctx.strokeStyle = "#3b4942";
+        ctx.lineWidth = 1;
+        for (let row = 0; row < 5; row += 1) {
+          const y = 48 + row * (canvasHeight - 80) / 4;
+          ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(left + width, y); ctx.stroke();
+        }
+        ctx.fillStyle = "#f4f7f3";
+        ctx.font = "700 16px system-ui, sans-serif";
+        ctx.fillText(melody.mode === "recording" ? "ろくおんちゅう" : melody.mode === "playing" ? "じぶんのうた ♪" : "じぶんのうた", left, 26);
+        const elapsed = now - melody.playbackAt;
+        let lastLabelX = -Infinity;
+        for (const event of shown) {
+          const pitch = noteById.get(event.noteId).midi - 60;
+          const x = left + event.at / span * width;
+          const y = canvasHeight - 36 - pitch / 23 * (canvasHeight - 100);
+          const live = melody.mode === "playing" && elapsed >= event.at && elapsed < event.at + 180;
+          ctx.fillStyle = colors[pitch % colors.length];
+          ctx.beginPath(); ctx.ellipse(x, y, live ? 12 : 8, live ? 9 : 6, -0.3, 0, Math.PI * 2); ctx.fill();
+          ctx.fillRect(x + 6, y - 24, 2, 24);
+          if (shown.length <= 16 && x - lastLabelX >= 36) {
+            ctx.font = "700 12px system-ui, sans-serif";
+            ctx.fillText(names[pitch % 12], x - 7, y + 23);
+            lastLabelX = x;
+          }
+        }
+        if (melody.mode === "playing") {
+          const x = left + Math.max(0, Math.min(1, elapsed / span)) * width;
+          ctx.strokeStyle = "#f4cc72";
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(x, 38); ctx.lineTo(x, canvasHeight - 8); ctx.stroke();
+        }
+        ctx.restore();
+      }
+
       function draw(now = performance.now()) {
         drawNotes(now);
         feedbackEl.classList.remove("is-perfect", "is-great", "is-good", "is-ok", "is-bad", "is-miss");
@@ -2279,6 +2670,7 @@
         if (elapsed < 1000) registerMisses(now);
         draw(now);
         updateHud();
+        if (melody.mode !== "idle") updateMelodyUi(now);
         animationId = requestAnimationFrame(tick);
       }
 
@@ -2286,11 +2678,15 @@
       buildCharacters();
       buildSongSelect();
       updateSoundButton();
+      updateMelodyUi();
       updateHud();
       resizeCanvas();
       animationId = requestAnimationFrame(tick);
 
       songButton.addEventListener("click", openSongPicker);
+      melodyRecord.addEventListener("click", recordMelody);
+      melodyPlay.addEventListener("click", replayMelody);
+      melodyStop.addEventListener("click", () => stopMelody());
       menuButton.addEventListener("click", openGameMenu);
       menuCloseButton.addEventListener("click", closeGameMenu);
       startButton.addEventListener("click", () => {
@@ -2323,6 +2719,7 @@
         piano.addEventListener("touchcancel", handleTouchEnd, { passive: false });
       }
       soundButton.addEventListener("click", () => {
+        stopMelody();
         soundEnabled = !soundEnabled;
         updateSoundButton();
         if (soundEnabled) {
@@ -2337,23 +2734,34 @@
       });
 
       window.addEventListener("keydown", (event) => {
+        const dialog = [gameMenu, songPicker].find((item) => item.classList.contains("is-open"));
+        if (dialog && event.code === "Tab") {
+          const buttons = [...dialog.querySelectorAll("button:not(:disabled)")];
+          const target = event.shiftKey ? buttons[buttons.length - 1] : buttons[0];
+          const edge = event.shiftKey ? buttons[0] : buttons[buttons.length - 1];
+          if (document.activeElement === edge) {
+            target.focus();
+            event.preventDefault();
+          }
+          return;
+        }
         if (gameMenu.classList.contains("is-open")) {
           if (event.code === "Escape") {
             closeGameMenu();
             menuButton.focus({ preventScroll: true });
+            event.preventDefault();
           }
-          event.preventDefault();
           return;
         }
         if (songPicker.classList.contains("is-open")) {
           if (event.code === "Escape") {
             closeSongPicker();
             songButton.focus({ preventScroll: true });
+            event.preventDefault();
           }
-          event.preventDefault();
           return;
         }
-        if (event.repeat) return;
+        if (event.repeat || melody.mode === "playing" || activeKeys.has(event.code) || event.ctrlKey || event.metaKey || event.altKey) return;
         const noteId = noteFromKeyboard(event);
         if (!noteId) return;
         activeKeys.set(event.code, noteId);
@@ -2364,13 +2772,22 @@
       window.addEventListener("keyup", (event) => {
         const noteId = activeKeys.get(event.code);
         if (!noteId) return;
-        showKey(noteId, false);
+        if (melody.mode !== "playing") showKey(noteId, false);
         activeKeys.delete(event.code);
       });
 
       window.addEventListener("resize", resizeCanvas, { passive: true });
+      new ResizeObserver(resizeCanvas).observe(stage);
       window.addEventListener("orientationchange", () => setTimeout(resizeCanvas, 150), { passive: true });
-      window.addEventListener("beforeunload", () => cancelAnimationFrame(animationId));
+      function leavePiano() {
+        stopMelody();
+        if (state.running && !state.paused) pauseGame();
+      }
+      document.addEventListener("visibilitychange", () => { if (document.hidden) leavePiano(); });
+      window.addEventListener("blur", leavePiano);
+      window.addEventListener("pagehide", leavePiano);
+      document.querySelectorAll("a[href]").forEach((link) => link.addEventListener("click", leavePiano));
+      window.addEventListener("beforeunload", () => { leavePiano(); cancelAnimationFrame(animationId); });
     })();
   </script>
 </body>

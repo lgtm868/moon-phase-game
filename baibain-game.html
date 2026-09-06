@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#151918">
+  <title>バイバイン観察室 | Moon Games</title>
+  <style>
+    :root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",Meiryo,sans-serif;background:var(--game-bg,#151918);color:var(--game-ink,#f4f7f3);--muted:var(--game-muted,#a9b7b0);--line:var(--game-line,#3b4942);--accent:var(--game-primary,#b9edcc)}
+    *{box-sizing:border-box}body{margin:0}button,select,input{font:inherit}button,select{cursor:pointer}button,a,select,input{touch-action:manipulation}button{border:1px solid var(--line);background:transparent;color:inherit}button:hover{background:#ffffff12}button:disabled{opacity:.45;cursor:default}a{color:var(--accent)}button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--game-cyan,#8edce2);outline-offset:2px}[hidden]{display:none!important}
+    .top{display:flex;justify-content:space-between;align-items:center}.stage{position:relative;min-width:0}canvas{display:block;width:100%}.hud{position:absolute;pointer-events:none;text-shadow:0 2px 8px #000;background:#111b}.hud-time,.count,.value{font-variant-numeric:tabular-nums}.count,.value{overflow-wrap:anywhere}.count{font-weight:650}.count-unit{font-size:12px;color:var(--muted);margin-left:6px}.formula{color:var(--accent)}.camera-controls,.transport-top,.speed-label,.below{display:flex;align-items:center}.stat-pair{display:grid;border-block:1px solid var(--line)}.meter{height:3px}.meter div{height:100%;background:var(--accent);width:0}.scrubber{width:100%;margin:0;accent-color:var(--accent)}.ticks{display:flex;justify-content:space-between}.comparison{border-top:1px solid var(--line);color:var(--muted)}.comparison strong{color:var(--accent)}.below{justify-content:space-between}.cosmic{border-top:1px solid var(--line)}.cosmic-title{margin:0}.jumps span{color:var(--muted)}#announcement{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+    .game-page,.game-page *{letter-spacing:0}
+    .game-page{background:var(--game-bg,#151918);color:var(--game-ink,#f4f7f3)}
+    .game-page button,.game-page select{border-radius:6px;min-height:44px;font-size:12px;padding:8px 12px}
+    .game-page button:focus-visible,.game-page a:focus-visible,.game-page select:focus-visible,.game-page input:focus-visible{outline-color:var(--game-cyan,#8edce2)}
+    .game-page select{background:var(--game-surface,#202824);color:inherit;min-width:0}
+    .game-page .app{max-width:1560px;margin:auto;padding:12px 20px;min-height:100svh;display:grid;grid-template-rows:auto minmax(320px,1fr) auto auto;gap:10px}
+    .game-page .top{margin:0;gap:12px;min-height:48px}
+    .game-page h1{font-size:25px;line-height:1.25;margin:0;font-weight:650}
+    .game-page .subtitle{font-size:11px;margin:3px 0 0;line-height:1.4}
+    .game-page .rule{border:0;border-radius:0;padding:0;font-size:13px;margin:0}
+    .game-page .rule b{color:var(--game-gold,#f4cc72)}
+    .game-page .workspace{display:grid;grid-template-columns:minmax(0,1fr) 256px;gap:20px;min-height:0}
+    .game-page .stage{height:100%;min-height:0;border:0;border-radius:0;overflow:visible;background:var(--game-bg,#151918);display:grid;grid-template-rows:minmax(0,1fr) 44px}
+    .game-page canvas{min-height:0;height:100%;grid-row:1}
+    .game-page .hud{left:12px;top:10px;padding:5px 8px;border-radius:6px;max-width:55%;color:var(--game-ink,#f4f7f3)}
+    .game-page .hud-label{font-size:9px;color:var(--game-muted,#a9b7b0)}
+    .game-page .hud-time{font-size:24px;line-height:1.2}
+    .game-page .camera-controls{position:static;grid-row:2;justify-content:flex-end;align-items:center;background:none;border-radius:0;padding:0;gap:4px}
+    .game-page .camera-controls button{padding:6px 10px;font-size:11px;min-height:40px}
+    .game-page .camera-controls button[aria-pressed=true]{background:var(--game-primary,#b9edcc);color:var(--game-bg,#151918)}
+    .game-page .scene-status{position:static;grid-row:2;grid-column:1;max-width:none;background:none;padding:0;border-radius:0;color:var(--muted);font-size:10px;align-self:center;line-height:1.4}
+    .game-page .stage{grid-template-columns:minmax(0,1fr) auto;column-gap:8px}
+    .game-page canvas{grid-column:1/-1}
+    .game-page .camera-controls{grid-column:2}
+    .game-page .readout{display:flex;flex-direction:column;margin:0;gap:10px;min-width:0}
+    .game-page .main-count{margin:0;padding:0;border:0}
+    .game-page .stat-label{font-size:11px;margin:0 0 4px}
+    .game-page .count{font-size:27px;line-height:1.25}
+    .game-page .formula{margin:3px 0 0;font-size:11px}
+    .game-page .text-action{min-height:32px;padding:4px 0;border:0;background:none;color:var(--game-cyan,#8edce2);text-decoration:underline;text-underline-offset:3px;font-size:11px}
+    .game-page .stat-pair{padding:9px 0;gap:10px;grid-template-columns:1fr 1fr}
+    .game-page .stat-pair .stat-label{margin-bottom:4px}
+    .game-page .value{font-size:16px;line-height:1.35}
+    .game-page .observation{margin:0}
+    .game-page .chapter{font-size:10px;color:var(--game-gold,#f4cc72)}
+    .game-page .observation h2{font-size:16px;line-height:1.4;margin:4px 0 0}
+    .game-page .comparison{margin:0;padding:6px 0 0;font-size:11px;line-height:1.5}
+    .game-page .comparison p{margin:2px 0 0}
+    .game-page .next{margin-top:auto;padding:0;font-size:11px}
+    .game-page .next strong{color:var(--game-ink,#f4f7f3)}
+    .game-page .meter{margin-top:6px;background:var(--line)}
+    .game-page .transport{margin:0;padding:10px 0 0;border:0;border-top:1px solid var(--line);border-radius:0;background:none;display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:6px 20px}
+    .game-page .transport-top{grid-column:1/-1;gap:8px;flex-wrap:wrap}
+    .game-page .primary{background:var(--accent);color:var(--game-bg,#151918);min-width:150px}
+    .game-page .primary:hover{background:var(--game-cyan,#8edce2)}
+    .game-page .speed-label{margin-left:auto;font-size:11px;gap:6px}
+    .game-page .range-control{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+    .game-page .timeline-top{margin:0;font-size:10px;min-height:16px}
+    .game-page .scrubber{height:28px}
+    .game-page .ticks{font-size:10px;margin:0 2px;color:var(--muted)}
+    .game-page .reference-control{margin:0;gap:4px;display:grid;align-content:start;font-size:10px}
+    .game-page .reference-control select{width:100%;min-width:0;min-height:40px}
+    .game-page .below{margin:0;gap:12px;align-items:center;font-size:11px;line-height:1.4}
+    .game-page .below .text-action{min-height:24px}
+    .game-page .back{font-size:11px}
+    .game-page #reset{font-size:22px;min-width:44px;line-height:1}
+    .game-page .formula{color:var(--game-gold,#f4cc72)}
+    html.is-embedded .game-page .back{display:none}
+    .game-page dialog{background:var(--game-surface,#202824);color:var(--game-ink,#f4f7f3);border:1px solid var(--line);border-radius:8px;padding:0;width:min(680px,calc(100% - 28px));max-height:calc(100svh - 32px);overflow:auto;overscroll-behavior:contain}
+    .game-page dialog::backdrop{background:#0009}
+    .game-page .dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;background:var(--game-surface,#202824);padding:12px 16px;border-bottom:1px solid var(--line);z-index:1}
+    .game-page .dialog-heading h2{font-size:18px;margin:0;line-height:1.4}
+    .game-page .dialog-heading button{font-size:22px;min-width:44px;padding:4px}
+    .game-page .dialog-content{padding:16px;font-size:13px;line-height:1.8;overflow-wrap:anywhere}
+    .game-page .dialog-content p{margin:0 0 12px}
+    .game-page .dialog-content p:last-child{margin-bottom:0}
+    .game-page .jumps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+    .game-page .jumps button{text-align:left;white-space:normal;font-size:12px;min-height:48px}
+    .game-page .jumps span{display:block;margin:2px 0 0;font-size:11px}
+    .game-page .cosmic{margin-top:16px;padding-top:12px}
+    .game-page .cosmic-title{font-size:12px;color:var(--game-gold,#f4cc72)}
+    .game-page .cosmic .jumps{margin-top:10px}
+    .game-page #hudCount{display:none}
+    .game-page .top>div:first-child{min-width:0}
+    .game-page .prediction-entry{display:flex;align-items:center;gap:12px;flex-shrink:0}
+    .game-page #openPrediction{border-color:var(--game-cyan,#8edce2);color:var(--game-cyan,#8edce2);font-size:14px;min-height:44px}
+    .game-page #predictionDialog{width:min(560px,calc(100% - 28px))}
+    .game-page .prediction-content{padding:12px 16px 16px;text-align:center}
+    .game-page .prediction-now{display:flex;align-items:center;justify-content:center;gap:16px;min-height:64px}
+    .game-page .prediction-now p{margin:0;font-size:17px}
+    .game-page #predictionCount{font-size:28px;color:var(--game-gold,#f4cc72)}
+    .game-page .prediction-images{display:grid;grid-template-columns:repeat(4,20px);grid-auto-rows:17px;gap:3px;align-content:center;justify-content:center;min-height:77px}
+    .game-page .prediction-bun{display:block;width:20px;height:17px}
+    .game-page #predictionPrompt{font-size:18px;margin:8px 0 12px}
+    .game-page .prediction-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .game-page .prediction-choice{display:flex;flex-direction:column;justify-content:center;gap:8px;min-width:0;height:142px;padding:10px 4px;border-width:2px}
+    .game-page .prediction-number{font-size:28px;line-height:1.2;font-weight:700}
+    .game-page .prediction-choice[data-correct]{border-color:var(--accent);background:#b9edcc18;opacity:1}
+    .game-page .prediction-feedback{display:flex;align-items:center;justify-content:center;gap:8px;min-height:62px}
+    .game-page #predictionFeedback{margin:0;font-size:15px;line-height:1.5}
+    .game-page .prediction-star{color:var(--game-gold,#f4cc72);font-size:28px;animation:prediction-pop .5s ease-out}
+    .game-page #predictionNext{font-size:18px;min-height:48px;width:100%;max-width:280px}
+    @keyframes prediction-pop{from{transform:scale(.5) rotate(-20deg)}to{transform:scale(1) rotate(0)}}
+    @media(prefers-reduced-motion:reduce){.game-page .prediction-star{animation:none}}
+    @media(max-width:640px){.game-page .prediction-entry{flex-direction:column;gap:4px}.game-page #openPrediction{padding:6px 8px;font-size:12px}.game-page .prediction-content{padding:10px}.game-page .prediction-choices{gap:5px}.game-page .prediction-images{grid-template-columns:repeat(4,17px);grid-auto-rows:15px;gap:2px}.game-page .prediction-bun{width:17px;height:15px}.game-page #predictionPrompt{font-size:16px}.game-page #predictionFeedback{font-size:13px}}
+    @media(min-width:901px){.game-page .app{height:100svh;min-height:0;grid-template-rows:58px minmax(0,1fr) 112px 24px;gap:8px}.game-page .readout{gap:6px}}
+    @media(min-width:901px) and (max-height:650px){.game-page .app{padding:8px 16px;grid-template-rows:48px minmax(0,1fr) 112px 24px;gap:6px}.game-page h1{font-size:22px}.game-page .subtitle{font-size:10px}.game-page .readout{gap:4px}.game-page .count{font-size:24px}.game-page .stat-pair{padding:6px 0}.game-page .hud-time{font-size:22px}.game-page .observation h2{font-size:15px}}
+    @media(max-width:900px){.game-page .app{padding:12px;grid-template-rows:auto 380px auto auto}.game-page .workspace{grid-template-columns:minmax(0,1fr) 230px;gap:12px}.game-page .transport{gap:8px 12px}.game-page h1{font-size:23px}}
+    @media(max-width:640px){.game-page .app{display:flex;gap:12px;padding:12px}.game-page .top{order:0;align-items:center}.game-page .eyebrow{font-size:8px}.game-page h1{font-size:21px}.game-page .subtitle{font-size:10px;max-width:230px}.game-page .rule{font-size:10px;white-space:normal;min-width:64px;display:block}.game-page .workspace{display:contents}.game-page .stage{order:1;height:320px;min-height:320px;flex:none}.game-page .stage.is-space{min-height:360px;height:360px}.game-page .transport{order:2;display:flex;flex-direction:column;gap:8px}.game-page .transport-top{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.game-page .transport-top>*{min-width:0}.game-page .primary{grid-column:span 2;min-width:0}.game-page .speed-label{margin:0;grid-column:span 2;display:grid;grid-template-columns:auto minmax(0,1fr)}.game-page .range-control{grid-column:span 2;display:grid;grid-template-columns:auto minmax(0,1fr)}.game-page #openMilestones{grid-column:3}.game-page .reference-control{grid-template-columns:auto minmax(0,1fr);align-items:center;font-size:11px}.game-page .readout{order:3;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0}.game-page .main-count{grid-column:1/-1}.game-page .comparison,.game-page .next{grid-column:1/-1}.game-page .stat-pair{border:0;grid-template-columns:1fr;padding:0;gap:12px}.game-page .below{order:4;flex-wrap:wrap}.game-page .hud-time{font-size:22px}.game-page .count{font-size:27px}.game-page .dialog-heading h2{font-size:16px}}
+    @media(max-width:640px){.game-page .app{flex-direction:column}.game-page .rule{min-width:76px;white-space:nowrap}.game-page .stage{grid-template-rows:minmax(0,1fr) 40px 28px}.game-page .camera-controls{grid-column:1/-1;justify-content:center}.game-page .scene-status{grid-row:3;grid-column:1/-1;text-align:center}}
+  </style>
+  <link rel="stylesheet" href="games-theme.css?v=20260907-fun">
+  <script src="games-theme.js?v=20260907-fun"></script>
+  <script src="game-navigation.js?v=20260907-fun" defer></script>
+</head>
+<body class="game-page" data-game="baibain">
+  <main class="app">
+    <header class="top"><div><h1>バイバイン観察室</h1><p class="subtitle">たったひとつの、くりまんじゅう。その先を見てみよう。</p></div><div class="prediction-entry"><div class="rule"><b>5分</b> ごとに <b>2倍</b></div><button type="button" id="openPrediction" aria-haspopup="dialog" aria-controls="predictionDialog">つぎは いくつ？</button></div></header>
+    <div class="workspace">
+      <section class="stage" aria-label="くりまんじゅうが増える様子">
+        <canvas id="scene" role="img" aria-label="皿の上のくりまんじゅう1個"></canvas>
+        <div class="hud"><div class="hud-label">ひとしずく たらしてから</div><div class="hud-time" id="elapsed">00:00:00</div><div id="hudCount">1 個</div></div>
+        <div class="scene-status" id="sceneStatus">まずは「時間をすすめる」で観察</div>
+        <div class="camera-controls" aria-label="カメラ"><button type="button" data-view="auto" aria-pressed="true">自動カメラ</button><button type="button" data-view="close" aria-pressed="false">近くで</button><button type="button" data-view="wide" aria-pressed="false">広く見る</button></div>
+      </section>
+      <aside class="readout" aria-label="現在の観察データ">
+        <div class="main-count"><p class="stat-label">いまの くりまんじゅう</p><div><span class="count" id="count">1</span><span class="count-unit">個</span></div><p class="formula" id="formula">2⁰ = 1 · まだ増えていません</p><button type="button" class="text-action" data-dialog="exactDialog" aria-haspopup="dialog">正確な個数を見る</button></div>
+        <div class="stat-pair"><div><p class="stat-label">全部の重さ</p><div class="value" id="mass">50 g</div></div><div><p class="stat-label" id="sizeLabel">1個の大きさ</p><div class="value" id="height">幅 5 cm</div></div></div>
+        <div class="observation"><div class="chapter" id="chapter">01 / お皿の上</div><h2 id="headline">まだ、ひとくち。</h2><button type="button" class="text-action" data-dialog="observationDialog" aria-haspopup="dialog">観察の詳細</button></div>
+        <div class="comparison" id="spaceComparison" hidden><div>比較対象：<strong id="referenceLabel">地球</strong></div><p id="referenceRatio"></p></div>
+        <div class="next"><span id="nextLabel">次の倍増まで <strong id="next">05:00</strong></span><div class="meter"><div id="progress"></div></div></div>
+      </aside>
+    </div>
+    <section class="transport" aria-label="時間の操作">
+      <div class="transport-top"><button type="button" class="primary" id="play" aria-pressed="false">▶ 時間をすすめる</button><button type="button" class="reset" id="reset" aria-label="最初の1個に戻す" title="最初の1個に戻す">↺</button><button type="button" id="step" class="reset">+5分</button><label class="speed-label">再生速度<select id="speed"><option value="1">1倍（実時間）</option><option value="60" selected>60倍</option><option value="300">300倍</option><option value="1800">1,800倍</option></select></label><label class="range-control">表示範囲<select id="range"><option value="10800">3時間</option><option value="43200">12時間</option><option value="86400" selected>24時間</option></select></label><button type="button" id="openMilestones" data-dialog="milestonesDialog" aria-haspopup="dialog">見どころ</button></div>
+      <div class="timeline"><div class="timeline-top"><label for="timeline">経過時間 <span id="speedHint">· 1秒で1分すすむ</span></label></div>
+      <input class="scrubber" id="timeline" type="range" min="0" max="86400" step="1" value="0" aria-label="経過時間" aria-valuetext="0時間0分0秒">
+      <div class="ticks" id="ticks" aria-hidden="true"><span>0</span><span>6時間</span><span>12時間</span><span>18時間</span><span>24時間</span></div></div>
+      <label class="reference-control">宇宙での比較対象<select id="reference"><option value="auto">自動で切り替える</option></select></label>
+    </section>
+    <footer class="below"><button type="button" class="text-action" data-dialog="assumptionsDialog" aria-haspopup="dialog">計算の条件と出典</button><a class="back" href="index.html?game=moon" target="_top">おつきさまへ ↗</a></footer>
+    <dialog id="exactDialog" aria-labelledby="exactTitle"><header class="dialog-heading"><h2 id="exactTitle">正確な個数</h2><button type="button" data-close-dialog aria-label="閉じる" autofocus>×</button></header><div class="dialog-content"><p id="exactCount">1 個</p></div></dialog>
+    <dialog id="observationDialog" aria-labelledby="observationTitle"><header class="dialog-heading"><h2 id="observationTitle">観察の詳細</h2><button type="button" data-close-dialog aria-label="閉じる" autofocus>×</button></header><div class="dialog-content"><p id="description">最初は1個。5分待つと2個になり、その2個も、さらに5分で4個になります。</p><div id="referenceDetails" hidden><p id="referenceSize"></p><p id="referenceNote"></p></div></div></dialog>
+    <dialog id="milestonesDialog" aria-labelledby="milestonesTitle"><header class="dialog-heading"><h2 id="milestonesTitle">見どころへ移動</h2><button type="button" data-close-dialog aria-label="閉じる" autofocus>×</button></header><div class="dialog-content">
+      <nav class="jumps" id="milestones" aria-label="見どころへ移動"><button type="button" data-time="300">最初の2個<span>5分</span></button><button type="button" data-time="3600">1時間後<span>4,096個</span></button></nav>
+      <div class="cosmic"><p class="cosmic-title">地球の先へ — 同じ体積の球は、どこまで大きくなる？</p><nav class="jumps" id="cosmicMilestones" aria-label="地球以降の見どころへ移動"></nav></div>
+    </div></dialog>
+    <dialog id="assumptionsDialog" aria-labelledby="assumptionsTitle"><header class="dialog-heading"><h2 id="assumptionsTitle">計算の条件と出典</h2><button type="button" data-close-dialog aria-label="閉じる" autofocus>×</button></header><div class="dialog-content" id="assumptions"><div class="notes"><p>原作の設定に合わせ、1個からスタートし、5分の境目で一斉に2倍になります。途中で食べたり減ったりはしません。個数は24時間後まで整数で正確に計算しています。</p><p>1個を幅5 × 奥行4 × 高さ3.5 cmの楕円体、50 gと仮定。積み山はすき間36%、斜面32°の円すいで見積もります。これは寸法から大きさを比較するためのモデルで、実際のまんじゅうの変形・つぶれ・衝突・流れを解く物理実験ではありません。小さい段階は個体を描き、多くなると表面の模様として省略します。</p><p>惑星規模では、すき間を除いた同じ体積の球を地球・太陽・海王星の軌道・天の川銀河・観測可能な宇宙と比較します。地球を覆う速さや、重力による崩壊の予測ではありません。銀河や宇宙の描画は広がりを示す模式図で、宇宙全体の大きさや形を表しません。海王星の軌道を太陽系の幅の目安にしていますが、太陽系はさらに外まで続きます。質量が無から増える設定自体は、現実の物理法則では起こりません。</p><p>設定：<a href="https://www.tv-asahi.co.jp/doraemon/story/0135/" target="_blank" rel="noopener noreferrer">テレビ朝日「バイバイン」</a> ／ 地球の参考値：<a href="https://ssd.jpl.nasa.gov/planets/phys_par.html" target="_blank" rel="noopener noreferrer">NASA/JPL 惑星の物理量</a>。地球の平均半径6,371 km・質量5.9722 × 10²⁴ kgを使用。まんじゅうの寸法・重さ・山の形は、このシミュレーションの仮定です。</p><p>宇宙の比較値：NASAの<a href="https://www.nasa.gov/learning-resources/how-does-the-sun-behave-grades-5-8/" target="_blank" rel="noopener noreferrer">太陽の直径</a>、<a href="https://science.nasa.gov/neptune/neptune-facts/" target="_blank" rel="noopener noreferrer">海王星までの平均距離</a>、<a href="https://www.nasa.gov/science-research/astrophysics/how-big-is-space-we-asked-a-nasa-expert-episode-61/" target="_blank" rel="noopener noreferrer">銀河・観測可能な宇宙の幅</a>。約140万km・軌道直径90億km・10万光年・920億光年を使用します。これらは到達時刻を見積もるための丸めた基準値です。</p></div></div></dialog>
+    <dialog id="predictionDialog" aria-labelledby="predictionTitle" aria-describedby="predictionPrompt">
+      <header class="dialog-heading"><h2 id="predictionTitle">つぎは いくつ？</h2><button type="button" data-close-dialog aria-label="とじて かんさつに もどる">×</button></header>
+      <div class="prediction-content">
+        <div class="prediction-now"><p>いまは <strong id="predictionCount">1</strong> こ</p><div id="predictionNowImages" class="prediction-images" aria-hidden="true"></div></div>
+        <p id="predictionPrompt">5ふんごは、なんこ？</p>
+        <div id="predictionChoices" class="prediction-choices" role="group" aria-labelledby="predictionPrompt"></div>
+        <div class="prediction-feedback"><span id="predictionStar" class="prediction-star" aria-hidden="true" hidden>★</span><p id="predictionFeedback" role="status" aria-live="polite" aria-atomic="true"></p></div>
+        <button type="button" id="predictionNext" class="primary" disabled>つぎへ</button>
+      </div>
+    </dialog>
+    <svg width="0" height="0" aria-hidden="true" style="position:absolute;pointer-events:none"><defs><symbol id="predictionBun" viewBox="0 0 40 34"><path d="M3 23C2 15 10 7 20 3C30 7 38 15 37 23C36 32 4 32 3 23Z" fill="#d69a53" stroke="#75472d" stroke-width="2"/><path d="M4 24Q20 29 36 24Q34 33 20 32Q6 33 4 24Z" fill="#75472d"/><path d="M10 17Q12 12 18 9" fill="none" stroke="#ffe3ac" stroke-width="3" stroke-linecap="round"/></symbol></defs></svg>
+    <div id="announcement" role="status" aria-live="polite"></div>
+  </main>
+  <script src="baibain-model.js"></script>
+  <script src="baibain-renderer.js"></script>
+  <script>
+    (() => {
+      'use strict';
+      const M = window.BaibainModel;
+      const $ = id => document.getElementById(id);
+      document.querySelectorAll('[data-dialog]').forEach(button=>button.addEventListener('click',()=>$(button.dataset.dialog).showModal()));
+      document.querySelectorAll('[data-close-dialog]').forEach(button=>button.addEventListener('click',()=>button.closest('dialog').close()));
+      const scene = new window.BaibainScene($('scene'));
+      const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+      let seconds = 0, speed = 60, playing = false, view = 'auto', referenceId = 'auto', last = null, lastUI = -1, frameId, alive = true, snapCamera = true, lastSceneMode;
+      let state = M.snapshot(0);
+      // Observation achievements are independent of the unlimited prediction practice.
+      const rankingDiscoveries = new Set();
+      let rankingObservationStarted = false, rankingSerial = 0;
+      function recordDiscoveries(snapshot) {
+        if (!rankingObservationStarted) return;
+        const before = rankingDiscoveries.size;
+        for (const [id, minimum] of [['one',1n],['double',2n],['hundred',100n],['thousand',1000n],['million',1000000n]]) {
+          if (snapshot.count >= minimum) rankingDiscoveries.add(id);
+        }
+        if (before === rankingDiscoveries.size) return;
+        let runId;
+        try { runId = window.crypto?.randomUUID?.(); } catch {}
+        runId ||= 'baibain-' + Date.now().toString(36) + '-' + (++rankingSerial) + '-' + Math.random().toString(36).slice(2);
+        try {
+          window.MoonRanking?.complete?.({ game: 'baibain', mode: 'discoveries', runId,
+            metrics: { discoveries: [...rankingDiscoveries] } });
+        } catch { /* Optional ranking must never interrupt the observation. */ }
+      }
+      const clock = value => { const n = Math.floor(value); return [Math.floor(n / 3600),Math.floor(n % 3600 / 60),n % 60].map(x => String(x).padStart(2,'0')).join(':'); };
+      function observation(s) {
+        const ref = M.spaceReference(s);
+        if(ref.id === 'observable-universe') return ['09 / 観測できる宇宙の規模','見える宇宙の幅さえ超える。','同じ体積の球の直径が、観測可能な宇宙の約920億光年を超えました。宇宙全体の大きさや、宇宙が埋まる時刻を示すものではありません。'];
+        if(ref.id === 'milky-way') return ['08 / 銀河の規模','天の川銀河より大きく。','球の直径が、天の川銀河の幅、約10万光年を超えました。銀河は星が散らばる領域。その広がりと、球の直径を比較しています。'];
+        if(ref.id === 'solar-system') return ['07 / 太陽系の規模','海王星の軌道より大きく。','球の直径が、海王星の公転軌道の幅、約90億kmを超えました。太陽系はさらに外側まで続きます。軌道は実寸、星の点は位置を示す記号です。'];
+        if(ref.id === 'sun') return ['06 / 恒星の規模','太陽より大きく。','同じ体積の球の直径が、太陽の直径、約140万kmを超えました。さらに時間を進めると、太陽系や銀河と比べられます。'];
+        if(s.earthMassRatio >= 1) return ['06 / 惑星の、その先','重さが地球を超える。','同じ形のまま増え続けると仮定した比較です。現実なら圧縮や加熱、重力の影響を無視できません。'];
+        if(s.earthVolumeRatio >= 1) return ['05 / 地球と比べる','体積が地球を超える。','すき間を除いたまんじゅうの体積の合計です。ここでは同じ体積の球に置き換えて見ています。'];
+        if(s.pileRadius >= 1000) return ['04 / 街を見下ろす','もう、街の大きさ。','山の底の直径は '+M.formatLength(s.pileRadius * 2)+'。大きくなっても、次の5分でまた2倍。ここからの形は大きさを比べる目安です。'];
+        if(s.bulkVolume >= 30) return ['03 / 部屋の外へ','部屋には収まらない。','すき間込みの体積が、30 m³の部屋を超えました。山のように積んだ場合の大きさを、人や家と比べてみましょう。'];
+        if(s.count >= 32n) return ['02 / お皿から、その先へ','少しずつ、ではなく。','今ある全部が、それぞれもう1個に。1時間で4,096個、2時間では1,677万個を超えます。'];
+        return ['01 / お皿の上',s.count === 1n ? 'まだ、ひとくち。' : 'ひとつが、ふたつに。','最初は1個。5分待つと2個になり、その2個も、さらに5分で4個になります。'];
+      }
+      function update(force = false) {
+        const whole = Math.floor(seconds);
+        if(!force && whole === lastUI) return;
+        lastUI = whole; state = M.snapshot(seconds);
+        $('elapsed').textContent = clock(seconds);
+        $('count').textContent = M.formatCount(state.count);
+        $('hudCount').textContent = M.formatCount(state.count)+' 個';
+        $('exactCount').textContent = state.count.toLocaleString('ja-JP')+' 個';
+        $('formula').textContent = '2^'+state.generations+' · '+state.generations+'回の倍増';
+        $('mass').textContent = M.formatMass(state.massKg);
+        updateSize();
+        const copy = observation(state);
+        $('chapter').textContent = copy[0]; $('headline').textContent = copy[1]; $('description').textContent = copy[2];
+        $('nextLabel').innerHTML = seconds >= M.DEFAULTS.maxTime ? '24時間の観察が完了しました' : '次の倍増まで <strong id="next">'+clock(Math.ceil(state.nextIn)).slice(3)+'</strong>';
+        $('progress').style.width = (seconds >= M.DEFAULTS.maxTime ? 100 : (300-state.nextIn)/3)+'%';
+        $('timeline').value = seconds;
+        $('timeline').setAttribute('aria-valuetext',Math.floor(seconds/3600)+'時間'+Math.floor(seconds%3600/60)+'分'+Math.floor(seconds%60)+'秒');
+        $('scene').setAttribute('aria-label',clock(seconds)+'経過、くりまんじゅう'+M.formatCount(state.count)+'個。'+copy[1]);
+        $('sceneStatus').textContent = seconds >= M.DEFAULTS.maxTime ? '24時間後まで到達 · 時間を戻して何度でも観察' : playing ? (speed === 1 ? '実時間で観察中 · 5分ごとに倍増' : speed.toLocaleString()+'倍速で観察中 · 5分ごとに倍増') : seconds === 0 ? 'まずは「時間をすすめる」で観察' : '一時停止中 · 時間を動かして比べよう';
+        $('step').disabled = seconds >= M.DEFAULTS.maxTime;
+        recordDiscoveries(state);
+      }
+      function setPlaying(on) {
+        playing = on; last = null;
+        $('play').textContent = playing ? 'Ⅱ 一時停止' : seconds >= M.DEFAULTS.maxTime ? '▶ もう一度みる' : '▶ 時間をすすめる';
+        $('play').setAttribute('aria-pressed',String(playing)); update(true);
+      }
+      function ensureRange() {
+        if(seconds > Number($('range').value)) {
+          $('range').value = seconds <= 43200 ? '43200' : '86400'; setRange();
+        }
+      }
+      function updateSize() {
+        const space = scene.mode === 'space';
+        $('sizeLabel').textContent = space ? '同じ体積の球の直径' : state.count <= 256n ? '1個の大きさ' : '円すいと仮定した高さ';
+        $('height').textContent = space ? M.formatCosmicLength(state.equivalentRadius*2) : state.count <= 256n ? '幅 5 cm' : M.formatLength(state.pileHeight);
+        $('spaceComparison').hidden=!space;
+        $('referenceDetails').hidden=!space;
+        if(space){
+          const ref = M.SPACE_REFERENCES.find(r=>r.id===referenceId) || M.spaceReference(state);
+          const ratio = state.equivalentRadius*2/ref.diameter;
+          const ratioText = ratio < .001 ? ratio.toExponential(2).replace('e-',' × 10^-') : Number(ratio.toPrecision(3)).toLocaleString('ja-JP',{maximumSignificantDigits:3});
+          $('referenceLabel').textContent=ref.label;
+          $('referenceSize').textContent='基準の直径・幅：'+M.formatCosmicLength(ref.diameter);
+          $('referenceRatio').textContent='球の直径は、この基準の約'+ratioText+'倍';
+          $('referenceNote').textContent=ref.kind==='body'?'同じ縮尺で直径を比較しています。':'星々が広がる領域の幅との比較です。中身が詰まった天体ではありません。';
+        }
+      }
+      function seek(value) { rankingObservationStarted=true; seconds = Math.min(M.DEFAULTS.maxTime,Math.max(0,Number(value)||0)); snapCamera=true; ensureRange(); setPlaying(false); update(true); }
+      // Independent practice snapshots never seek or replace the observation state.
+      let predictionRound = 0, predictionSolved = false, predictionAnswer = 0;
+      function predictionImages(count) {
+        return Array.from({length:count},()=>{
+          const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+          svg.classList.add('prediction-bun');svg.setAttribute('viewBox','0 0 40 34');
+          const use=document.createElementNS(svg.namespaceURI,'use');use.setAttribute('href','#predictionBun');svg.append(use);
+          return svg;
+        });
+      }
+      function showPrediction() {
+        const time=(predictionRound%4)*M.DEFAULTS.interval;
+        const count=Number(M.snapshot(time).count);
+        predictionAnswer=Number(M.snapshot(time+M.DEFAULTS.interval).count);
+        predictionSolved=false;
+        $('predictionCount').textContent=count;
+        $('predictionNowImages').replaceChildren(...predictionImages(count));
+        $('predictionNext').disabled=true;
+        $('predictionStar').hidden=true;
+        $('predictionFeedback').textContent='';
+        const choices=[predictionAnswer,count,predictionAnswer===2?3:predictionAnswer-1];
+        for(let i=choices.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[choices[i],choices[j]]=[choices[j],choices[i]];}
+        $('predictionChoices').replaceChildren(...choices.map(value=>{
+          const button=document.createElement('button');button.type='button';button.className='prediction-choice';
+          button.dataset.count=value;button.setAttribute('aria-label',value+'こ');
+          const images=document.createElement('span');images.className='prediction-images';images.setAttribute('aria-hidden','true');images.append(...predictionImages(value));
+          const number=document.createElement('span');number.className='prediction-number';number.textContent=value;
+          button.append(images,number);
+          return button;
+        }));
+      }
+      $('openPrediction').addEventListener('click',()=>{
+        setPlaying(false);
+        if(!$('predictionChoices').children.length) showPrediction();
+        $('predictionDialog').showModal();
+        (predictionSolved?$('predictionNext'):$('predictionChoices').firstElementChild).focus();
+      });
+      $('predictionChoices').addEventListener('click',event=>{
+        const button=event.target.closest('button[data-count]');
+        if(!button||predictionSolved||!$('predictionDialog').open) return;
+        if(Number(button.dataset.count)!==predictionAnswer){
+          $('predictionFeedback').textContent='もういちど！ おなじ かずが もうひとくみ。';
+          return;
+        }
+        predictionSolved=true;
+        button.dataset.correct='true';
+        for(const choice of $('predictionChoices').children) choice.disabled=true;
+        const count=Number($('predictionCount').textContent);
+        $('predictionFeedback').textContent='だいせいかい！ '+count+' + '+count+' = '+predictionAnswer+'こ';
+        $('predictionStar').hidden=false;
+        $('predictionNext').disabled=false;
+        $('predictionNext').focus();
+      });
+      $('predictionNext').addEventListener('click',()=>{
+        if(!predictionSolved||!$('predictionDialog').open) return;
+        predictionRound=(predictionRound+1)%4;
+        showPrediction();
+        $('predictionChoices').firstElementChild.focus();
+      });
+      $('predictionDialog').addEventListener('keydown',event=>{
+        if(event.key!=='Tab') return;
+        const buttons=[...$('predictionDialog').querySelectorAll('button:not(:disabled)')];
+        const edge=event.shiftKey?buttons[0]:buttons[buttons.length-1];
+        if(document.activeElement===edge){
+          event.preventDefault();
+          (event.shiftKey?buttons[buttons.length-1]:buttons[0]).focus();
+        }
+      });
+      function setRange() {
+        const max = Number($('range').value); $('timeline').max = max;
+        if(seconds > max) { seconds = max; snapCamera=true; setPlaying(false); }
+        $('ticks').replaceChildren(...Array.from({length:5},(_,i)=>{const e=document.createElement('span'); e.textContent = i ? (max*i/4/3600)+'時間' : '0'; return e;})); update(true);
+      }
+      $('play').addEventListener('click',()=>{ rankingObservationStarted=true; if(seconds >= M.DEFAULTS.maxTime) {seconds = 0;snapCamera=true;} setPlaying(!playing); });
+      $('reset').addEventListener('click',()=>seek(0));
+      $('step').addEventListener('click',()=>seek(seconds+300));
+      $('timeline').addEventListener('input',e=>seek(e.target.value));
+      $('range').addEventListener('change',setRange);
+      $('speed').addEventListener('change',e=>{ speed=Number(e.target.value); last=null; $('speedHint').textContent = speed===1 ? '· 現実と同じ速さ' : '· 1秒で'+(speed/60)+'分すすむ'; update(true); });
+      document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{view=button.dataset.view;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));}));
+      for(const ref of M.SPACE_REFERENCES){const option=document.createElement('option');option.value=ref.id;option.textContent=ref.label;$('reference').append(option);}
+      $('reference').addEventListener('change',e=>{referenceId=e.target.value;view='auto';snapCamera=true;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===view)));update(true);});
+      const cosmicIds=['sun-diameter','solar-system-diameter','milky-way-diameter','observable-universe-diameter'];
+      const jumps=M.milestones().filter(m=>['room','city','earth-volume',...cosmicIds].includes(m.id));
+      for(const m of jumps){const b=document.createElement('button');b.type='button';b.dataset.time=m.seconds;b.dataset.milestone=m.id;b.append(document.createTextNode(m.label));const t=document.createElement('span');t.textContent=Math.floor(m.seconds/3600)+'時間'+Math.floor(m.seconds%3600/60)+'分';b.append(t);b.title=m.description;$(cosmicIds.includes(m.id)?'cosmicMilestones':'milestones').append(b);}
+      for(const id of ['milestones','cosmicMilestones']) $(id).addEventListener('click',e=>{const button=e.target.closest('[data-time]');if(button){seek(button.dataset.time);$('milestonesDialog').close();$('announcement').textContent=$('scene').getAttribute('aria-label');if(id==='cosmicMilestones'&&innerWidth<=640)$('scene').parentElement.scrollIntoView({block:'start',behavior:motionQuery.matches?'instant':'smooth'});}});
+      function animate(now) {
+        if(!alive) return;
+        const dt = last === null ? 0 : Math.max(0,(now-last)/1000); last=now;
+        if(playing && !document.hidden) {
+          seconds=Math.min(M.DEFAULTS.maxTime,seconds+dt*speed);ensureRange();
+          if(seconds >= M.DEFAULTS.maxTime) setPlaying(false);
+        }
+        update();
+        scene.render(state,{time:now/1000,dt:Math.min(dt,.05),view,referenceId,reducedMotion:motionQuery.matches,snapCamera});
+        snapCamera=false;
+        if(lastSceneMode!==scene.mode){lastSceneMode=scene.mode;$('scene').parentElement.classList.toggle('is-space',scene.mode==='space');updateSize();}
+        frameId=requestAnimationFrame(animate);
+      }
+      document.addEventListener('visibilitychange',()=>{if(document.hidden) setPlaying(false);last=null;});
+      window.addEventListener('pagehide',()=>{alive=false;cancelAnimationFrame(frameId);scene.destroy();});
+      window.addEventListener('pageshow',e=>{if(e.persisted) location.reload();});
+      const initialTime=Number(new URLSearchParams(location.search).get('t'));
+      if(Number.isFinite(initialTime)&&initialTime>0) seek(initialTime);
+      update(true); frameId=requestAnimationFrame(animate);
+    })();
+  </script>
+</body>
+</html>

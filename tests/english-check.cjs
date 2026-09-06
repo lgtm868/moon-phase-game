@@ -54,6 +54,25 @@ assert.equal(seen.size,18);
  const count=app.utterances.length;learnCard.onclick();assert.equal(app.utterances.length,count,'Detached learning cards cannot speak after leaving');
 }
 console.log(`PASS: ${count} English questions, all 18 words, unique targets/options, 15000 retries, manual next, stale cards, restart, mute/hidden/pagehide speech cancellation and no-speech fallback.`);
+{
+ const app=setup();
+ app.read("window.results=[];window.MoonRanking={complete:value=>window.results.push(value)};openGarden('food')");
+ app.el('start').click();const firstRun=app.read('runId');
+ for(let i=0;i<5;i++){
+  const target=app.read('deck[position][1]');const cards=app.el('choices').children;
+  if(i===0)cards.find(card=>card.attributes['aria-label']!==target).click();
+  cards.find(card=>card.attributes['aria-label']===target).click();app.el('next').click();
+ }
+ const review=app.el('reviewWords').children;assert.equal(review.length,5);
+ assert.equal(new Set(review.map(card=>card.attributes['aria-label'])).size,5);
+ review[0].click();assert.equal(app.utterances.at(-1).text,app.read('deck[0][0]'));
+ assert.equal(app.read('window.results.length'),1);assert.equal(app.read('window.results[0].metrics.firstTry'),4);
+ assert.equal(app.read('window.results[0].runId'),firstRun);assert.equal(app.read('window.results[0].metrics.completed'),5);
+ app.el('next').onclick();assert.equal(app.read('window.results.length'),1);
+ app.el('again').click();assert.notEqual(app.read('runId'),firstRun);
+ const spoken=app.utterances.length;review[0].onclick();assert.equal(app.utterances.length,spoken,'Old review cards cannot speak in a new round');
+}
+console.log('PASS: five earned review words, English replay, stale-review guard, optional first-try ranking and unique rounds.');
 
 
 

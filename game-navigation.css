@@ -1,0 +1,28 @@
+:root{--game-nav-bg:#202824;--game-nav-ink:#f4f7f3;--game-nav-line:#3b4942;--game-nav-accent:#b9edcc}
+body.game-shell{margin:0;height:100svh;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#151918;color:var(--game-nav-ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",Meiryo,sans-serif}
+#gameNavigation{position:relative;z-index:5;background:var(--game-nav-bg);border-bottom:1px solid var(--game-nav-line);padding:max(8px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left))}
+.game-nav-bar{width:100%;max-width:1480px;margin:auto;display:flex;align-items:center;gap:12px;min-height:44px}
+#gameNavigation button,#gameNavigation a{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#gameMenuToggle,#gameMenuClose{flex-shrink:0;min-height:44px;padding:9px 14px;border:1px solid #70867a;border-radius:8px;background:#2b3830;color:var(--game-nav-ink);font-size:15px;font-weight:800;cursor:pointer}
+#gameMenuToggle>span{font-size:22px;vertical-align:middle;margin-right:5px}.game-nav-current{font-size:17px;font-weight:800;flex:1;min-width:0;overflow-wrap:anywhere}
+.game-nav-shortcuts{display:flex;flex:1;gap:5px;justify-content:center}.game-nav-link{position:relative;display:flex;align-items:center;justify-content:center;gap:7px;min-height:44px;border:1px solid transparent;border-radius:8px;padding:8px 12px;text-decoration:none;color:#d8e2dc;white-space:nowrap;font-weight:800;font-size:15px;line-height:1.3}
+.game-nav-link:hover{background:#35443a}.game-nav-link.is-active{background:var(--game-nav-accent);color:#193527}.game-nav-icon{font-size:23px;line-height:1.2;min-width:26px;text-align:center}.game-nav-selected{display:none}.game-menu-card.is-active .game-nav-selected{display:block;position:absolute;top:8px;right:10px;font-size:18px}
+#gameNavigation :is(button,a):focus-visible{outline:3px solid #f4cc72;outline-offset:3px}.game-nav-bar>[data-game-nav-actions]{display:flex;gap:6px;align-items:center}.game-nav-bar>[data-game-nav-actions]:empty{display:none}
+#gameMenu{box-sizing:border-box;width:min(620px,calc(100vw - 24px));max-height:calc(100svh - 32px);margin:auto;padding:22px;border:1px solid #758b7c;border-radius:8px;color:var(--game-nav-ink);background:var(--game-nav-bg);overflow:auto;overscroll-behavior:contain;box-shadow:0 18px 80px #0008}
+#gameMenu:not([open]){display:none}#gameMenu::backdrop{background:#08130cc9}.game-menu-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.game-menu-heading h2{margin:0;font-size:24px;font-weight:800}.game-menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.game-menu-card{min-height:88px;flex-direction:column;gap:7px;padding:12px;background:#2b3830;border-color:#4c6254;font-size:18px}.game-menu-card .game-nav-icon{font-size:28px}
+body.game-shell>.game-frame{display:block;width:100%;height:100%;min-width:0;min-height:0;border:0;background:#151918}
+@media(min-width:1280px){.game-nav-current{display:none}}
+@media(max-width:1279px){.game-nav-shortcuts{display:none}}
+@media(max-width:520px){#gameNavigation{padding-inline:max(8px,env(safe-area-inset-left)) max(8px,env(safe-area-inset-right))}.game-nav-bar{gap:8px}#gameMenuToggle{padding:8px 10px;font-size:14px}.game-nav-current{font-size:15px}#gameMenu{padding:16px}.game-menu-heading{margin-bottom:12px}.game-menu-heading h2{font-size:20px}.game-menu-grid{gap:9px}.game-menu-card{min-height:78px;font-size:17px}}
+@media(max-height:520px){#gameMenu{padding:12px}.game-menu-heading{margin-bottom:10px}.game-menu-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.game-menu-card{min-height:75px;font-size:14px}.game-menu-card .game-nav-icon{font-size:24px}}
+/* Keep the original 56px shell budget without shrinking touch targets. */
+#gameNavigation{padding-top:calc(6px + env(safe-area-inset-top));padding-bottom:5px}
+.game-nav-bar{height:44px;min-height:44px}
+#gameMenuToggle{height:44px;min-height:44px;padding-block:7px;display:inline-flex;align-items:center;justify-content:center;gap:6px;line-height:1.3}
+#gameMenuToggle>span{line-height:1;margin-right:0}
+.game-nav-shortcut{height:44px;min-height:44px;padding-block:7px}
+.game-nav-shortcut .game-nav-icon{line-height:1}
+.game-nav-bar>[data-game-nav-actions]>:is(button,a){box-sizing:border-box;height:44px;min-height:44px;margin:0;padding-block:7px}
+.game-nav-bar>[data-game-nav-actions]{flex-shrink:0}
+.game-nav-bar>[data-game-nav-actions]>:is(button,a){flex-shrink:0;white-space:nowrap}
+@media(max-width:380px){.game-nav-current{display:none}.game-nav-bar>[data-game-nav-actions]{margin-left:auto}}

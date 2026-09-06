@@ -6,20 +6,21 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="おつきさま">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#101719">
+  <meta name="theme-color" content="#151918">
   <title>おつきさまのかたち</title>
   <style>
     :root {
       color-scheme: dark;
-      --sky: #101719; --ink: #f5faf7; --muted: #a5b7b3; --line: #344640;
-      --button: #b9edcc; --button-ink: #14271f;
+      --sky: var(--game-bg, #151918); --ink: var(--game-ink, #f4f7f3);
+      --muted: var(--game-muted, #a9b7b0); --line: var(--game-line, #3b4942);
+      --button: var(--game-primary, #b9edcc); --button-ink: #14271f;
       font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; letter-spacing: 0; }
     html, body { margin: 0; width: 100%; min-height: 100%; background: var(--sky); color: var(--ink); }
     body { padding: max(8px, env(safe-area-inset-top)) 12px max(8px, env(safe-area-inset-bottom)); }
     main {
-      width: min(100%, 1160px); height: calc(100svh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      width: min(100%, 1160px); height: calc(100svh - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
       min-height: 550px; margin: auto; display: grid;
       grid-template-columns: minmax(0, 1.3fr) minmax(360px, 1fr);
       grid-template-rows: minmax(0, 1fr) 300px 64px; gap: 16px 32px;
@@ -27,66 +28,66 @@
     button, a { touch-action: manipulation; }
     button, .game-link {
       font: inherit; color: inherit; cursor: pointer; appearance: none; text-decoration: none;
-      border: 1px solid var(--line); background: #1a2925; border-radius: 8px;
+      border: 1px solid var(--line); background: var(--game-surface, #202824); border-radius: 8px;
     }
     button { min-width: 0; }
     button:disabled { opacity: 0.45; cursor: default; }
-    button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px solid #f9ce6b; outline-offset: 3px; }
+    button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--game-cyan, #8edce2); outline-offset: 3px; }
     button:active, .game-link:active { transform: translateY(1px); }
-    .scene { position: relative; grid-column: 1; grid-row: 1 / 3; min-height: 0; overflow: hidden; display: grid; grid-template-rows: 44px minmax(0, 1fr) 14px; gap: 4px; }
+    .scene { position: relative; grid-column: 1; grid-row: 1 / 3; min-height: 0; display: grid; grid-template-rows: 44px minmax(0, 1fr) 14px; gap: 4px; }
     #space { grid-row: 2; width: 100%; height: 100%; min-height: 0; display: block; touch-action: none; cursor: grab; }
     #space:active { cursor: grabbing; }
     .scene-actions { grid-row: 1; display: flex; gap: 4px; justify-content: space-between; min-width: 0; }
-    .scene-actions button { pointer-events: auto; width: 44px; height: 44px; font-size: 22px; background: #18221fd9; }
-    .scene-actions .guess-link { pointer-events: auto; align-self: flex-start; display: inline-flex; align-items: center; justify-content: center; min-width: 0; min-height: 44px; padding: 4px 8px; font-size: 13px; font-weight: 800; background: #d5efc3; color: #29463f; border-color: #d5efc3; }
+    .scene-actions button { pointer-events: auto; width: 44px; flex: 0 0 44px; height: 44px; font-size: 22px; }
+    .scene-actions .guess-link { pointer-events: auto; align-self: flex-start; display: inline-flex; align-items: center; justify-content: center; min-width: 0; min-height: 44px; padding: 4px 5px; font-size: 12px; font-weight: 800; color: var(--button); }
     .scene-footer { grid-row: 3; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 10px; line-height: 14px; color: var(--muted); }
     .progress-dots { display: flex; gap: 4px; pointer-events: none; }
     .progress-dots i { width: 4px; height: 4px; border-radius: 50%; background: #64746e; }
-    .progress-dots i.active { background: #f9ce6b; box-shadow: 0 0 0 3px #f9ce6b22; }
+    .progress-dots i.active { background: var(--game-gold, #f4cc72); }
     .phase-strip { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 20px; padding: 8px 0; cursor: pointer; min-width: 0; }
     #phaseMoon { width: 144px; height: 144px; flex: 0 0 auto; }
     .phase-copy { min-width: 0; }
     .small-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
     .phase-name { font-size: 27px; font-weight: 800; line-height: 1.4; overflow-wrap: anywhere; }
-    .phase-message { font-size: 13px; line-height: 1.6; color: #c4d5cd; margin-top: 8px; }
+    .phase-message { font-size: 13px; line-height: 1.6; color: var(--muted); margin-top: 8px; }
     .library { grid-column: 2; grid-row: 2; min-width: 0; display: grid; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; }
     .library-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; border-bottom: 1px solid var(--line); }
     .library-tabs button { border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; padding: 0 2px; }
-    .library-tabs button[aria-selected="true"] { color: #b9edcc; border-bottom: 3px solid #b9edcc; }
+    .library-tabs button[aria-selected="true"] { color: var(--button); border-bottom: 3px solid var(--button); }
     .phase-picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 5px; }
     .phase-choice { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 2px; font-size: 11px; line-height: 1.25; }
     .phase-choice canvas { width: 26px; height: 26px; }
-    .phase-choice.is-active { background: #b9edcc; color: #14271f; border-color: #b9edcc; }
+    .phase-choice.is-active { background: var(--button); color: var(--button-ink); border-color: var(--button); }
     .sprunki-picker { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 4px; }
     .sprunki-choice { position: relative; min-height: 0; padding: 2px; font-size: 9px; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .sprunki-choice img { width: 28px; height: 29px; object-fit: contain; }
     .sprunki-choice span { max-width: 100%; overflow-wrap: anywhere; }
-    .sprunki-choice.is-active { border-color: #b9edcc; background: #284338; }
-    .sprunki-choice.is-active::after { content: "✓"; position: absolute; top: 1px; right: 3px; color: #b9edcc; font-size: 10px; }
+    .sprunki-choice.is-active { border-color: var(--button); background: #284338; }
+    .sprunki-choice.is-active::after { content: "✓"; position: absolute; top: 1px; right: 3px; color: var(--button); font-size: 10px; }
     [hidden] { display: none !important; }
     .controls { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) repeat(2, 64px); gap: 8px; align-items: stretch; }
     .controls button, .game-link { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 700; min-height: 48px; }
-    #playButton { background: #b9edcc; color: #14271f; border-color: #b9edcc; }
-    #musicButton[aria-pressed="true"] { background: #493b22; color: #ffda80; border-color: #a08242; }
+    #playButton { background: var(--button); color: var(--button-ink); border-color: var(--button); }
+    #musicButton[aria-pressed="true"] { background: var(--game-gold, #f4cc72); color: var(--button-ink); border-color: var(--game-gold, #f4cc72); }
     .button-icon { font-size: 21px; line-height: 1; }
     .game-link { font-size: 9px; text-align: center; }
     .game-link .button-icon { display: block; font-size: 16px; margin-bottom: 3px; }
     .quiz { display: grid; grid-template-rows: 44px minmax(88px, 1fr) 44px; gap: 4px; min-height: 0; }
-    .quiz-prompt { border: 0; background: transparent; font-size: 16px; line-height: 1.3; font-weight: 800; color: #ffda80; padding: 0 2px; }
+    .quiz-prompt { border: 0; background: transparent; font-size: 16px; line-height: 1.3; font-weight: 800; color: var(--game-gold, #f4cc72); padding: 0 2px; }
     .quiz-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 4px; }
-    .quiz-options button { display: grid; place-items: center; min-height: 42px; padding: 0; overflow: hidden; }
+    .quiz-options button { display: grid; place-items: center; min-height: 42px; padding: 0; }
     .quiz-options canvas { width: 64px; height: 64px; }
-    .quiz-options .correct { border-color: #b9edcc; background: #365c48; }
-    .quiz-options .try-again { border-color: #f4b183; }
+    .quiz-options .correct { border-color: var(--button); background: #365c48; }
+    .quiz-options .try-again { border-color: var(--game-coral, #f4a996); }
     .quiz-footer { display: grid; grid-template-columns: minmax(0, 1fr) 82px; gap: 8px; align-items: center; }
-    .quiz-result { text-align: center; font-size: 13px; line-height: 1.3; white-space: pre-line; color: #ffda80; }
+    .quiz-result { text-align: center; font-size: 13px; line-height: 1.3; white-space: pre-line; color: var(--game-gold, #f4cc72); }
     #quizNext { height: 44px; font-size: 14px; }
-    .quiz-mask { display: none; width: 144px; height: 144px; flex: 0 0 auto; place-items: center; font: 48px/1 Arial, sans-serif; color: #ffda80; }
+    .quiz-mask { display: none; width: 144px; height: 144px; flex: 0 0 auto; place-items: center; font: 48px/1 Arial, sans-serif; color: var(--game-gold, #f4cc72); }
     .phase-strip.is-masked #phaseMoon { display: none; }
     .phase-strip.is-masked .quiz-mask { display: grid; }
     body.in-quiz .phase-name { font-size: 18px; }
     .phase-strip.is-continuous .phase-name { font-size: 18px; }
-    .audio-status { position: fixed; bottom: 86px; left: 50%; transform: translateX(-50%); z-index: 3; background: #492f22; color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; max-width: 90%; }
+    .audio-status { position: fixed; bottom: 86px; left: 50%; transform: translateX(-50%); z-index: 3; background: var(--game-coral, #f4a996); color: var(--button-ink); padding: 8px 16px; border-radius: 8px; font-size: 13px; max-width: 90%; }
     @media (max-width: 759px) {
       .scene-footer .progress-dots { display: none; }
       .quiz-options canvas { width: 56px; height: 56px; }
@@ -105,7 +106,7 @@
     }
     @media (max-width: 759px) and (max-height: 700px) {
       body { padding: max(4px, env(safe-area-inset-top)) 8px max(4px, env(safe-area-inset-bottom)); }
-      main { min-height: 540px; height: calc(100svh - 8px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); grid-template-rows: minmax(144px, 1fr) 76px 256px 48px; gap: 5px; }
+      main { min-height: 540px; height: calc(100svh - max(4px, env(safe-area-inset-top)) - max(4px, env(safe-area-inset-bottom))); grid-template-rows: minmax(144px, 1fr) 76px 256px 48px; gap: 5px; }
       #phaseMoon { width: 74px; height: 74px; }
       .quiz-mask { width: 74px; height: 74px; }
       .phase-name { font-size: 22px; }
@@ -115,16 +116,18 @@
       .phase-choice canvas { width: 23px; height: 23px; }
     }
     @media (min-width: 760px) and (max-height: 650px) {
-      .quiz-options canvas { width: 40px; height: 40px; }
-      main { min-height: 350px; grid-template-rows: minmax(80px, 1fr) 210px 48px; gap: 8px 20px; }
-      #phaseMoon { width: 90px; height: 90px; }
-      .quiz-mask { width: 90px; height: 90px; }
-      .library { grid-template-rows: 22px minmax(0, 1fr); gap: 4px; }
+      main { min-height: 480px; grid-template-rows: minmax(100px, 1fr) 300px 48px; gap: 8px 20px; }
+      #phaseMoon, .quiz-mask { width: 96px; height: 96px; }
+      .phase-strip { gap: 16px; padding: 0; }
+      .phase-name { font-size: 24px; }
+      .library { grid-template-rows: 40px minmax(0, 1fr); gap: 8px; }
     }
     @media (min-width: 560px) and (max-height: 500px) {
+      .scene-actions { gap: 2px; }
+      .scene-actions .guess-link { padding: 4px 2px; font-size: 11px; }
       .quiz-options canvas { width: 40px; height: 40px; }
       body { padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
-      main { width: 100%; min-height: 342px; height: calc(100svh - 8px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr); grid-template-rows: minmax(68px, 1fr) 210px 48px; gap: 8px 12px; }
+      main { width: 100%; min-height: 342px; height: calc(100svh - max(4px, env(safe-area-inset-top)) - max(4px, env(safe-area-inset-bottom))); grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr); grid-template-rows: minmax(68px, 1fr) 210px 48px; gap: 8px 12px; }
       .scene { grid-column: 1; grid-row: 1 / 3; }
       .phase-strip { grid-column: 2; grid-row: 1; gap: 8px; padding: 0; }
       #phaseMoon, .quiz-mask { width: 64px; height: 64px; }
@@ -149,18 +152,68 @@
       .quiz-options canvas { width: 36px; height: 36px; }
       #quizNext { height: 36px; }
     }
+    html.is-embedded .game-link { display: none; }
+    html.is-embedded .controls { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    @media (max-width: 360px) {
+      .phase-choice { padding: 1px; gap: 1px; font-size: 10px; line-height: 1.2; }
+      .phase-choice canvas { width: 19px; height: 19px; }
+      .sprunki-choice { padding: 1px 0; }
+    }
+    @media (max-width: 559px) and (max-height: 550px) {
+      html.is-embedded main { min-height: 0; grid-template-rows: minmax(120px, 1fr) 76px 225px 48px; }
+      html.is-embedded .phase-choice { font-size: 9px; }
+      html.is-embedded .quiz-options canvas { width: 40px; height: 40px; }
+      html.is-embedded .sprunki-choice { padding: 1px 0; }
+      html.is-embedded .sprunki-choice img { width: 19px; height: 19px; }
+    }
+    @media (max-width: 559px) and (max-height: 500px) {
+      html.is-embedded main { min-height: 0; grid-template-rows: minmax(96px, 1fr) 64px 185px 48px; }
+      html.is-embedded .phase-strip { gap: 8px; padding: 0; }
+      html.is-embedded #phaseMoon, html.is-embedded .quiz-mask { width: 56px; height: 56px; }
+      html.is-embedded .phase-name { font-size: 18px; line-height: 1.3; }
+      html.is-embedded .small-label { font-size: 10px; }
+      html.is-embedded .library { grid-template-rows: 28px minmax(0, 1fr); gap: 4px; }
+      html.is-embedded .phase-choice { padding: 1px; gap: 1px; line-height: 1.2; }
+      html.is-embedded .phase-choice canvas { width: 18px; height: 18px; }
+      html.is-embedded .sprunki-picker { overflow-y: auto; grid-template-rows: repeat(5, 44px); align-content: start; }
+      html.is-embedded .sprunki-choice img { width: 25px; height: 25px; }
+      html.is-embedded .quiz { grid-template-rows: 32px minmax(72px, 1fr) 40px; }
+      html.is-embedded .quiz-prompt { font-size: 12px; }
+      html.is-embedded .quiz-options button { min-height: 34px; }
+      html.is-embedded .quiz-options canvas { width: 32px; height: 32px; }
+      html.is-embedded .quiz-result { font-size: 11px; }
+      html.is-embedded #quizNext { height: 40px; }
+    }
+    .scene-actions .album-button { flex: 0 1 auto; width: auto; padding: 0 10px; font-size: 12px; font-weight: 800; color: var(--button); }
+    .scene-actions .local-menu { flex: 0 0 44px; width: 44px; font-size: 24px; }
+    .phase-choice.is-found { box-shadow: inset 0 -3px var(--game-gold, #f4cc72); }
+    .moon-album { width: min(680px, calc(100% - 24px)); max-height: calc(100svh - 24px); padding: 16px; color: var(--ink); background: var(--sky); border: 1px solid var(--line); border-radius: 8px; }
+    .moon-album::backdrop { background: #000a; }
+    .album-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .album-head h2 { margin: 0; font-size: 22px; }
+    .album-head button { width: 44px; height: 44px; font-size: 24px; }
+    #albumStatus { color: var(--game-gold, #f4cc72); margin: 8px 0; font-size: 14px; }
+    .album-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .album-grid button { display: grid; justify-items: center; align-content: center; min-height: 76px; gap: 3px; padding: 4px; font-size: 12px; line-height: 1.3; }
+    .album-grid button:disabled { opacity: 1; color: var(--muted); }
+    .album-grid canvas, .album-missing { width: 40px; height: 40px; }
+    .album-missing { display: grid; place-items: center; color: var(--muted); font-size: 24px; }
+    .album-grid .collected { border-color: var(--button); background: #284338; }
+    @media (max-width: 400px) { .album-grid button { font-size: 10px; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
   </style>
+  <link rel="stylesheet" href="games-theme.css?v=20260907-fun">
+  <script src="games-theme.js?v=20260907-fun"></script>
+  <script src="game-navigation.js?v=20260907-fun" defer></script>
 </head>
-<body>
+<body class="game-page" data-game="moon">
   <main aria-label="月の満ち欠けをみるゲーム">
     <section class="scene" aria-label="北極側から見た太陽、地球、月の動き">
       <canvas id="space" role="slider" tabindex="0" aria-label="月の位置（北極側から見た図）" title="北極側から見た図。月は反時計回りに進みます。" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0"></canvas>
       <div class="scene-actions">
         <button id="voiceButton" type="button" aria-label="読み上げをオフにする" aria-pressed="true" title="読み上げ">♬</button>
-        <a class="game-link guess-link" href="index.html?game=guess" target="_top" aria-label="あてっこで あそぶ">あてっこ</a>
-        <a class="game-link guess-link" href="index.html?game=food" target="_top" aria-label="ごはんクイズで あそぶ">ごはん</a>
-        <a class="game-link guess-link" href="index.html?game=english" target="_top" aria-label="えいごで あそぶ">えいご</a>
+        <button id="albumButton" class="album-button" type="button" aria-haspopup="dialog" title="みつけた月のずかん">ずかん 0/16</button>
+        <a class="game-link guess-link local-menu" href="index.html?game=moon" target="_top" aria-label="ゲームいちらん" title="ゲームいちらん">☷</a>
         <button id="fullscreenButton" type="button" aria-label="全画面表示" title="全画面表示">⛶</button>
       </div>
       <div class="scene-footer"><span>ほっきょくの うえから</span><span>きょりは めやす</span><div class="progress-dots" id="progressDots" aria-hidden="true"></div></div>
@@ -1384,6 +1437,7 @@
       function speakCurrentPhaseName() {
         playTone();
         if (isQuizActive()) { speakJapanese(phaseSummary.getAttribute("aria-label")); return; }
+        collectObservedMoon();
         speakJapanese(explorationShape().name);
       }
 
@@ -1406,6 +1460,7 @@
             speakJapanese(label.name);
             setPlaying(false);
             snapPhase(phaseAngles[index]);
+            collectObservedMoon();
             draw();
           });
           phaseList.appendChild(button);
@@ -1528,6 +1583,7 @@
         if (hit === "moon" && !isQuizActive()) {
           setPlaying(false);
           snapPhase(phaseAngles[nextPhaseIndex()]);
+          collectObservedMoon();
           speakJapanese(phaseLabels[currentIndex()].name);
         } else if (hit === "earth" && musicEnabled) {
           restartSelectedSprunkiMusic();
@@ -1545,6 +1601,7 @@
         playTone();
         setPlaying(false);
         snapPhase(phaseAngles[nextPhaseIndex()]);
+        collectObservedMoon();
         speakJapanese(phaseLabels[currentIndex()].name);
         draw();
       });
@@ -1553,6 +1610,7 @@
         playTone();
         setPlaying(false);
         snapPhase(0);
+        collectObservedMoon();
         speakJapanese(phaseLabels[0].name);
         draw();
       });
@@ -1630,7 +1688,7 @@
         if (!direction && event.key !== "Home" && event.key !== "End") return;
         event.preventDefault(); setPlaying(false);
         const index = event.key === "Home" ? 0 : event.key === "End" ? 15 : nextPhaseIndex(direction);
-        snapPhase(phaseAngles[index]); draw(); speakJapanese(phaseLabels[index].name);
+        snapPhase(phaseAngles[index]); collectObservedMoon(); draw(); speakJapanese(phaseLabels[index].name);
       });
 
       const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
@@ -1723,7 +1781,8 @@
       }
       // Each mode owns its progress; changing tabs never transfers a question or score.
       const quizSessions = Object.fromEntries(["current", "future"].map(mode => [mode, {
-        question: null, solved: false, stars: 0, deck: [], wrong: new Set(), feedback: ""
+        question: null, solved: false, stars: 0, deck: [], wrong: new Set(), feedback: "",
+        runId: null, completed: 0, firstTry: 0
       }]));
       let quizMode = "current", quizState = quizSessions.current, quizSerial = 0;
       let explorationPhase = phase;
@@ -1763,6 +1822,11 @@
       }
       function nextQuiz() {
         if (quizState.question && !quizState.solved) return;
+        if (!quizState.runId || quizState.completed === 20) {
+          quizState.runId = window.crypto?.randomUUID?.() || "moon-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+          quizState.completed = 0;
+          quizState.firstTry = 0;
+        }
         if (!quizState.deck.length) {
           // Sample the entire cycle afresh, including very thin and almost-full moons.
           const samples = Array.from({ length: 16 }, (_, sector) => ({
@@ -1828,6 +1892,16 @@
             if (id === question.correctOption) {
               state.solved = true;
               state.stars++;
+              state.completed++;
+              if (!state.wrong.size) state.firstTry++;
+              if (state.completed === 20) {
+                try {
+                  Promise.resolve(window.MoonRanking?.complete({
+                    game: "moon", mode: quizMode, runId: state.runId,
+                    metrics: { firstTry: state.firstTry, completed: 20, total: 20 }
+                  })).catch(() => {});
+                } catch { /* Optional ranking must never block the next question. */ }
+              }
               button.classList.remove("try-again");
               button.classList.add("correct");
               quizNext.disabled = false;
@@ -1863,17 +1937,26 @@
         event.currentTarget.textContent = voiceEnabled ? "♬" : "♩";
       });
       const fullscreenButton = document.getElementById("fullscreenButton");
-      if (!document.documentElement.requestFullscreen) fullscreenButton.hidden = true;
+      let fullscreenDocument = document;
+      try {
+        if (window.parent !== window && window.parent.document.getElementById("gameFrame")?.contentWindow === window) {
+          fullscreenDocument = window.parent.document;
+        }
+      } catch {}
+      if (!fullscreenDocument.documentElement.requestFullscreen) fullscreenButton.hidden = true;
       fullscreenButton.addEventListener("click", async () => {
         try {
-          if (document.fullscreenElement) await document.exitFullscreen();
-          else await document.documentElement.requestFullscreen();
+          if (fullscreenDocument.fullscreenElement) await fullscreenDocument.exitFullscreen();
+          else await fullscreenDocument.documentElement.requestFullscreen();
         } catch (error) { fullscreenButton.hidden = true; }
       });
-      document.addEventListener("fullscreenchange", () => {
-        fullscreenButton.setAttribute("aria-label", document.fullscreenElement ? "全画面表示を終了" : "全画面表示");
+      function syncFullscreenState() {
+        fullscreenButton.setAttribute("aria-label", fullscreenDocument.fullscreenElement ? "全画面表示を終了" : "全画面表示");
         resize();
-      });
+      }
+      fullscreenDocument.addEventListener("fullscreenchange", syncFullscreenState);
+      window.addEventListener("pagehide", () => fullscreenDocument.removeEventListener("fullscreenchange", syncFullscreenState));
+      window.addEventListener("pageshow", () => fullscreenDocument.addEventListener("fullscreenchange", syncFullscreenState));
       function pauseForBackground() {
         cancelDrag();
         setPlaying(false);
@@ -1885,9 +1968,76 @@
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) pauseForBackground();
       });
+      const albumKey = "moon-observations-v1";
+      const observedMoons = new Set();
+      try {
+        const saved = JSON.parse(localStorage.getItem(albumKey) || "[]");
+        if (Array.isArray(saved)) saved.forEach(name => {
+          if (phaseLabels.some(label => label.name === name)) observedMoons.add(name);
+        });
+      } catch { /* The album also works when storage is unavailable. */ }
+      const album = document.createElement("dialog");
+      album.className = "moon-album";
+      album.id = "moonAlbum";
+      album.setAttribute("aria-labelledby", "albumTitle");
+      album.innerHTML = '<div class="album-head"><h2 id="albumTitle">つきの ずかん</h2><button type="button" id="albumClose" aria-label="ずかんを閉じる">×</button></div><p id="albumStatus" role="status"></p><div class="album-grid" id="albumGrid"></div>';
+      document.body.append(album);
+      function updateAlbumCount() {
+        document.getElementById("albumButton").textContent = "ずかん " + observedMoons.size + "/16";
+        phaseList.querySelectorAll(".phase-choice").forEach((button, index) => {
+          button.classList.toggle("is-found", observedMoons.has(phaseLabels[index].name));
+        });
+      }
+      function collectObservedMoon() {
+        if (isQuizActive()) return;
+        const index = exactPhaseIndex();
+        if (index < 0 || observedMoons.has(phaseLabels[index].name)) return;
+        observedMoons.add(phaseLabels[index].name);
+        try { localStorage.setItem(albumKey, JSON.stringify([...observedMoons])); } catch { /* Keep session progress. */ }
+        updateAlbumCount();
+      }
+      document.getElementById("albumButton").addEventListener("click", () => {
+        setPlaying(false);
+        cancelDrag();
+        document.getElementById("albumStatus").textContent = observedMoons.size === 16
+          ? "16この おつきさま、ぜんぶ みつけたね！"
+          : observedMoons.size + " / 16 みつけた！";
+        const grid = document.getElementById("albumGrid");
+        grid.replaceChildren();
+        phaseLabels.forEach((label, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          const found = observedMoons.has(label.name);
+          button.disabled = !found;
+          button.classList.toggle("collected", found);
+          button.setAttribute("aria-label", label.name + (found ? "を もういちど みる" : "、まだ みつけていない"));
+          if (found) {
+            const canvas = document.createElement("canvas");
+            canvas.width = canvas.height = 80;
+            canvas.setAttribute("aria-hidden", "true");
+            drawMoonPhase(canvas.getContext("2d"), 40, 40, 35, phaseAngles[index]);
+            button.append(canvas);
+          } else {
+            const missing = document.createElement("span");
+            missing.className = "album-missing"; missing.textContent = "?";
+            missing.setAttribute("aria-hidden", "true"); button.append(missing);
+          }
+          const caption = document.createElement("span"); caption.textContent = label.name;
+          button.append(caption);
+          button.addEventListener("click", () => {
+            if (!found) return;
+            album.close(); selectPanel(document.getElementById("tabMoon"));
+            snapPhase(phaseAngles[index]); draw(); speakJapanese(label.name);
+          });
+          grid.append(button);
+        });
+        album.showModal();
+      });
+      document.getElementById("albumClose").addEventListener("click", () => album.close());
       phaseLabels.forEach(() => document.getElementById("progressDots").append(document.createElement("i")));
 
       buildPhasePicker();
+      updateAlbumCount();
       buildSprunkiPicker();
       updateMusicButton();
       resize();

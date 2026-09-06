@@ -41,6 +41,27 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--cyan); outline-
 .sound { white-space: nowrap; }
 .sound svg, .listen svg { height: 20px; width: 20px; flex-shrink: 0; }
 .listen:disabled { color: var(--muted); }
+.top-actions { display: flex; align-items: center; gap: 8px; }
+.album-button { display: inline-flex; align-items: center; gap: 6px; min-height: 46px; padding: 6px 10px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; font-weight: 800; }
+.album-button svg { width: 30px; height: 30px; }
+.album-button span { white-space: nowrap; }
+.album-dialog { width: min(720px, calc(100% - 24px)); max-height: calc(100svh - 24px); padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); }
+.album-dialog::backdrop { background: rgb(0 0 0 / .7); }
+.album-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.album-heading h2 { font-size: 22px; margin: 0; }
+.album-close { min-width: 44px; min-height: 44px; border: 1px solid var(--line); background: var(--surface); font-size: 24px; }
+.album-status { color: var(--gold); font-size: 14px; min-height: 21px; margin: 8px 0 12px; }
+.album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; max-height: calc(100svh - 160px); overflow-y: auto; padding: 4px; }
+.album-food { display: grid; grid-template-rows: 88px auto; align-items: center; min-width: 0; padding: 8px; background: var(--surface); border: 1px solid var(--line); font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+.album-food:nth-child(3n + 2) { background: #343329; }
+.album-food:nth-child(3n) { background: #263439; }
+.album-food svg { display: block; width: 100%; height: 88px; }
+@media (max-width: 600px) {
+  .top { flex-wrap: wrap; }
+  .top-actions { margin-left: auto; gap: 6px; }
+  .album-button { padding: 4px 6px; min-height: 44px; }
+  .album-button svg { width: 24px; height: 24px; }
+}
 
 .start, .finish { min-height: 0; display: grid; align-content: center; justify-items: center; gap: 8px; text-align: center; }
 .eyebrow { font-size: 12px; line-height: 1.5; color: var(--gold); font-weight: 800; }
@@ -214,12 +235,13 @@ body[data-phase="start"] .app, body[data-phase="finish"] .app { height: auto; mi
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 </style>
-<link rel="stylesheet" href="games-theme.css?v=20260906-ipad">
-<script src="games-theme.js?v=20260906-ipad"></script>
+<link rel="stylesheet" href="games-theme.css?v=20260907-fun">
+<script src="games-theme.js?v=20260907-fun"></script>
+<script src="game-navigation.js?v=20260907-fun" defer></script>
 </head>
 <body class="game-page" data-game="food" data-phase="start">
 <main class="app">
-<header class="top"><div class="brand">ごはん なあに？<small>おいしい もの みつけよう</small></div><button type="button" class="sound" id="sound" aria-pressed="true"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5ZM16 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/></svg><span id="soundLabel">こえ あり</span></button></header>
+<header class="top"><div class="brand">ごはん なあに？<small>おいしい もの みつけよう</small></div><div class="top-actions"><button type="button" class="album-button" id="albumButton" aria-haspopup="dialog" aria-controls="albumDialog"><span id="albumIcon" aria-hidden="true"></span><span id="albumCount">あつめた 0/50</span></button><button type="button" class="sound" id="sound" aria-pressed="true"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5ZM16 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/></svg><span id="soundLabel">こえ あり</span></button></div></header>
 <section id="start" class="start" aria-labelledby="startTitle"><div class="eyebrow">1000もんの おいしい あてっこ</div><div class="hero" id="hero" aria-hidden="true"></div><h1 id="startTitle">ごはん なあに？</h1><p class="intro">えを たっぷして えらぼう！</p><h2 class="difficulty-title" id="difficultyTitle">むずかしさを えらぼう</h2><div class="difficulty-choices" id="difficultyChoices" role="radiogroup" aria-labelledby="difficultyTitle" aria-describedby="difficultyHelp"><button type="button" class="difficulty-choice" id="difficultyEasy" data-difficulty="easy" role="radio" aria-checked="true" tabindex="0">やさしい<small>400もん</small></button><button type="button" class="difficulty-choice" id="difficultyNormal" data-difficulty="normal" role="radio" aria-checked="false" tabindex="-1">ふつう<small>350もん</small></button><button type="button" class="difficulty-choice" id="difficultyHard" data-difficulty="hard" role="radio" aria-checked="false" tabindex="-1">むずかしい<small>250もん</small></button></div><p class="difficulty-help" id="difficultyHelp" aria-live="polite"></p><button class="primary" id="startButton" type="button">あそぶ →</button><div><span class="stamp">ごもんで ほしを あつめよう</span></div></section>
 <section id="play" class="play" hidden aria-label="ごはん くいず">
   <div class="question-panel">
@@ -235,6 +257,7 @@ body[data-phase="start"] .app, body[data-phase="finish"] .app { height: auto; mi
 <section id="finish" class="finish" hidden aria-labelledby="finishTitle"><div class="finish-stars" aria-label="ほし いつつ">★★★★★</div><h1 id="finishTitle" tabindex="-1">ぜんぶ できたね！</h1><p id="finishLevel"></p><p>おいしい ものを<br>いつつ みつけたね。</p><div class="finish-foods" id="finishFoods" aria-hidden="true"></div><div class="finish-actions"><button class="primary" id="again" type="button">もういちど あそぶ ↻</button><button class="secondary" id="finishDifficulty" type="button">むずかしさを かえる</button></div></section>
 <footer class="foot"><p class="audio-note" id="audioNote" role="status" hidden>こえが でないときは、おとなと いっしょに よんでね。</p><a href="index.html" target="_top">← げーむ いちらん</a><p>ゆっくりで だいじょうぶ。なんどでも！</p></footer>
 </main><noscript>あそぶには、ぶらうざの じゃばすくりぷとを おんにしてね。</noscript>
+<dialog class="album-dialog" id="albumDialog" aria-labelledby="albumTitle" aria-describedby="albumStatus"><div class="album-heading"><h2 id="albumTitle">おいしい あるばむ</h2><button type="button" class="album-close" id="albumClose" aria-label="とじる" autofocus>×</button></div><p class="album-status" id="albumStatus" role="status"></p><div class="album-grid" id="albumGrid"></div></dialog>
 <script src="food-quiz-bank.js?v=20260906-1000"></script>
 <script>
 'use strict';
@@ -253,6 +276,52 @@ window.FoodQuiz = (() => {
   const seen = new Map(levels.map(level => [level.id, new Set()]));
   const levelButtons = [...$('difficultyChoices').querySelectorAll('[data-difficulty]')];
   const svg = id => foodById.get(id).svg;
+  const albumStorageKey = 'moon-food-album-v1';
+  function readAlbum() {
+    try {
+      const raw = window.localStorage.getItem(albumStorageKey);
+      if (!raw || raw.length > 16384) return [];
+      const ids = JSON.parse(raw);
+      return Array.isArray(ids) ? ids.filter(id => typeof id === 'string' && foodById.has(id)) : [];
+    } catch { return []; }
+  }
+  const collected = new Set(readAlbum());
+  function updateAlbumCount() {
+    $('albumCount').textContent = 'あつめた ' + collected.size + '/' + foods.length;
+    $('albumButton').setAttribute('aria-label', 'おいしい あるばむ、' + collected.size + 'こ');
+  }
+  function collectFood(id) {
+    for (const savedId of readAlbum()) collected.add(savedId);
+    const isNew = !collected.has(id);
+    collected.add(id);
+    // Storage is optional: the in-memory album survives every round even if saving fails.
+    try { window.localStorage.setItem(albumStorageKey, JSON.stringify([...collected])); } catch {}
+    updateAlbumCount();
+    return isNew;
+  }
+  function openAlbum() {
+    if ($('albumDialog').open) return;
+    stopSpeech();
+    for (const savedId of readAlbum()) collected.add(savedId);
+    updateAlbumCount();
+    $('albumStatus').textContent = collected.size ? collected.size + 'こ あつまったよ！' + (sound ? '' : ' こえ なし') : 'まだ 0こ';
+    $('albumGrid').replaceChildren();
+    for (const food of foods.filter(food => collected.has(food.id))) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'album-food';
+      button.dataset.food = food.id;
+      button.setAttribute('aria-label', food.name);
+      button.innerHTML = food.svg + '<span>' + food.name + '</span>';
+      button.addEventListener('click', () => {
+        if (!$('albumDialog').open || !button.isConnected) return;
+        $('albumStatus').textContent = food.name + (sound ? '' : '、こえ なし');
+        speak(food.name);
+      });
+      $('albumGrid').append(button);
+    }
+    $('albumDialog').showModal();
+  }
   function shuffle(items) {
     const result = [...items];
     for (let i = result.length - 1; i > 0; i--) {
@@ -263,6 +332,12 @@ window.FoodQuiz = (() => {
   }
   let phase = 'start', difficulty = 'easy', deck = [], index = 0;
   let answered = false, stars = 0, sound = true, speechToken = 0, session = 0;
+  let firstAttempt = true, firstTry = 0, runId = '';
+  function newRunId() {
+    try { return window.crypto.randomUUID(); } catch {
+      return 'food-' + Date.now().toString(36) + '-' + session + '-' + Math.random().toString(36).slice(2);
+    }
+  }
   function stopSpeech() {
     speechToken++;
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
@@ -329,6 +404,7 @@ window.FoodQuiz = (() => {
   }
   function showQuestion() {
     answered = false;
+    firstAttempt = true;
     const question = deck[index], currentSession = session;
     $('prompt').textContent = question.clue;
     $('feedback').textContent = 'えを たっぷしてね';
@@ -356,6 +432,8 @@ window.FoodQuiz = (() => {
     stopSpeech();
     session++;
     deck = buildDeck();
+    runId = newRunId();
+    firstTry = 0;
     index = 0;
     stars = 0;
     answered = false;
@@ -379,16 +457,19 @@ window.FoodQuiz = (() => {
     if (phase !== 'play' || answered) return;
     const question = deck[index];
     if (id !== question.answer) {
+      firstAttempt = false;
       $('feedback').textContent = 'もういちど えらんでみよう！';
       speak('もういちど えらんでみよう！ ' + question.clue);
       return;
     }
     answered = true;
+    if (firstAttempt) firstTry++;
     stars++;
+    const isNewFood = collectFood(id);
     button.classList.add('correct');
     $('cards').querySelectorAll('button').forEach(card => { card.disabled = true; });
     const name = foodById.get(id).name;
-    $('feedback').textContent = 'せいかい！ ' + name + ' だね！';
+    $('feedback').textContent = 'せいかい！ ' + name + (isNewFood ? ' あつめたよ！' : ' だね！');
     $('feedback').className = 'feedback success';
     $('next').textContent = index === 4 ? 'できた！ →' : 'つぎへ →';
     $('next').hidden = false;
@@ -404,6 +485,9 @@ window.FoodQuiz = (() => {
     $('finishFoods').innerHTML = deck.map(question => svg(question.answer)).join('');
     $('finishTitle').focus({ preventScroll: true });
     speak('ぜんぶ できたね！ おいしい ものを いつつ みつけたね。');
+    try {
+      window.MoonRanking?.complete({ game: 'food', mode: difficulty, runId, metrics: { firstTry, completed: 5, total: 5 } })?.catch?.(() => {});
+    } catch {}
   }
   for (const button of levelButtons) {
     const level = levelById.get(button.dataset.difficulty);
@@ -420,6 +504,14 @@ window.FoodQuiz = (() => {
     });
   }
   $('hero').innerHTML = svg(foodById.has('onigiri') ? 'onigiri' : foods[0].id);
+  $('albumIcon').innerHTML = $('hero').innerHTML;
+  updateAlbumCount();
+  $('albumButton').addEventListener('click', openAlbum);
+  $('albumClose').addEventListener('click', () => $('albumDialog').close());
+  $('albumDialog').addEventListener('close', () => {
+    stopSpeech();
+    $('albumButton').focus({ preventScroll: true });
+  });
   $('startButton').addEventListener('click', start);
   $('again').addEventListener('click', start);
   $('changeDifficulty').addEventListener('click', returnToStart);
@@ -442,7 +534,7 @@ window.FoodQuiz = (() => {
     foods: foods.map(food => ({ ...food })),
     questions: questions.map(question => ({ ...question, choices: [...question.choices] })),
     levels: levels.map(level => ({ ...level })),
-    getState: () => ({ phase, difficulty, index, answered, stars, questionId: deck[index]?.id ?? null,
+    getState: () => ({ phase, difficulty, index, answered, stars, collectedIds: [...collected], questionId: deck[index]?.id ?? null,
       question: deck[index] ? { ...deck[index], choices: [...deck[index].choices] } : null,
       deck: deck.map(question => ({ ...question, choices: [...question.choices] })) })
   };

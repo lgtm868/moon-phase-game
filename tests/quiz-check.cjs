@@ -10,6 +10,10 @@ const phases = Array.from({ length: 8 }, (_, id) => id);
 const cardinalNames = ['しんげつ', 'じょうげん', 'まんげつ', 'かげん'];
 const normalize = a => ((a % TAU) + TAU) % TAU;
 const distance = (a, b) => Math.min(normalize(a - b), normalize(b - a));
+const SYNODIC_DAYS = 29.53059;
+// Advance elapsed lunar age, independently of the application's angular step.
+const afterDays = (source, days) => ((source / TAU * SYNODIC_DAYS + days) % SYNODIC_DAYS) / SYNODIC_DAYS * TAU;
+const targetFor = (source, mode) => mode === 'future' ? afterDays(source, 7) : source;
 const cardinal = a => cardinalNames.findIndex((_, i) => distance(a, i * QUARTER) < EPS);
 const shapeName = a => {
   const anchor = cardinal(a);
@@ -330,7 +334,7 @@ async function checkDeck(browser, seed, errors) {
       assert.deepEqual(q.correct, []); assert.deepEqual(q.wrong, []);
       assert.ok(q.nextDisabled && q.buttonStates.every(b => !b.disabled));
       assert.equal(Number(q.result.match(/★\s*(\d+)/)?.[1]), index);
-      const target = normalize(q.source + (mode === 'future' ? QUARTER : 0));
+      const target = targetFor(q.source, mode);
       const answers = q.shapes.filter(s => distance(s.angle, target) < EPS);
       assert.equal(answers.length, 1, `${label}: exactly one correct angle`);
       const answer = answers[0], wrong = q.shapes.find(s => s.id !== answer.id);
@@ -373,9 +377,11 @@ async function checkDeck(browser, seed, errors) {
       if (mode === 'future') assert.deepEqual(solved.summary, q.summary, `${label}: entire source summary fixed`);
       await checkSummary(page, solved, `${label}: solved`);
       if (mode === 'future' && [2, 3].includes(anchor)) {
-        assert.ok(distance(answer.angle, anchor === 3 ? 0 : 3 * QUARTER) < EPS);
+        assert.ok(distance(answer.angle, afterDays(q.source, 7)) < EPS);
+        assert.ok(distance(answer.angle, anchor === 3 ? 0 : 3 * QUARTER) > .08,
+          `${label}: seven days must not silently become a quarter cycle`);
         assert.equal(solved.summary.name, cardinalNames[anchor]);
-        assert.equal(solved.result.split('\n')[1], `こたえ：${anchor === 3 ? 'しんげつ' : 'かげん'}`);
+        assert.equal(solved.result.split('\n')[1], `こたえ：${shapeName(target)}`);
         await checkSourceReadAloud(page, solved, label);
         references.add(anchor);
       }
@@ -404,7 +410,7 @@ async function checkDeck(browser, seed, errors) {
         `${mode}: jittered continuous angles, not a 16/8-phase grid`);
       assert.ok(new Set(questions.map(q => q.answerId)).size > 1, `${mode}: randomized correct local ID`);
     }
-    assert.deepEqual([...references].sort(), [2, 3], 'pi -> 3pi/2 and 3pi/2 -> 0 regressions');
+    assert.deepEqual([...references].sort(), [2, 3], 'full and last-quarter sources advance seven days, not 90 degrees');
     return deck;
   } finally { await page.close(); }
 }
@@ -412,9 +418,23 @@ async function checkDeck(browser, seed, errors) {
 async function checkBoundaryPhases(browser, errors) {
   const covered = new Set();
   let tinyWaning = 0, rejected = 0, checked = 0;
-  // Fixed jitter forces sector endpoints and two visible, sub-1% waning crescents.
+  const sourceAtNew = (SYNODIC_DAYS - 7) / SYNODIC_DAYS * TAU;
+  const jitterAt = source => source / TAU * 16 % 1;
+  const fixtures = [
+    { name: 'sector-start', jitter: 1e-6 },
+    { name: 'sector-end', jitter: 1 - 1e-6 },
+    ...[-1e-6, 0, 1e-6].map(delta => ({
+      name: `seven-day-wrap-${delta}`, jitter: jitterAt(sourceAtNew + delta)
+    })),
+    ...[.12, .18].map(delta => ({
+      name: `visible-waning-${delta}`, jitter: jitterAt(sourceAtNew - delta), tinySource: sourceAtNew - delta
+    }))
+  ];
+  assert.ok(Math.abs(sourceAtNew * 180 / Math.PI - 274.6647594917677) < 1e-10,
+    'seven-day wrap is after last quarter, not at 270 degrees');
+  // Fixed jitter forces both sides of the actual seven-day wrap and sub-1% crescents.
   // Drive the real deck through its UI; do not replace production answer/shape helpers.
-  for (const jitter of [.55, .7, 1e-6, 1 - 1e-6]) {
+  for (const { name, jitter, tinySource } of fixtures) {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     page.on('pageerror', error => errors.push(error.message));
     try {
@@ -425,19 +445,22 @@ async function checkBoundaryPhases(browser, errors) {
       await page.locator('#voiceButton').click();
       for (const mode of Object.keys(modes)) {
         await page.locator(modes[mode].tab).click();
+        const sourceCoverage = [];
         for (let index = 0; index < 20; index++) {
-          const q = await snapshot(page), label = `boundary ${mode}, jitter ${jitter}, source ${q.source}`;
-          const target = normalize(q.source + (mode === 'future' ? QUARTER : 0));
+          const q = await snapshot(page), label = `boundary ${name}, ${mode}, source ${q.source}`;
+          sourceCoverage.push({ angle: q.source, type: q.sourceType });
+          const target = targetFor(q.source, mode);
           const answers = q.shapes.filter(s => distance(s.angle, target) < EPS);
           assert.equal(answers.length, 1, `${label}: exactly one geometrically correct option`);
           const answer = answers[0];
-          const nearLast = mode === 'future' && q.source < 3 * QUARTER
-            && q.source > 3 * QUARTER - .2 && jitter > .5 && jitter < .8;
+          const tiny = mode === 'future' && tinySource !== undefined && distance(q.source, tinySource) < EPS;
           const endpoint = distance(target, 0) < 1e-5;
-          if (nearLast || endpoint) {
+          if (tiny || endpoint) {
             checked++;
+            await checkPixels(page, label);
+            await checkSummary(page, q, label);
             if (endpoint) {
-              const side = target === 0 ? 'new' : target < Math.PI ? 'after' : 'before';
+              const side = distance(target, 0) < EPS ? 'new' : target < Math.PI ? 'after' : 'before';
               covered.add(`${mode}:${side}`);
               assert.equal(answer.name, side === 'new' ? 'しんげつ'
                 : side === 'after' ? 'しんげつの すこしあと' : 'しんげつの すこしまえ', label);
@@ -449,7 +472,7 @@ async function checkBoundaryPhases(browser, errors) {
               assert.equal(shape.label, `${shape.name}、あかるいところ ${illuminationLabel(shape.angle)}`,
                 `${label}: precise accessible illumination`);
             }
-            if (nearLast) {
+            if (tiny) {
               tinyWaning++;
               assert.ok(target > TAU - .2 && target < TAU, `${label}: target is before new, not after`);
               assert.ok((1 - Math.cos(target)) / 2 < .01, `${label}: genuinely sub-1% illuminated`);
@@ -482,6 +505,10 @@ async function checkBoundaryPhases(browser, errors) {
               assert.deepEqual(attempt.summary, q.summary);
               rejected++;
             }
+            const wrongState = await snapshot(page);
+            await page.locator(modes[mode === 'future' ? 'current' : 'future'].tab).click();
+            await page.locator(modes[mode].tab).click();
+            assert.deepEqual(await snapshot(page), wrongState, `${label}: boundary retries survive mode switches`);
           }
           await page.locator(`#quizOptions button[data-phase="${answer.id}"]`).click();
           const solved = await snapshot(page);
@@ -491,15 +518,25 @@ async function checkBoundaryPhases(browser, errors) {
           assert.equal(solved.nextDisabled, false);
           assert.equal(Number(solved.result.match(/★\s*(\d+)/)?.[1]), index + 1);
           if (mode === 'future') assert.deepEqual(solved.summary, q.summary, `${label}: source summary unchanged`);
+          if (tiny || endpoint) {
+            await page.locator('#tabMoon').click();
+            await page.locator(modes[mode].tab).click();
+            assert.deepEqual(await snapshot(page), solved, `${label}: solved boundary survives exploration`);
+          }
           await page.locator('#quizNext').click();
         }
+        assert.deepEqual(sourceCoverage.filter(q => q.type === 'anchor').map(q => cardinal(q.angle)).sort(),
+          [0, 1, 2, 3], `${name} ${mode}: all four anchors retained`);
+        assert.deepEqual(sourceCoverage.filter(q => q.type === 'continuous').map(q => Math.floor(q.angle / TAU * 16)).sort((a, b) => a - b),
+          Array.from({ length: 16 }, (_, i) => i), `${name} ${mode}: all 16 source sectors retained`);
       }
     } finally { await page.close(); }
   }
-  assert.equal(tinyWaning, 2, 'both near-last-quarter source regressions exercised');
+  assert.equal(tinyWaning, 2, 'both sub-1% waning targets before the seven-day wrap exercised');
   assert.deepEqual([...covered].sort(), ['current:after', 'current:before', 'current:new',
     'future:after', 'future:before', 'future:new'], 'both sides and exact new exercised in each mode');
-  return { cases: checked, tinyWaning, wrongAnswersRejected: rejected };
+  return { cases: checked, decks: fixtures.length * 2, questions: fixtures.length * 40,
+    tinyWaning, wrongAnswersRejected: rejected };
 }
 
 (async () => {

@@ -5,8 +5,8 @@
 The Sun is on the left. The orbital view always lights the left hemisphere of
 the Moon. The Earth-facing view uses the surface-normal dot product with the
 light vector `(sin(phase), 0, -cos(phase))`. New moon, first quarter, full moon,
-and last quarter occur at 0, 90, 180, and 270 degrees. The northern-hemisphere
-view shows waxing light on the right and waning light on the left.
+and last quarter occur at 0, 90, 180, and 270 degrees. With lunar north upright,
+the Earth view shows waxing light on the right and waning light on the left.
 
 The orbital diagram is explicitly viewed from the north-pole side. With the
 Sun at the left, new/first-quarter/full/last-quarter positions are left/bottom/
@@ -21,6 +21,12 @@ substitute the Earth-view phase rendering for this top-down view.
 Traditional lunar-day names have approximate positions in a mean 29.53059-day
 cycle, not 16 equal angular sectors. These are illustrative positions, not a
 calendar or an ephemeris. Actual lunar age and traditional calendar dates vary.
+Calendar labels appear only at their deliberately selected sample angles and
+are marked as approximate calendar names. During continuous motion or dragging,
+the summary and speech describe the actual shape; a nearest picker must never
+turn a crescent/gibbous moon into a named half moon. Only an exactly matching
+sample is highlighted. Forward/back navigation selects the next/previous angle
+in that direction, rather than skipping an upcoming sample via nearest rounding.
 The physical sizes and distances are not to scale. This is a phase model, not
 an eclipse simulation.
 
@@ -31,9 +37,26 @@ Sources:
   https://svs.gsfc.nasa.gov/4720/
 
 The embedded lunar albedo image is the 2019 LROC WAC color mosaic from NASA SVS.
-It is projected onto a sphere in Canvas. Geometry and texture samples are
+It is projected onto a sphere in Canvas. The Earth view uses the equatorial
+near-side projection; the overhead view uses the northern polar hemisphere,
+rotated so the prime-meridian face remains directed toward Earth. It must not
+reuse an unrotated Earth-facing surface for the north-pole camera.
+Geometry and texture samples are
 cached separately from phase lighting. Cache sizes are bounded. The embedded
 image avoids remote image requests and file-origin canvas restrictions.
+Lighting-cache keys retain vector precision; coarse quantization would make a
+frame depend on which nearby angle was rendered first.
+Surface/frame keys also distinguish camera orientation and synchronous rotation.
+Parallel light arrows and a visible scale note clarify that the drawn nearby
+Sun icon is not a finite-distance point light. The diagram omits scale,
+inclination and libration; Earth-view images fix lunar north upward, not the
+local horizon at a particular place/time.
+
+The toolbar, orbital canvas and footer occupy separate grid tracks. Canvas
+resize and pointer geometry use the canvas bounds, not its larger container.
+This prevents links from hiding the upper Moon on short displays.
+Pointer cancellation, capture loss, backgrounding and resizing terminate a
+drag without new speech. A mouse hover cannot continue an abandoned drag.
 
 ## Quiz model
 
@@ -60,8 +83,9 @@ never rounded to 0%; likewise near-full non-full moons are not announced as 100%
 Thumbnails are enlarged where layout permits, but the illuminated shape is not
 artificially thickened. At finite screen resolution a very thin crescent can
 still be subpixel; the phase angle and grading retain their exact values.
-One week is modeled as one quarter of the mean 29.53059-day cycle (7.38 days).
-The displayed orientation is the same northern-hemisphere convention as the
+One week is seven elapsed days in the mean 29.53059-day cycle (about 85.335 degrees),
+not a quarter turn (7.38 days). This is still a uniform-speed teaching model.
+The displayed orientation is the same lunar-north-up convention as the
 main renderer; this is not an exact-date or observing-time prediction.
 
 Questions and options are immutable. The diagram is frozen to the question,
@@ -72,8 +96,9 @@ diagram and the "current Moon" summary still show the original source. The
 answer is identified separately by the selected option and result label.
 Replacing the source with the future answer would change the visible question
 while retaining the old grading result, so tests explicitly forbid that change.
-In particular, last quarter leads to new moon, and full moon leads to last
-quarter after about one week. Summary speech always describes its shown Moon.
+In particular, last quarter is still just before new moon after seven modeled
+days, and a full moon is still just before last quarter. Summary speech always
+describes its shown Moon.
 Only the explicit Next button advances. Tab changes and backgrounding retain
 the question, result and score. Leaving the quiz restores the previous
 exploration phase rather than leaking the quiz answer through the phase picker.
@@ -87,7 +112,11 @@ Music starts off. The ON action invokes each selected HTML media element's
 play method inside the user gesture, with real existing audio files and no
 substitute synthesized character music. Selection changes do not restart
 already-playing tracks. Stale play failures are ignored after a newer attempt
-or OFF action. Backgrounding stops music and motion, while preserving the quiz.
+or OFF action. Native media errors after playback starts remove the failed
+track and report the failure; when all tracks fail the button returns to OFF.
+The full selected batch is registered before playback, including synchronous
+failures, so one failed track does not disable other successful tracks.
+Backgrounding stops music and motion, while preserving the quiz.
 The read-aloud toggle is separate from music; character names use English for
 Sprunki and Japanese for the existing Japanese characters.
 
@@ -106,6 +135,10 @@ images, 16 phase selections, drag/keyboard control, phase pixel illumination,
 30 character choices, actual media time progression, OFF, and quiz answers.
 It also checks the index wrapper and piano navigation, delayed/rejected media
 playback, and the file URL with external network blocked.
+Interruption regressions cover seven drag cancellation paths, recovery,
+native mid-playback media errors, synchronous first-track failures and stale
+failures after stopping, retrying or changing the selection.
+`QUALITY_FOCUS=interruptions` runs just those state-transition checks.
 
 `tests/quiz-check.cjs` exercises complete quiz decks, every incorrect choice,
 correct answers, rendered illumination and bright-side direction, duplicate
@@ -120,12 +153,25 @@ cardinal positions against the north-side view, and derives the Earth-view
 lighting from that measured position. It also checks eight-direction dragging
 and counterclockwise progression rather than trusting the phase label alone.
 
+`tests/moon-audit-check.cjs` exercises actual mouse/touch gestures and autoplay
+around the entire orbit, all named samples and continuous shapes, spoken and
+accessible labels, hit targets and text containment at seven viewport sizes.
+It includes 568x320, where two-line questions need a compact type size.
+`MOON_AUDIT_VIEWPORT=568x320` isolates that viewport for diagnosis.
+
+`tests/moon-texture-check.cjs` uses a synthetic latitude/longitude atlas to
+check the polar camera, Earth-facing camera, synchronous rotation and cache
+ordering/eviction without importing the application's projection as an oracle.
+It runs in Node alone, with four deliberately broken negative controls.
+
 Run with Node and Playwright installed:
 
 ```sh
 node tests/quality-check.cjs
 node tests/quiz-check.cjs
 node tests/orbit-check.cjs
+node tests/moon-audit-check.cjs
+node tests/moon-texture-check.cjs
 ```
 
 Optional `PLAYWRIGHT_MODULE` selects an installed Playwright module path;

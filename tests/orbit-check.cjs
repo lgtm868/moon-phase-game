@@ -48,12 +48,26 @@ const directions = [
   { name: 'waning-upper-left', degrees: 315, x: -diagonal, y: -diagonal }
 ];
 const angularDistance = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
+const afterSevenDays = sourceDegrees => {
+  const periodDays = 29.53059, ageDays = sourceDegrees / 360 * periodDays;
+  return ((ageDays + 7) % periodDays) / periodDays * 360;
+};
 const near = (actual, expected, tolerance, label) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${label}: ${actual} vs ${expected}`);
 
 async function geometry(page) {
   const box = await page.locator('#space').boundingBox();
-  assert.ok(box && box.width > 100 && box.height > 100, 'visible orbit canvas');
+  assert.ok(box && box.width > 100 && box.height > 80, 'visible orbit canvas, including compact portrait');
+  const bounds = await page.locator('#space').evaluate(canvas => {
+    const rect = canvas.getBoundingClientRect(), scale = Math.max(1, Math.min(devicePixelRatio || 1, 2));
+    return { width: canvas.width, height: canvas.height,
+      expectedWidth: Math.round(rect.width * scale), expectedHeight: Math.round(rect.height * scale),
+      unobscured: document.querySelector('.scene-actions').getBoundingClientRect().bottom <= rect.top
+        && rect.bottom <= document.querySelector('.scene-footer').getBoundingClientRect().top };
+  });
+  assert.equal(bounds.width, bounds.expectedWidth, 'backing bitmap matches canvas own width');
+  assert.equal(bounds.height, bounds.expectedHeight, 'backing bitmap matches canvas own height');
+  assert.ok(bounds.unobscured, 'toolbar and footer do not cover the orbit canvas');
   return { box, cx: box.width * .58, cy: box.height * .52,
     radius: Math.min(box.width * .32, box.height * .37) };
 }
@@ -63,7 +77,7 @@ async function rasterMoon(page, g) {
     const { width, height } = canvas, sx = width / canvas.clientWidth, sy = height / canvas.clientHeight;
     const data = canvas.getContext('2d').getImageData(0, 0, width, height).data;
     const mask = new Uint8Array(width * height);
-    const band = Math.max(14, Math.min(canvas.clientWidth, canvas.clientHeight) * .052) + 4;
+    const band = Math.max(8, Math.min(canvas.clientWidth, canvas.clientHeight) * .052) + 4;
     // Find the large neutral illuminated component in the orbital annulus.
     // Background stars are tiny; the Sun and Earth are outside this annulus.
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
@@ -96,7 +110,9 @@ async function rasterMoon(page, g) {
 
 async function checkPosition(page, g, direction, label) {
   const actual = await rasterMoon(page, g);
-  assert.ok(actual.count > 100, `${label}: nonblank lunar disk ${JSON.stringify(actual)}`);
+  const moonRadius = Math.round(Math.max(8, Math.min(g.box.width, g.box.height) * .052));
+  assert.ok(actual.count > Math.PI * moonRadius ** 2 * .3,
+    `${label}: substantial illuminated half-disk ${JSON.stringify(actual)}`);
   near(actual.x, g.cx + direction.x * g.radius, 2.5, `${label}: rendered center X`);
   near(actual.y, g.cy + direction.y * g.radius, 2.5, `${label}: rendered center Y`);
   assert.ok(actual.height > actual.width * 1.5, `${label}: top-down disk is a left-lit half`);
@@ -109,7 +125,7 @@ async function checkLight(page, g, direction, index) {
     const sx = canvas.width / canvas.clientWidth, sy = canvas.height / canvas.clientHeight;
     const x = g.cx + direction.x * g.radius, y = g.cy + direction.y * g.radius;
     const sample = (px, py) => [...ctx.getImageData(Math.round(px * sx), Math.round(py * sy), 1, 1).data];
-    const radius = Math.max(14, Math.min(canvas.clientWidth, canvas.clientHeight) * .052);
+    const radius = Math.max(8, Math.min(canvas.clientWidth, canvas.clientHeight) * .052);
     const sun = sample(Math.max(25, canvas.clientWidth * .075), g.cy);
     const left = sample(x - radius * .5, y), right = sample(x + radius * .5, y);
     const phase = document.querySelector('#phaseMoon'), pctx = phase.getContext('2d');
@@ -167,20 +183,25 @@ async function checkProgression(page, g) {
 
 async function checkQuizCardinals(page) {
   let checked = 0;
-  for (const [tab, offset] of [['#tabQuiz', 0], ['#tabChallenge', 90]]) {
+  for (const tab of ['#tabQuiz', '#tabChallenge']) {
     await page.locator(tab).click();
-    const seen = new Set();
+    const seen = new Set(), sectors = [];
     for (let question = 0; question < 20; question++) {
       const source = Number(await page.locator('#quizPanel').getAttribute('data-source-angle')) * 180 / Math.PI;
+      if (await page.locator('#quizPanel').getAttribute('data-source-type') === 'continuous') {
+        sectors.push(Math.floor(source / 360 * 16));
+      }
       const cardinal = directions.find(d => d.degrees % 90 === 0 && angularDistance(source, d.degrees) < 1e-7);
       const choices = await page.locator('#quizOptions button').evaluateAll(buttons => buttons.map(b => ({
         id: b.dataset.phase, degrees: Number(b.dataset.angle) * 180 / Math.PI
       })));
-      const answers = choices.filter(c => angularDistance(c.degrees, (source + offset) % 360) < 1e-7);
+      const target = tab === '#tabChallenge' ? afterSevenDays(source) : source;
+      const answers = choices.filter(c => angularDistance(c.degrees, target) < 1e-7);
       assert.equal(answers.length, 1, 'unique geometrically correct quiz answer');
       const answer = answers[0], wrong = choices.find(c => c.id !== answer.id);
       const g = await geometry(page);
       const originalAngle = await page.locator('#space').getAttribute('aria-valuenow');
+      const originalMoon = await rasterMoon(page, g);
       if (cardinal) {
         seen.add(cardinal.degrees); checked++;
         await checkPosition(page, g, cardinal, `${tab} source ${cardinal.name}`);
@@ -190,6 +211,16 @@ async function checkQuizCardinals(page) {
       }
       await page.locator(`#quizOptions button[data-phase="${answer.id}"]`).click();
       assert.equal(await page.locator('#quizNext').isDisabled(), false, 'correct answer accepted');
+      const solvedMoon = await rasterMoon(page, g);
+      for (const dimension of ['x', 'y', 'width', 'height']) {
+        near(solvedMoon[dimension], originalMoon[dimension], .5,
+          `grading preserves rendered source ${dimension} at every angle`);
+      }
+      // Thresholded antialiased edge pixels may vary; geometry and lit area must not.
+      near(solvedMoon.count, originalMoon.count, Math.max(2, originalMoon.count * .01),
+        'grading preserves illuminated source area');
+      assert.equal(await page.locator('#space').getAttribute('aria-valuenow'), originalAngle,
+        'grading preserves source angle for continuous and cardinal questions');
       if (cardinal) {
         await checkPosition(page, g, cardinal, `${tab} solved preserves SOURCE ${cardinal.name}`);
         assert.equal(await page.locator('#space').getAttribute('aria-valuenow'), originalAngle);
@@ -197,6 +228,8 @@ async function checkQuizCardinals(page) {
       await page.locator('#quizNext').click();
     }
     assert.deepEqual([...seen].sort((a, b) => a - b), [0, 90, 180, 270], `${tab}: bounded deck covers four sources`);
+    assert.deepEqual(sectors.sort((a, b) => a - b), Array.from({ length: 16 }, (_, i) => i),
+      `${tab}: bounded deck covers every continuous source sector`);
   }
   return checked;
 }
@@ -209,7 +242,7 @@ async function checkQuizCardinals(page) {
     ...(process.env.CHROME_EXECUTABLE ? { executablePath: process.env.CHROME_EXECUTABLE } : {}) });
   const errors = [], report = [];
   try {
-    for (const [width, height, deviceScaleFactor] of [[1280, 800, 1], [390, 844, 2], [740, 360, 1]]) {
+    for (const [width, height, deviceScaleFactor] of [[1280, 800, 1], [390, 844, 2], [320, 568, 2], [740, 360, 1]]) {
       const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor, reducedMotion: 'reduce' });
       page.on('pageerror', e => errors.push(e.message));
       page.setDefaultTimeout(10000);
@@ -231,7 +264,7 @@ async function checkQuizCardinals(page) {
         // Non-sequential targets distinguish all quadrants and cross the 0/360 seam.
         for (const index of [0, 4, 2, 6, 1, 5, 3, 7, 0]) {
           const target = directions[index];
-          // Start on a side: the compact layout has real controls over the top arc.
+          // Use varied starting points while checking every target quadrant.
           await dragTo(page, g, directions[index === 0 ? 4 : 0], target);
           const actual = Number(await page.locator('#space').getAttribute('aria-valuenow'));
           assert.ok(angularDistance(actual, target.degrees) <= 1, `${width} drag ${target.name}: ${actual}`);

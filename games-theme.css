@@ -1,0 +1,29 @@
+:root {
+  color-scheme: dark;
+  --game-bg: #151918;
+  --game-surface: #202824;
+  --game-ink: #f4f7f3;
+  --game-muted: #a9b7b0;
+  --game-line: #3b4942;
+  --game-primary: #b9edcc;
+  --game-gold: #f4cc72;
+  --game-coral: #f4a996;
+  --game-cyan: #8edce2;
+  --game-radius: 8px;
+  --game-font: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  font-family: var(--game-font);
+}
+*, *::before, *::after { box-sizing: border-box; letter-spacing: 0; }
+html { background: var(--game-bg); }
+body.game-page { font-family: var(--game-font); background: var(--game-bg); color: var(--game-ink); }
+.game-page :where(button, input, select) { font-family: inherit; }
+.game-page :where(button, a, select, input, summary) { touch-action: manipulation; }
+.game-page :where(button, select) { border-radius: var(--game-radius); }
+.game-page :where(button, a, select, input, summary, [tabindex]):focus-visible { outline: 3px solid var(--game-gold); outline-offset: 3px; }
+.game-page :where(button):disabled { cursor: default; }
+.game-page :where(input[type="range"], input[type="checkbox"]) { accent-color: var(--game-primary); }
+.game-page :where(h1, h2, p) { overflow-wrap: anywhere; }
+.game-page [hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}

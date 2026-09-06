@@ -3,67 +3,449 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#fff8ed">
-<meta name="description" content="えを えらんで あそぶ、４さいからの ごはんクイズ。こえで きける、やさしい ごもん。">
+<meta name="theme-color" content="#151918">
+<meta name="description" content="４さいからの ごはんクイズ。1000もんから、やさしい・ふつう・むずかしいを えらんで、ごもんずつ あそぼう。">
 <title>ごはん なあに？ | Moon Games</title>
 <style>
-:root{color-scheme:light;font-family:"Hiragino Maru Gothic ProN","BIZ UDPGothic","Yu Gothic",Meiryo,sans-serif;color:#543b29;background:#fff8ed;font-synthesis:none}*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{margin:0;background:radial-gradient(ellipse at 10% 5%,#ffe8bd 0,transparent 38%),radial-gradient(ellipse at 95% 90%,#ffead4 0,transparent 36%),#fff8ed}button,a{touch-action:manipulation}button{font:inherit;cursor:pointer;color:inherit}button:disabled{cursor:default}button:focus-visible,a:focus-visible{outline:4px solid #28628d;outline-offset:5px}[hidden]{display:none!important}.app{max-width:1000px;min-height:100svh;margin:auto;padding:24px 32px;display:flex;flex-direction:column}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #e8d8c4;padding-bottom:19px}.brand{font-size:19px;font-weight:900;letter-spacing:.07em}.brand small{font-size:11px;letter-spacing:.2em;display:block;color:#83674c;margin-top:5px}.sound,.listen{border:1px solid #dfc8ae;background:#fffcf6;border-radius:99px;font-size:14px;font-weight:800;padding:12px 17px;min-height:46px}.sound{white-space:nowrap}.sound svg,.listen svg{height:20px;width:20px;vertical-align:middle;margin-right:5px}.start,.finish{text-align:center;padding:36px 0 26px;flex:1}.eyebrow{font-size:13px;color:#956c42;letter-spacing:.2em;font-weight:800}.hero{height:230px;max-width:420px;margin:0 auto}.hero svg{height:100%;width:100%}h1{font-size:clamp(32px,5vw,49px);line-height:1.45;letter-spacing:.07em;margin:15px 0}.intro{font-size:18px;line-height:1.9;margin:12px 0 25px}.primary{border:0;border-radius:19px;min-height:64px;padding:14px 43px;background:#bd4e24;color:#fffdf7;box-shadow:0 6px 0 #8d371d;font-size:23px;font-weight:900;letter-spacing:.05em}.primary:active{transform:translateY(3px);box-shadow:0 3px 0 #8d371d}.play{flex:1;text-align:center;padding-top:23px}.progress{display:flex;align-items:center;justify-content:center;gap:16px}.stars{color:#947755;font-size:29px;letter-spacing:5px}.stars .earned{color:#b97000}.progress-label{font-size:13px;font-weight:800;color:#806349}.prompt{font-size:clamp(25px,4vw,35px);margin:21px auto 15px;line-height:1.7;max-width:23em;white-space:pre-line}.question-number{display:block;font-size:12px;color:#a36634;letter-spacing:.17em;margin-bottom:5px}.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:27px 0 0}.card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;border:2px solid #e6d2ba;border-radius:27px;background:#fffcf6;padding:18px 12px 21px;box-shadow:0 7px 0 #eddfcb;transition:transform .15s,border-color .15s}.card:nth-child(2){background:#fff3db}.card:nth-child(3){background:#f2f5e7}.card:not(:disabled):hover{transform:translateY(-4px);border-color:#bd793a}.card:not(:disabled):active{transform:translateY(3px);box-shadow:0 3px 0 #eddfcb}.card svg{width:100%;height:180px;pointer-events:none}.food-name{font-size:23px;font-weight:900;letter-spacing:.05em;margin-top:12px}.card.correct{border:4px solid #397955;padding:16px 10px 19px;background:#eef7df;box-shadow:0 7px 0 #cbdcb7}.correct:after{content:'○';position:absolute;right:12px;top:8px;font-size:35px;font-weight:900;color:#32704c}.feedback{min-height:33px;margin:24px 0 14px;font-size:20px;font-weight:800;line-height:1.6}.feedback.success{color:#326b46}.next{margin-bottom:8px}.audio-note{font-size:13px;line-height:1.6;color:#806349;margin:15px 0 0}.foot{display:flex;justify-content:space-between;gap:15px;align-items:center;font-size:12px;color:#806349;margin-top:28px;border-top:1px solid #e8d8c4;padding-top:17px}.foot a{color:#765033;min-height:44px;display:flex;align-items:center;text-underline-offset:4px}.finish-stars{color:#b97000;font-size:44px;letter-spacing:7px;margin:20px 0}.finish-foods{display:flex;justify-content:center;gap:5px;max-width:640px;margin:24px auto}.finish-foods svg{width:20%;height:auto}.finish p{font-size:20px;line-height:1.8}.stamp{display:inline-block;background:#eef3d9;color:#526c31;padding:7px 17px;border-radius:99px;font-size:13px;font-weight:800;margin-top:20px}@media(max-width:600px){.app{padding:17px 15px}.top{padding-bottom:14px}.brand{font-size:16px}.brand small{font-size:10px}.sound{font-size:12px;padding:10px 12px}.start,.finish{padding-top:24px}.hero{height:195px}h1{font-size:36px}.intro{font-size:17px}.play{padding-top:20px}.prompt{font-size:25px;margin-top:17px}.cards{gap:9px;margin-top:22px}.card{padding:12px 5px 16px;border-radius:19px}.card svg{height:130px}.food-name{font-size:17px;margin-top:6px;letter-spacing:0}.card.correct{padding:10px 3px 14px}.correct:after{font-size:27px;right:7px;top:4px}.feedback{font-size:17px;margin-top:22px}.primary{font-size:21px;min-height:60px}.stars{font-size:25px;letter-spacing:3px}.foot{font-size:11px;gap:8px;margin-top:20px}.finish-stars{font-size:34px;letter-spacing:4px}.finish p{font-size:18px}}@media(max-width:360px){.app{padding-inline:10px}.brand{font-size:14px}.sound svg{display:none}.card svg{height:105px}.food-name{font-size:15px}.prompt{font-size:23px}.foot{flex-wrap:wrap;justify-content:center}.foot p{margin:0}}@media(max-height:600px){.app{padding-top:10px;padding-bottom:8px}.top{padding-bottom:8px}.brand small{display:none}.sound{min-height:44px;padding-block:8px}.play{padding-top:10px}.progress{gap:10px}.stars{font-size:22px}.prompt{font-size:21px;line-height:1.4;margin:9px auto}.listen{min-height:44px;padding:8px 14px}.cards{margin-top:12px;gap:9px}.card{padding:8px 5px 10px;border-radius:18px}.card svg{height:85px}.food-name{font-size:16px;margin-top:4px}.card.correct{padding:6px 3px 8px}.feedback{font-size:16px;min-height:26px;margin:12px 0 9px}.primary{min-height:49px;padding:10px 30px;font-size:19px;border-radius:15px}.foot{padding-top:4px;margin-top:11px}.foot a{min-height:36px}.foot p{margin:0}.start,.finish{padding-top:15px;padding-bottom:12px}.hero{height:135px}.start h1,.finish h1{font-size:32px;margin:8px 0}.intro{font-size:16px;line-height:1.6;margin:9px 0 15px}.stamp{margin-top:14px}.finish-stars{font-size:31px;margin:10px 0}.finish-foods{margin:12px auto;max-width:420px}.finish p{font-size:17px;margin:9px 0}}@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+:root {
+  color-scheme: dark;
+  --paper: var(--game-bg, #151918);
+  --surface: var(--game-surface, #202824);
+  --ink: var(--game-ink, #f4f7f3);
+  --muted: var(--game-muted, #a9b7b0);
+  --line: var(--game-line, #3b4942);
+  --mint: var(--game-primary, #b9edcc);
+  --gold: var(--game-gold, #f4cc72);
+  --cyan: var(--game-cyan, #8edce2);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+  font-synthesis: none;
+}
+* { box-sizing: border-box; letter-spacing: 0; -webkit-tap-highlight-color: transparent; }
+body { margin: 0; color: var(--ink); background: var(--paper); }
+button, a { touch-action: manipulation; }
+button { font: inherit; color: inherit; cursor: pointer; border-radius: 8px; }
+button:disabled { cursor: default; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+[hidden] { display: none !important; }
+
+/* The shared navigation is outside this viewport, including in an iframe. */
+.app {
+  width: 100%; max-width: 1440px; height: 100svh; margin: auto;
+  padding: max(12px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 12px;
+}
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.brand { font-size: 24px; line-height: 1.4; font-weight: 900; }
+.brand small { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 2px; }
+.sound, .listen { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 46px; padding: 9px 14px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 800; line-height: 1.4; }
+.sound { white-space: nowrap; }
+.sound svg, .listen svg { height: 20px; width: 20px; flex-shrink: 0; }
+.listen:disabled { color: var(--muted); }
+
+.start, .finish { min-height: 0; display: grid; align-content: center; justify-items: center; gap: 8px; text-align: center; }
+.eyebrow { font-size: 12px; line-height: 1.5; color: var(--gold); font-weight: 800; }
+.hero { width: min(100%, 260px); height: 142px; }
+.hero svg { width: 100%; height: 100%; display: block; }
+h1 { margin: 0; font-size: 30px; line-height: 1.4; font-weight: 900; }
+.intro { font-size: 16px; line-height: 1.5; margin: 0; }
+.primary { border: 0; min-height: 52px; padding: 10px 30px; background: var(--mint); color: #151918; font-size: 21px; line-height: 1.4; font-weight: 900; }
+.primary:hover { background: #cef6dc; }
+.primary:active { background: #a6dbb9; }
+.stamp { display: inline-block; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.play { display: grid; grid-template-columns: 280px minmax(0, 1fr); grid-template-rows: minmax(160px, 1fr) 52px 56px; gap: 12px 24px; min-height: 0; text-align: center; }
+.question-panel { grid-column: 1; grid-row: 1 / 4; display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 0; gap: 18px; border-right: 1px solid var(--line); padding-right: 20px; }
+.progress { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; }
+.stars { display: flex; gap: 6px; color: var(--muted); font-size: 27px; line-height: 1.4; }
+.stars .earned { color: var(--gold); }
+.progress-label { font-size: 13px; line-height: 1.4; font-weight: 800; color: var(--muted); }
+.prompt { font-size: 26px; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; width: 100%; }
+.cards { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; min-height: 0; min-width: 0; }
+.card { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; align-items: center; min-height: 0; min-width: 0; padding: 16px 10px 12px; border: 2px solid var(--line); border-radius: 8px; background: #27352f; transition: border-color .15s, background-color .15s; }
+.card:nth-child(2) { background: #343329; border-color: #5b5439; }
+.card:nth-child(3) { background: #263439; border-color: #3d555a; }
+.card:not(:disabled):hover { border-color: var(--mint); }
+.card:not(:disabled):active { background: #344e3d; }
+.card svg { width: 100%; height: 100%; min-height: 0; display: block; pointer-events: none; }
+.food-name { font-size: 20px; line-height: 1.5; font-weight: 900; overflow-wrap: anywhere; margin-top: 8px; }
+.card.correct { border-color: var(--mint); background: #344e3d; box-shadow: inset 0 0 0 2px var(--mint); }
+.correct:after { content: '○'; position: absolute; right: 10px; top: 8px; width: 32px; height: 32px; line-height: 32px; border-radius: 6px; font-size: 26px; font-weight: 900; background: var(--mint); color: #151918; }
+.feedback { grid-column: 2; grid-row: 2; align-self: center; margin: 0; font-size: 19px; font-weight: 800; line-height: 1.5; overflow-wrap: anywhere; }
+.feedback.success { color: var(--mint); }
+.next { grid-column: 2; grid-row: 3; justify-self: center; min-width: 220px; }
+.audio-note { grid-column: 1 / -1; font-size: 12px; line-height: 1.5; color: var(--gold); text-align: center; margin: 0; }
+.foot { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 16px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.foot a { color: var(--cyan); min-height: 44px; display: flex; align-items: center; text-underline-offset: 4px; }
+.foot p:not(.audio-note) { margin: 0; text-align: right; }
+html.is-embedded .foot a { display: none; }
+html.is-embedded .foot { grid-template-columns: 1fr; }
+html.is-embedded .foot p:not(.audio-note) { text-align: center; }
+.finish-stars { display: flex; align-items: center; gap: 8px; color: var(--gold); font-size: 34px; line-height: 1.4; }
+.finish-foods { display: flex; justify-content: center; gap: 8px; width: min(100%, 760px); margin: 4px 0; }
+.finish-foods svg { width: calc((100% - 32px) / 5); height: 100px; }
+.finish p { font-size: 17px; line-height: 1.6; margin: 0; }
+body[data-phase="start"] .app, body[data-phase="finish"] .app { height: auto; min-height: 100svh; grid-template-rows: auto minmax(min-content, 1fr) auto; }
+.start { min-height: min-content; padding-block: 12px; }
+.start .hero { height: 100px; }
+.difficulty-title { margin: 4px 0 0; font-size: 17px; }
+.difficulty-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: min(100%, 660px); }
+.difficulty-choice { min-width: 0; min-height: 76px; border: 2px solid var(--line); background: var(--surface); padding: 9px 6px; font-size: 18px; font-weight: 900; line-height: 1.5; }
+.difficulty-choice[aria-checked="true"] { border-color: var(--mint); background: #344e3d; box-shadow: inset 0 0 0 1px var(--mint); }
+.difficulty-choice small { display: block; font-size: 12px; color: var(--muted); }
+.difficulty-help { min-height: 3em; margin: 0; max-width: 36em; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.secondary { min-height: 44px; border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; font-size: 14px; font-weight: 800; }
+.level-status { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 12px; font-size: 14px; color: var(--gold); }
+.finish-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+@media (max-height: 650px) {
+  .app { height: auto; min-height: 100svh; grid-template-rows: auto minmax(min-content, 1fr) auto; }
+  .play { min-height: min-content; }
+  .cards { min-height: 170px; }
+  .question-panel { gap: 10px; }
+  .top { min-height: 48px; padding-bottom: 6px; }
+  .brand small { display: none; }
+}
+
+@media (min-width: 1100px) and (min-height: 700px) {
+  .play { grid-template-columns: 310px minmax(0, 1fr); gap: 16px 32px; }
+  .prompt { font-size: 28px; }
+  .hero { height: 170px; width: 310px; }
+  .finish-foods svg { height: 140px; }
+}
+@media (max-width: 899px) {
+  .app { height: auto; min-height: 100svh; grid-template-rows: auto minmax(min-content, 1fr) auto; padding: 12px 16px; }
+  .play { min-height: min-content; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(160px, 1fr) 48px 52px; gap: 10px; }
+  .question-panel { grid-column: 1; grid-row: 1; border: 0; padding: 0; gap: 10px; }
+  .prompt { font-size: 24px; line-height: 1.5; }
+  .cards { grid-column: 1; grid-row: 2; gap: 10px; }
+  .feedback { grid-column: 1; grid-row: 3; font-size: 18px; }
+  .next { grid-column: 1; grid-row: 4; }
+}
+@media (max-width: 600px) {
+  .app { padding: 12px; gap: 10px; }
+  .top { min-height: 58px; gap: 8px; padding-bottom: 8px; }
+  .brand { font-size: 22px; }
+  .brand small { font-size: 11px; }
+  .sound { font-size: 12px; padding: 8px; }
+  .stars { font-size: 23px; gap: 5px; }
+  .prompt { font-size: 22px; }
+  .listen { min-height: 44px; padding: 8px 12px; font-size: 13px; }
+  .cards { gap: 8px; }
+  .card { padding: 10px 4px 8px; }
+  .food-name { font-size: 16px; margin-top: 4px; }
+  .correct:after { width: 26px; height: 26px; font-size: 22px; line-height: 26px; right: 6px; top: 6px; }
+  .feedback { font-size: 16px; }
+  .primary { font-size: 20px; min-height: 52px; padding: 10px 24px; }
+  .foot { font-size: 11px; gap: 4px 10px; }
+  .foot p:not(.audio-note) { max-width: 17em; justify-self: end; }
+  html.is-embedded .foot p:not(.audio-note) { max-width: none; justify-self: center; }
+  .finish-foods { gap: 4px; }
+  .finish-foods svg { width: calc((100% - 16px) / 5); height: 80px; }
+  .finish h1 { font-size: 28px; }
+  .finish-stars { font-size: 30px; }
+  .difficulty-choice { font-size: 16px; }
+  .start .hero { height: 76px; }
+}
+@media (max-width: 360px) {
+  .brand { font-size: 20px; }
+  .brand small { font-size: 10px; }
+  .sound { gap: 4px; padding: 8px 6px; }
+  .food-name { font-size: 14px; }
+  .prompt { font-size: 21px; }
+  .feedback { font-size: 15px; }
+  .foot { grid-template-columns: 1fr; justify-items: center; }
+  .foot p:not(.audio-note) { justify-self: center; max-width: none; }
+}
+@media (min-width: 900px) and (orientation: landscape) {
+  .app, body[data-phase="start"] .app, body[data-phase="finish"] .app {
+    height: 100svh; min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  .start {
+    min-height: 0; padding-block: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+    grid-template-rows: auto 100px auto auto auto; gap: 8px 32px; align-content: center;
+  }
+  .start .eyebrow { grid-column: 1; grid-row: 1; align-self: end; }
+  .start .hero { grid-column: 1; grid-row: 2; height: 100px; }
+  .start h1 { grid-column: 1; grid-row: 3; }
+  .start .intro { grid-column: 1; grid-row: 4; }
+  .difficulty-title { grid-column: 2; grid-row: 1; align-self: end; }
+  .difficulty-choices { grid-column: 2; grid-row: 2; align-self: center; }
+  .difficulty-help { grid-column: 2; grid-row: 3; align-self: start; }
+  #startButton { grid-column: 2; grid-row: 4; }
+  .start > div:last-child { grid-column: 2; grid-row: 5; }
+  .play { min-height: 0; grid-template-columns: minmax(300px, 1fr) minmax(0, 1.8fr); grid-template-rows: minmax(0, 1fr) 60px 52px; gap: 10px 20px; }
+  .question-panel { gap: 10px; padding-right: 16px; }
+  .prompt { font-size: 24px; line-height: 1.45; }
+  .cards { min-height: 0; gap: 10px; }
+  .finish { gap: 6px; }
+  .finish-foods svg { height: 100px; }
+}
+@media (max-width: 600px) and (max-height: 650px) {
+  .app { padding: 6px 10px; gap: 6px; }
+  .top { min-height: 44px; padding-bottom: 0; gap: 6px; }
+  .brand { font-size: 20px; }
+  .brand small { display: none; }
+  .sound { min-height: 44px; padding: 6px 8px; }
+  .play { grid-template-rows: auto minmax(110px, 1fr) minmax(36px, auto) 48px; gap: 4px; }
+  .question-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 6px; }
+  .level-status { display: contents; }
+  #changeDifficulty { grid-column: 1; grid-row: 1; }
+  .listen { grid-column: 2; grid-row: 1; }
+  #levelLabel { grid-column: 1; grid-row: 2; color: var(--gold); font-size: 12px; }
+  .progress { grid-column: 2; grid-row: 2; flex-wrap: nowrap; gap: 6px; }
+  .stars { font-size: 20px; line-height: 1.3; gap: 3px; }
+  .progress-label { font-size: 12px; white-space: nowrap; }
+  .secondary, .listen { min-height: 44px; padding: 6px; font-size: 12px; }
+  .listen svg { width: 16px; height: 16px; }
+  .prompt { grid-column: 1 / -1; grid-row: 3; font-size: 18px; line-height: 1.3; }
+  .cards { min-height: 110px; gap: 6px; }
+  .card { padding: 6px 4px; }
+  .food-name { font-size: 14px; line-height: 1.3; margin-top: 2px; }
+  .feedback { font-size: 15px; line-height: 1.2; }
+  .primary { min-height: 48px; padding: 8px 20px; font-size: 19px; }
+  .start { grid-template-columns: 64px minmax(0, 1fr); gap: 4px 8px; padding-block: 2px; }
+  .start > * { grid-column: 1 / -1; }
+  .start .hero { grid-column: 1; grid-row: 2; width: 60px; height: 52px; }
+  .start h1 { grid-column: 2; grid-row: 2; align-self: center; justify-self: start; font-size: 26px; }
+  .intro { font-size: 14px; }
+  .difficulty-title { font-size: 15px; margin-top: 0; }
+  .difficulty-choice { min-height: 58px; padding: 5px 4px; }
+  .difficulty-help { font-size: 12px; line-height: 1.4; min-height: 2.8em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
 </style>
+<link rel="stylesheet" href="games-theme.css?v=20260906-ipad">
+<script src="games-theme.js?v=20260906-ipad"></script>
 </head>
-<body>
+<body class="game-page" data-game="food" data-phase="start">
 <main class="app">
 <header class="top"><div class="brand">ごはん なあに？<small>おいしい もの みつけよう</small></div><button type="button" class="sound" id="sound" aria-pressed="true"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5ZM16 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/></svg><span id="soundLabel">こえ あり</span></button></header>
-<section id="start" class="start" aria-labelledby="startTitle"><div class="eyebrow">おいしい あてっこ</div><div class="hero" id="hero" aria-hidden="true"></div><h1 id="startTitle">ごはん なあに？</h1><p class="intro">どんな たべもの かな？<br>えを たっぷして えらぼう！</p><button class="primary" id="startButton" type="button">あそぶ →</button><div><span class="stamp">ごもんで ほしを あつめよう</span></div></section>
-<section id="play" class="play" hidden aria-label="ごはん くいず"><div class="progress"><div class="stars" id="stars" role="img" aria-label="ほし 0 こ"></div><span class="progress-label" id="progressLabel"></span></div><h1 class="prompt" id="prompt" tabindex="-1"></h1><button class="listen" id="listen" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14v-3a8 8 0 0 1 16 0v3M4 12H2v8h5v-8H4Zm16 0h2v8h-5v-8h3Z"/></svg>もういちど きく</button><div class="cards" id="cards"></div><p class="feedback" id="feedback" role="status" aria-live="polite">えを たっぷしてね</p><button class="primary next" id="next" type="button" hidden>つぎへ →</button></section>
-<section id="finish" class="finish" hidden aria-labelledby="finishTitle"><div class="finish-stars" aria-label="ほし いつつ">★★★★★</div><h1 id="finishTitle" tabindex="-1">ぜんぶ できたね！</h1><p>おいしい ものを<br>いつつ みつけたね。</p><div class="finish-foods" id="finishFoods" aria-hidden="true"></div><button class="primary" id="again" type="button">もういちど あそぶ ↻</button></section>
-<p class="audio-note" id="audioNote" role="status" hidden>こえが でないときは、おとなと いっしょに よんでね。</p><footer class="foot"><a href="index.html" target="_top">← げーむ いちらん</a><p>ゆっくりで だいじょうぶ。なんどでも！</p></footer>
+<section id="start" class="start" aria-labelledby="startTitle"><div class="eyebrow">1000もんの おいしい あてっこ</div><div class="hero" id="hero" aria-hidden="true"></div><h1 id="startTitle">ごはん なあに？</h1><p class="intro">えを たっぷして えらぼう！</p><h2 class="difficulty-title" id="difficultyTitle">むずかしさを えらぼう</h2><div class="difficulty-choices" id="difficultyChoices" role="radiogroup" aria-labelledby="difficultyTitle" aria-describedby="difficultyHelp"><button type="button" class="difficulty-choice" id="difficultyEasy" data-difficulty="easy" role="radio" aria-checked="true" tabindex="0">やさしい<small>400もん</small></button><button type="button" class="difficulty-choice" id="difficultyNormal" data-difficulty="normal" role="radio" aria-checked="false" tabindex="-1">ふつう<small>350もん</small></button><button type="button" class="difficulty-choice" id="difficultyHard" data-difficulty="hard" role="radio" aria-checked="false" tabindex="-1">むずかしい<small>250もん</small></button></div><p class="difficulty-help" id="difficultyHelp" aria-live="polite"></p><button class="primary" id="startButton" type="button">あそぶ →</button><div><span class="stamp">ごもんで ほしを あつめよう</span></div></section>
+<section id="play" class="play" hidden aria-label="ごはん くいず">
+  <div class="question-panel">
+    <div class="level-status"><span id="levelLabel"></span><button class="secondary" id="changeDifficulty" type="button">むずかしさを かえる</button></div>
+    <div class="progress"><div class="stars" id="stars" role="img" aria-label="ほし 0 こ"></div><span class="progress-label" id="progressLabel"></span></div>
+    <h1 class="prompt" id="prompt" tabindex="-1"></h1>
+    <button class="listen" id="listen" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14v-3a8 8 0 0 1 16 0v3M4 12H2v8h5v-8H4Zm16 0h2v8h-5v-8h3Z"/></svg>もういちど きく</button>
+  </div>
+  <div class="cards" id="cards"></div>
+  <p class="feedback" id="feedback" role="status" aria-live="polite">えを たっぷしてね</p>
+  <button class="primary next" id="next" type="button" hidden>つぎへ →</button>
+</section>
+<section id="finish" class="finish" hidden aria-labelledby="finishTitle"><div class="finish-stars" aria-label="ほし いつつ">★★★★★</div><h1 id="finishTitle" tabindex="-1">ぜんぶ できたね！</h1><p id="finishLevel"></p><p>おいしい ものを<br>いつつ みつけたね。</p><div class="finish-foods" id="finishFoods" aria-hidden="true"></div><div class="finish-actions"><button class="primary" id="again" type="button">もういちど あそぶ ↻</button><button class="secondary" id="finishDifficulty" type="button">むずかしさを かえる</button></div></section>
+<footer class="foot"><p class="audio-note" id="audioNote" role="status" hidden>こえが でないときは、おとなと いっしょに よんでね。</p><a href="index.html" target="_top">← げーむ いちらん</a><p>ゆっくりで だいじょうぶ。なんどでも！</p></footer>
 </main><noscript>あそぶには、ぶらうざの じゃばすくりぷとを おんにしてね。</noscript>
+<script src="food-quiz-bank.js?v=20260906-1000"></script>
 <script>
 'use strict';
-window.FoodQuiz=(()=>{
- const art={
- rice:'<path d="M41 114Q45 54 120 54T199 114" fill="#fffdf4" stroke="#dcc9a6" stroke-width="3"/><path d="M36 109H204Q197 179 120 179T36 109" fill="#73a998"/><path d="M54 127Q120 150 186 127" fill="none" stroke="#bdd7bf" stroke-width="8"/><path d="M92 176H148V186H92" fill="#568a7b"/><g stroke="#e6dfce" stroke-width="4" stroke-linecap="round"><path d="M74 85l8 3m17-19 7 3m22 16 8-3m23-12 7 5m-57 18 7-2m58 4 7 4"/></g>',
- onigiri:'<path d="M105 40Q120 20 135 40L203 145Q218 169 188 179H52Q22 169 37 145Z" fill="#fffdf5" stroke="#dfd6bf" stroke-width="4"/><path d="M91 114Q120 105 149 114V179H91Z" fill="#344e3d"/><path d="M103 126V169m12-45v43" stroke="#53634a" stroke-width="4" stroke-linecap="round"/>',
- bread:'<path d="M57 100C24 84 41 34 78 40Q119 13 160 40C200 34 216 83 183 100V177H57Z" fill="#c98947" stroke="#9e652f" stroke-width="4"/><path d="M70 96C47 79 58 50 85 55Q120 31 154 55C181 51 194 78 170 96V162H70Z" fill="#ffe9b0"/><path d="M89 77q7-10 14-9m31-9 14 5" stroke="#f3d28a" stroke-width="5" stroke-linecap="round"/>',
- egg:'<path d="M58 56C85 29 108 48 127 42C160 23 186 47 184 69C218 83 212 125 189 132C178 169 140 157 121 166C94 186 60 166 59 147C20 139 21 108 39 94C25 74 31 68 58 56Z" fill="#fffdfa" stroke="#e8dbc4" stroke-width="3"/><circle cx="122" cy="103" r="42" fill="#f5b52d"/><path d="M98 91q8-15 25-16" fill="none" stroke="#ffdb6d" stroke-width="8" stroke-linecap="round"/>',
- noodles:'<path d="M38 109H202L178 169Q120 199 62 169Z" fill="#da7758"/><path d="M45 119Q120 147 195 119" fill="none" stroke="#f3af8a" stroke-width="7"/><ellipse cx="120" cy="107" rx="82" ry="27" fill="#946039"/><g fill="none" stroke="#f5d58d" stroke-width="6" stroke-linecap="round"><path d="M64 111q13-30 26 0t26 0t26 0t26 0m-93-6q12-28 25 0t26 0t26 0t26 0M111 107V46q0-12 9-12t9 12v58m10 0V37q0-12 9-12t9 12v58"/></g><path d="M95 26 210 44m-112-7 109 20" stroke="#735032" stroke-width="6" stroke-linecap="round"/>',
- carrot:'<path d="M112 64Q155 40 175 83Q182 111 67 182Q57 186 61 172Z" fill="#ee8839" stroke="#cf6626" stroke-width="3"/><path d="M141 60Q110 21 134 17Q151 20 151 54Q159 9 181 19Q192 34 163 59Q197 35 203 55Q200 72 169 72" fill="#6e9c4c"/><path d="m104 96 22 15m5-45 20 13m-67 53 16 11" stroke="#d86c2b" stroke-width="5" stroke-linecap="round"/>',
- tomato:'<path d="M118 67C63 34 30 83 43 131C57 185 108 185 121 176C153 195 196 161 201 119C207 74 166 41 118 67" fill="#e66a50" stroke="#c34e38" stroke-width="3"/><path d="m121 68-37-14 17 27-37 4 37 12 22-14 25 15-5-24 30-12-36 1 2-22Z" fill="#63904e"/><path d="M76 108q-15 15-10 32" fill="none" stroke="#f89675" stroke-width="9" stroke-linecap="round"/>',
- cucumber:'<path d="M53 165C82 131 101 57 161 30C182 20 196 38 186 55C146 105 131 157 78 187C56 199 37 183 53 165Z" fill="#629652" stroke="#416f40" stroke-width="4"/><path d="M67 174C117 138 133 78 175 43" fill="none" stroke="#a0bd69" stroke-width="7" stroke-linecap="round"/><g fill="#3d7743"><circle cx="112" cy="109" r="3"/><circle cx="134" cy="77" r="3"/><circle cx="93" cy="144" r="3"/><circle cx="146" cy="96" r="3"/></g>',
- banana:'<path d="M49 62Q96 155 177 63L185 44L198 48L191 76Q182 164 106 180Q40 190 36 97Z" fill="#f5c84b" stroke="#d8a12e" stroke-width="4"/><path d="M47 91Q88 169 174 106" fill="none" stroke="#ffe880" stroke-width="9" stroke-linecap="round"/><path d="m183 47 3-12 13 3-2 12M39 100l-7-12 10-7 9 12" fill="#82633a"/>',
- apple:'<path d="M121 67C67 28 24 73 43 126C57 176 82 188 120 173C160 189 191 157 201 113C211 65 167 32 121 67Z" fill="#d95048" stroke="#bd403a" stroke-width="3"/><path d="M122 68q-6-27 8-42" fill="none" stroke="#805533" stroke-width="8" stroke-linecap="round"/><path d="M133 47q5-36 47-20-16 33-47 20" fill="#7a9d4d"/><path d="M71 87q-13 13-11 30" fill="none" stroke="#f58d78" stroke-width="9" stroke-linecap="round"/>',
- strawberry:'<path d="M120 67C65 28 27 65 47 108Q73 162 112 184Q120 189 129 182Q180 143 195 100C209 58 163 33 120 67Z" fill="#df6054" stroke="#bf4840" stroke-width="3"/><path d="m121 71-41-35 10 34-29 1 38 19 24-14 28 15 28-21-33 0 14-32Z" fill="#6c984f"/><g fill="#ffe7a3"><ellipse cx="80" cy="110" rx="3" ry="5" transform="rotate(-20 80 110)"/><ellipse cx="114" cy="104" rx="3" ry="5"/><ellipse cx="152" cy="109" rx="3" ry="5" transform="rotate(20 152 109)"/><ellipse cx="103" cy="139" rx="3" ry="5"/><ellipse cx="137" cy="141" rx="3" ry="5"/><ellipse cx="119" cy="166" rx="3" ry="5"/></g>',
- fish:'<path d="M69 108Q116 35 181 84Q221 106 179 134Q118 179 69 108L28 75V146Z" fill="#82afbc" stroke="#557e8e" stroke-width="4"/><path d="M140 69q-22 36 0 76M110 76l11-27 27 17m-43 78 13 21 27-18" fill="#a3c4c7" stroke="#557e8e" stroke-width="3"/><circle cx="172" cy="102" r="6" fill="#384b50"/><path d="m92 99 9 9-9 9m23-20 9 9-9 9" fill="none" stroke="#d3e6de" stroke-width="4"/>'
- };
- const foods=[{id:'rice',name:'ごはん'},{id:'onigiri',name:'おにぎり'},{id:'bread',name:'しょくぱん'},{id:'egg',name:'めだまやき'},{id:'noodles',name:'らーめん'},{id:'carrot',name:'にんじん'},{id:'tomato',name:'とまと'},{id:'cucumber',name:'きゅうり'},{id:'banana',name:'ばなな'},{id:'apple',name:'りんご'},{id:'strawberry',name:'いちご'},{id:'fish',name:'さかな'}];
- const questions=[
- {answer:'rice',clue:'おちゃわんに はいった\nしろい つぶつぶ、なあに？',choices:['rice','noodles','bread']},
- {answer:'onigiri',clue:'ごはんを にぎって\nのりを まいたよ。どれかな？',choices:['onigiri','bread','egg']},
- {answer:'bread',clue:'ふわふわ、しかくい ぱん。\nどれかな？',choices:['bread','rice','onigiri']},
- {answer:'egg',clue:'たまごを ぱかっ！\nやいて つくるのは どれ？',choices:['egg','rice','noodles']},
- {answer:'noodles',clue:'ながい めんが\nすーぷに はいっているよ。どれ？',choices:['noodles','bread','egg']},
- {answer:'carrot',clue:'おれんじいろで\nさきが とがった やさいは？',choices:['carrot','tomato','cucumber']},
- {answer:'tomato',clue:'あかくて まるい やさい。\nどれかな？',choices:['tomato','carrot','cucumber']},
- {answer:'cucumber',clue:'みどりいろで\nほそながい やさいは？',choices:['cucumber','tomato','carrot']},
- {answer:'banana',clue:'きいろくて ながい くだもの。\nかわを むくよ。どれかな？',choices:['banana','apple','strawberry']},
- {answer:'apple',clue:'あかくて まるい くだもの。\nしゃりっと たべるよ。どれ？',choices:['apple','banana','strawberry']},
- {answer:'strawberry',clue:'あかい くだものに\nちいさな つぶつぶ。どれかな？',choices:['strawberry','apple','banana']},
- {answer:'fish',clue:'うみに すんでいて\nひれで およぐよ。どれかな？',choices:['fish','carrot','egg']}
- ];
- const $=id=>document.getElementById(id);
- const svg=id=>'<svg viewBox="0 0 240 210" aria-hidden="true" focusable="false"><ellipse cx="120" cy="186" rx="85" ry="10" fill="#715a3010"/>'+art[id]+'</svg>';
- function shuffle(items){const result=[...items];for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;}
- let phase='start',deck=[],index=0,answered=false,stars=0,sound=true,speechToken=0;
- function stopSpeech(){speechToken++;if('speechSynthesis' in window)window.speechSynthesis.cancel();}
- function speak(text){stopSpeech();if(!sound||document.hidden)return;if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){$('audioNote').hidden=false;return;}const token=speechToken;try{const utterance=new SpeechSynthesisUtterance(text);utterance.lang='ja-JP';utterance.rate=.83;const voice=speechSynthesis.getVoices().find(v=>v.lang.startsWith('ja'));if(voice)utterance.voice=voice;utterance.onerror=e=>{if(token===speechToken&&sound&&!['canceled','interrupted'].includes(e.error))$('audioNote').hidden=false;};speechSynthesis.speak(utterance);}catch{$('audioNote').hidden=false;}}
- function updateProgress(){$('stars').innerHTML=Array.from({length:5},(_,i)=>'<span class="'+(i<stars?'earned':'')+'">'+(i<stars?'★':'☆')+'</span>').join('');$('stars').setAttribute('aria-label','ほし '+stars+' こ');$('progressLabel').textContent=(index+1)+' / 5';}
- function showQuestion(){answered=false;const question=deck[index];$('prompt').textContent=question.clue;$('feedback').textContent='えを たっぷしてね';$('feedback').className='feedback';$('next').hidden=true;$('cards').replaceChildren();question.choices.forEach(id=>{const food=foods.find(f=>f.id===id),button=document.createElement('button');button.type='button';button.className='card';button.dataset.answer=id;button.setAttribute('aria-label',food.name);button.innerHTML=svg(id)+'<span class="food-name">'+food.name+'</span>';button.addEventListener('click',()=>{if(deck[index]===question&&button.isConnected)choose(id,button);});$('cards').append(button);});updateProgress();$('prompt').focus({preventScroll:true});speak(question.clue);}
- function start(){stopSpeech();deck=shuffle(questions).slice(0,5).map(q=>({...q,choices:shuffle(q.choices)}));index=0;stars=0;answered=false;phase='play';$('start').hidden=true;$('finish').hidden=true;$('play').hidden=false;showQuestion();}
- function choose(id,button){if(phase!=='play'||answered)return;const question=deck[index];if(id!==question.answer){$('feedback').textContent='もういちど えらんでみよう！';speak('もういちど えらんでみよう！ '+question.clue);return;}answered=true;stars++;button.classList.add('correct');$('cards').querySelectorAll('button').forEach(b=>b.disabled=true);const name=foods.find(f=>f.id===id).name;$('feedback').textContent='せいかい！ '+name+' だね！';$('feedback').className='feedback success';$('next').textContent=index===4?'できた！ →':'つぎへ →';$('next').hidden=false;updateProgress();$('next').focus({preventScroll:true});speak('せいかい！ '+name+' だね！');}
- function next(){if(phase!=='play'||!answered)return;if(index<4){index++;showQuestion();return;}phase='finish';$('play').hidden=true;$('finish').hidden=false;$('finishFoods').innerHTML=deck.map(q=>svg(q.answer)).join('');$('finishTitle').focus({preventScroll:true});speak('ぜんぶ できたね！ おいしい ものを いつつ みつけたね。');}
- $('hero').innerHTML='<svg viewBox="0 0 420 230"><circle cx="210" cy="112" r="108" fill="#ffe9bc"/><g transform="translate(92 0)">'+art.onigiri+'</g><g transform="translate(290 123) scale(.43)">'+art.tomato+'</g><g transform="translate(2 110) scale(.43)">'+art.carrot+'</g><path d="m66 40 3 10 10 3-10 3-3 10-3-10-10-3 10-3m277 14 3 10 10 3-10 3-3 10-3-10-10-3 10-3" fill="#d8a456"/></svg>';
- $('startButton').addEventListener('click',start);$('again').addEventListener('click',start);$('next').addEventListener('click',next);$('listen').addEventListener('click',()=>{if(phase==='play')speak(deck[index].clue);});$('sound').addEventListener('click',()=>{sound=!sound;stopSpeech();$('sound').setAttribute('aria-pressed',String(sound));$('soundLabel').textContent=sound?'こえ あり':'こえ なし';$('listen').disabled=!sound;if(sound)speak(phase==='play'?deck[index].clue:'ごはん なあに？');});document.addEventListener('visibilitychange',()=>{if(document.hidden)stopSpeech();});window.addEventListener('pagehide',stopSpeech);
- return {foods:foods.map(f=>({...f})),questions:questions.map(q=>({...q,choices:[...q.choices]})),getState:()=>({phase,index,answered,stars,question:deck[index]?{...deck[index],choices:[...deck[index].choices]}:null,deck:deck.map(q=>({...q,choices:[...q.choices]}))})};
+window.FoodQuiz = (() => {
+  const bank = window.FoodQuizBank;
+  const $ = id => document.getElementById(id);
+  if (!bank || !Array.isArray(bank.questions) || !Array.isArray(bank.foods)) {
+    $('difficultyHelp').textContent = 'くいずを よみこめなかったよ。ぺーじを ひらきなおしてね。';
+    $('startButton').disabled = true;
+    return { getState: () => ({ phase: 'unavailable' }) };
+  }
+  const foods = bank.foods, questions = bank.questions, levels = bank.levels;
+  const foodById = new Map(foods.map(food => [food.id, food]));
+  const levelById = new Map(levels.map(level => [level.id, level]));
+  const pools = new Map(levels.map(level => [level.id, questions.filter(q => q.difficulty === level.id)]));
+  const seen = new Map(levels.map(level => [level.id, new Set()]));
+  const levelButtons = [...$('difficultyChoices').querySelectorAll('[data-difficulty]')];
+  const svg = id => foodById.get(id).svg;
+  function shuffle(items) {
+    const result = [...items];
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
+  }
+  let phase = 'start', difficulty = 'easy', deck = [], index = 0;
+  let answered = false, stars = 0, sound = true, speechToken = 0, session = 0;
+  function stopSpeech() {
+    speechToken++;
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  }
+  function speak(text) {
+    stopSpeech();
+    if (!sound || document.hidden) return;
+    if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
+      $('audioNote').hidden = false;
+      return;
+    }
+    const token = speechToken;
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ja-JP';
+      utterance.rate = .83;
+      const voice = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
+      if (voice) utterance.voice = voice;
+      utterance.onerror = event => {
+        if (token === speechToken && sound && !['canceled', 'interrupted'].includes(event.error)) $('audioNote').hidden = false;
+      };
+      speechSynthesis.speak(utterance);
+    } catch { $('audioNote').hidden = false; }
+  }
+  function selectDifficulty(value) {
+    if (phase !== 'start' || !levelById.has(value)) return;
+    difficulty = value;
+    const level = levelById.get(value);
+    for (const button of levelButtons) {
+      const selected = button.dataset.difficulty === value;
+      button.setAttribute('aria-checked', String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    }
+    $('difficultyHelp').textContent = level.description + ' ごもんずつ あそぶよ。';
+    $('levelLabel').textContent = level.name;
+  }
+  function setPhase(value) {
+    phase = value;
+    document.body.dataset.phase = value;
+    for (const name of ['start', 'play', 'finish']) $(name).hidden = name !== value;
+  }
+  function buildDeck() {
+    const pool = pools.get(difficulty), history = seen.get(difficulty);
+    const selected = [], targets = new Set();
+    let available = shuffle(pool.filter(q => !history.has(q.id)));
+    while (selected.length < 5) {
+      if (!available.length) {
+        history.clear();
+        available = shuffle(pool.filter(q => !selected.some(prior => prior.id === q.id)));
+      }
+      let position = available.findIndex(q => !targets.has(q.answer));
+      if (position < 0) position = 0;
+      const [question] = available.splice(position, 1);
+      selected.push({ ...question, choices: shuffle(question.choices) });
+      targets.add(question.answer);
+      history.add(question.id);
+    }
+    return selected;
+  }
+  function updateProgress() {
+    $('stars').innerHTML = Array.from({ length: 5 }, (_, i) => '<span class="' + (i < stars ? 'earned' : '') + '">' + (i < stars ? '★' : '☆') + '</span>').join('');
+    $('stars').setAttribute('aria-label', 'ほし ' + stars + ' こ');
+    $('progressLabel').textContent = (index + 1) + ' / 5';
+  }
+  function showQuestion() {
+    answered = false;
+    const question = deck[index], currentSession = session;
+    $('prompt').textContent = question.clue;
+    $('feedback').textContent = 'えを たっぷしてね';
+    $('feedback').className = 'feedback';
+    $('next').hidden = true;
+    $('cards').replaceChildren();
+    for (const id of question.choices) {
+      const food = foodById.get(id), button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'card';
+      button.dataset.answer = id;
+      button.setAttribute('aria-label', food.name);
+      button.innerHTML = svg(id) + '<span class="food-name">' + food.name + '</span>';
+      button.addEventListener('click', () => {
+        if (currentSession === session && deck[index] === question && button.isConnected) choose(id, button);
+      });
+      $('cards').append(button);
+    }
+    updateProgress();
+    $('prompt').focus({ preventScroll: true });
+    speak(question.clue);
+  }
+  function start() {
+    if (phase !== 'start' && phase !== 'finish') return;
+    stopSpeech();
+    session++;
+    deck = buildDeck();
+    index = 0;
+    stars = 0;
+    answered = false;
+    setPhase('play');
+    showQuestion();
+  }
+  function returnToStart() {
+    stopSpeech();
+    session++;
+    deck = [];
+    index = 0;
+    stars = 0;
+    answered = false;
+    $('cards').replaceChildren();
+    $('audioNote').hidden = true;
+    setPhase('start');
+    selectDifficulty(difficulty);
+    levelButtons.find(button => button.dataset.difficulty === difficulty).focus({ preventScroll: true });
+  }
+  function choose(id, button) {
+    if (phase !== 'play' || answered) return;
+    const question = deck[index];
+    if (id !== question.answer) {
+      $('feedback').textContent = 'もういちど えらんでみよう！';
+      speak('もういちど えらんでみよう！ ' + question.clue);
+      return;
+    }
+    answered = true;
+    stars++;
+    button.classList.add('correct');
+    $('cards').querySelectorAll('button').forEach(card => { card.disabled = true; });
+    const name = foodById.get(id).name;
+    $('feedback').textContent = 'せいかい！ ' + name + ' だね！';
+    $('feedback').className = 'feedback success';
+    $('next').textContent = index === 4 ? 'できた！ →' : 'つぎへ →';
+    $('next').hidden = false;
+    updateProgress();
+    $('next').focus({ preventScroll: true });
+    speak('せいかい！ ' + name + ' だね！');
+  }
+  function next() {
+    if (phase !== 'play' || !answered) return;
+    if (index < 4) { index++; showQuestion(); return; }
+    setPhase('finish');
+    $('finishLevel').textContent = levelById.get(difficulty).name + '、ごもん できたよ！';
+    $('finishFoods').innerHTML = deck.map(question => svg(question.answer)).join('');
+    $('finishTitle').focus({ preventScroll: true });
+    speak('ぜんぶ できたね！ おいしい ものを いつつ みつけたね。');
+  }
+  for (const button of levelButtons) {
+    const level = levelById.get(button.dataset.difficulty);
+    button.innerHTML = level.name + '<small>' + pools.get(level.id).length + 'もん</small>';
+    button.addEventListener('click', () => selectDifficulty(button.dataset.difficulty));
+    button.addEventListener('keydown', event => {
+      const direction = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+      if (!direction && event.key !== 'Home' && event.key !== 'End') return;
+      event.preventDefault();
+      const position = event.key === 'Home' ? 0 : event.key === 'End' ? levelButtons.length - 1 : (levelButtons.indexOf(button) + direction + levelButtons.length) % levelButtons.length;
+      const target = levelButtons[position];
+      selectDifficulty(target.dataset.difficulty);
+      target.focus();
+    });
+  }
+  $('hero').innerHTML = svg(foodById.has('onigiri') ? 'onigiri' : foods[0].id);
+  $('startButton').addEventListener('click', start);
+  $('again').addEventListener('click', start);
+  $('changeDifficulty').addEventListener('click', returnToStart);
+  $('finishDifficulty').addEventListener('click', returnToStart);
+  $('next').addEventListener('click', next);
+  $('listen').addEventListener('click', () => { if (phase === 'play') speak(deck[index].clue); });
+  $('sound').addEventListener('click', () => {
+    sound = !sound;
+    stopSpeech();
+    $('sound').setAttribute('aria-pressed', String(sound));
+    $('soundLabel').textContent = sound ? 'こえ あり' : 'こえ なし';
+    $('listen').disabled = !sound;
+    if (!sound) $('audioNote').hidden = true;
+    if (sound) speak(phase === 'play' ? deck[index].clue : 'ごはん なあに？');
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopSpeech(); });
+  window.addEventListener('pagehide', stopSpeech);
+  selectDifficulty(difficulty);
+  return {
+    foods: foods.map(food => ({ ...food })),
+    questions: questions.map(question => ({ ...question, choices: [...question.choices] })),
+    levels: levels.map(level => ({ ...level })),
+    getState: () => ({ phase, difficulty, index, answered, stars, questionId: deck[index]?.id ?? null,
+      question: deck[index] ? { ...deck[index], choices: [...deck[index].choices] } : null,
+      deck: deck.map(question => ({ ...question, choices: [...question.choices] })) })
+  };
 })();
 </script>
 </body>

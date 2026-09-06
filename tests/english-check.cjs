@@ -15,9 +15,15 @@ function setup(seed=1,voices=[{lang:'en-US'}],speech=true){
  vm.createContext(context);vm.runInContext(script,context);
  return {el,events,windowEvents,document,utterances,homeButtons,read:x=>vm.runInContext(x,context),get cancels(){return cancels}};
 }
+function chooseCategory(app,key){app.el('category').value=key;app.el('category').onchange()}
 let count=0;const seen=new Set();
+{
+ const app=setup();assert.equal(app.read('screen'),'quiz','Opening English goes straight to the quiz');assert.equal(app.read('category'),'animals');assert.equal(app.read('position'),0);assert.equal(app.read('answered'),false);assert.equal(app.el('choices').children.length,3);assert.equal(app.el('quiz').hidden,false);assert.equal(app.utterances.length,0,'Initial render does not speak without a user gesture');
+ assert(!/id=["'](?:home|learn|learn-grid|start)["']/.test(html),'Garden and learning entry screens are removed');
+ app.el('listen').click();assert.equal(app.utterances.length,1,'First listen tap starts English speech');assert.equal(app.utterances[0].text,app.read('deck[position][0]'));assert.equal(app.utterances[0].lang,'en-US');
+}
 for(let seed=1;seed<=100;seed++)for(const category of ['animals','food','colors']){
- const app=setup(Math.imul(seed,2654435761)>>>0);app.read(`openGarden('${category}')`);assert.equal(app.el('learn-grid').children.length,6);app.el('start').click();
+ const app=setup(Math.imul(seed,2654435761)>>>0);chooseCategory(app,category);assert.equal(app.read('category'),category);assert.equal(app.read('screen'),'quiz');
  assert.equal(app.read('deck.length'),5);assert.equal(app.read('new Set(deck.map(w=>w[0])).size'),5);
  let stale;
  for(let round=0;round<5;round++){
@@ -37,27 +43,29 @@ for(let seed=1;seed<=100;seed++)for(const category of ['animals','food','colors'
 }
 assert.equal(seen.size,18);
 {
- const app=setup();app.read("openGarden('animals')");app.el('learn-grid').children[0].click();assert.equal(app.utterances.at(-1).text,'dog');assert.equal(app.utterances.at(-1).lang,'en-US');app.el('start').click();
+ const app=setup();app.el('listen').click();assert.equal(app.utterances.at(-1).text,app.read('deck[position][0]'));assert.equal(app.utterances.at(-1).lang,'en-US');
  const old=app.utterances.at(-1);const before=app.cancels;app.el('sound').click();assert(app.cancels>before);assert.equal(app.el('hint').hidden,false);old.onerror?.({error:'network'});assert.equal(app.read('audioFailed'),false);
  const spoken=app.utterances.length;app.el('listen').click();assert.equal(app.utterances.length,spoken,'Mute suppresses listen');
  app.el('sound').click();const hiddenVoice=app.utterances.at(-1);app.document.hidden=true;const beforeHide=app.cancels;app.events.visibilitychange();assert(app.cancels>beforeHide);hiddenVoice.onerror?.({error:'network'});assert.equal(app.read('audioFailed'),false);app.el('listen').click();assert.equal(app.utterances.at(-1),hiddenVoice,'Hidden page cannot start speech');
  const beforePagehide=app.cancels;app.windowEvents.pagehide();assert(app.cancels>beforePagehide);
 }
 {
- const app=setup(1,[],false);app.read("openGarden('food')");app.el('start').click();assert.equal(app.el('hint').hidden,false);assert(app.el('audio-note').textContent);assert.equal(app.el('choices').children.length,3);
+ const app=setup(1,[],false);chooseCategory(app,'food');assert.equal(app.el('hint').hidden,false);assert(app.el('audio-note').textContent);assert.equal(app.el('choices').children.length,3);
 }
 {
- const app=setup(1,[{lang:'ja-JP'}]);app.read("openGarden('colors')");app.el('start').click();assert.equal(app.el('hint').hidden,false,'Unavailable English voice reveals a usable Japanese hint');assert.equal(app.utterances.length,0,'Do not pronounce English with an unrelated voice');
+ const app=setup(1,[{lang:'ja-JP'}]);chooseCategory(app,'colors');assert.equal(app.el('hint').hidden,false,'Unavailable English voice reveals a usable Japanese hint');assert.equal(app.utterances.length,0,'Do not pronounce English with an unrelated voice');
 }
 {
- const app=setup();app.read("openGarden('animals')");const learnCard=app.el('learn-grid').children[0];app.el('start').click();const voice=app.utterances.at(-1);app.homeButtons[0].click();voice.onerror?.({error:'network'});assert.equal(app.read('audioFailed'),false,'Leaving a question invalidates its speech errors');assert.equal(app.read('screen'),'home');
- const count=app.utterances.length;learnCard.onclick();assert.equal(app.utterances.length,count,'Detached learning cards cannot speak after leaving');
+ const app=setup();app.el('listen').click();const voice=app.utterances.at(-1);const oldCards=app.el('choices').children;const oldRun=app.read('runId');chooseCategory(app,'food');voice.onerror?.({error:'network'});assert.equal(app.read('audioFailed'),false,'Changing category invalidates old speech errors');assert.equal(app.read('screen'),'quiz');assert.equal(app.read('category'),'food');assert.equal(app.read('position'),0);assert.equal(app.read('answered'),false);assert.notEqual(app.read('runId'),oldRun);assert(app.read('deck.every(word=>DATA.food.words.includes(word))'));
+ const spoken=app.utterances.length;for(const card of oldCards)card.onclick();assert.equal(app.utterances.length,spoken,'Detached previous-category choices cannot speak or answer');assert.equal(app.read('answered'),false);
+ const run=app.read('runId');chooseCategory(app,'__proto__');assert.equal(app.read('runId'),run,'Prototype category values cannot start a round');assert.equal(app.read('category'),'food');
 }
+
 console.log(`PASS: ${count} English questions, all 18 words, unique targets/options, 15000 retries, manual next, stale cards, restart, mute/hidden/pagehide speech cancellation and no-speech fallback.`);
 {
  const app=setup();
- app.read("window.results=[];window.MoonRanking={complete:value=>window.results.push(value)};openGarden('food')");
- app.el('start').click();const firstRun=app.read('runId');
+ app.read("window.results=[];window.MoonRanking={complete:value=>window.results.push(value)}");
+ chooseCategory(app,'food');const firstRun=app.read('runId');
  for(let i=0;i<5;i++){
   const target=app.read('deck[position][1]');const cards=app.el('choices').children;
   if(i===0)cards.find(card=>card.attributes['aria-label']!==target).click();

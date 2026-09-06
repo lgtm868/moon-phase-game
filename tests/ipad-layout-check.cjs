@@ -467,25 +467,19 @@ async function englishFlow(c) {
   const f = c.frame;
   // English's pressed sound button means muted, unlike the original six games.
   if (await f.locator('#sound').getAttribute('aria-pressed') !== 'true') await click(f, '#sound');
-  assert.equal(await f.locator('#categories button').count(), 3, 'All three English gardens are available');
-  await checkpoint(c, 'home', ['#categories button']);
+  assert.equal(await f.locator('#quiz').isVisible(), true, 'English opens directly in a quiz');
+  assert.equal(await f.locator('#home, #learn').count(), 0);
+  await checkpoint(c, 'direct-quiz', ['#category', '#listen', '#choices button']);
+  const vocabulary = Object.entries({dog:'いぬ',cat:'ねこ',rabbit:'うさぎ',bear:'くま',lion:'らいおん',elephant:'ぞう',apple:'りんご',banana:'ばなな',strawberry:'いちご',grapes:'ぶどう',bread:'ぱん','ice cream':'あいす',red:'あか',blue:'あお',yellow:'きいろ',green:'みどり',pink:'ぴんく',purple:'むらさき'}).map(([english,name])=>({english,name}));
   c.entry.englishRounds = [];
-  for (let category = 0; category < 3; category++) {
-    const prefix = `garden-${category + 1}`;
-    await f.locator('#categories button').nth(category).click();
-    const vocabulary = await f.locator('#learn-grid button').evaluateAll(buttons => buttons.map(button => ({
-      english: button.querySelector('strong').textContent.trim(), name: button.querySelector('small').textContent.trim()
-    })));
-    assert.equal(vocabulary.length, 6, 'Each garden has six pictured vocabulary words');
-    assert.equal(new Set(vocabulary.map(word => word.english)).size, 6);
-    await f.locator('#learn-grid button').last().click();
-    await checkpoint(c, `${prefix}-learn`, ['#learn-title', '#learn [data-home]', '#learn-grid button', '#start']);
-    await click(f, '#start');
+  for (const category of ['animals','food','colors']) {
+    const prefix = `category-${category}`;
+    await f.locator('#category').selectOption(category);
     const targets = [];
     for (let index = 0; index < 5; index++) {
       const english = (await f.locator('#english').textContent()).trim();
       const target = vocabulary.find(word => word.english === english);
-      assert(target, 'Visible English prompt matches the pictured vocabulary just learned');
+      assert(target, 'Visible English prompt is a supported vocabulary word');
       targets.push(english);
       assert.equal((await f.locator('#count').textContent()).trim(), `${index + 1} / 5`);
       assert.equal(await f.locator('#choices button:enabled').count(), 3);
@@ -512,7 +506,7 @@ async function englishFlow(c) {
     assert.equal(new Set(targets).size, 5, 'English round contains five different target words');
     c.entry.englishRounds.push({ category, vocabulary, targets });
     await f.locator('#finish').waitFor({ state: 'visible' });
-    await checkpoint(c, `${prefix}-finish`, ['#again', '#finish [data-home]']);
+    await checkpoint(c, `${prefix}-finish`, ['#again']);
     if (await f.locator('#reviewWords').count()) {
       assert.equal(await f.locator('#reviewWords button').count(), 5, 'Finish lets the child review all five learned words');
       const reviewed = await f.locator('#reviewWords button strong').allTextContents();
@@ -523,9 +517,7 @@ async function englishFlow(c) {
     await click(f, '#again');
     assert.equal(await f.locator('#choices button:enabled').count(), 3, 'English replay starts a fresh round');
     assert.equal((await f.locator('#count').textContent()).trim(), '1 / 5');
-    await checkpoint(c, `${prefix}-again`, ['#quiz [data-home]', '#listen', '#choices button']);
-    await click(f, '#quiz [data-home]');
-    await f.locator('#home').waitFor({ state: 'visible' });
+    await checkpoint(c, `${prefix}-again`, ['#category', '#listen', '#choices button']);
   }
 }
 

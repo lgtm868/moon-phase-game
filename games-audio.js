@@ -13,6 +13,7 @@
   let context = null, decoder = null, buses = null, master = null, compressor = null, resumePromise = null;
   let epoch = null, generation = 0, lifecycle = 0, ducked = false;
   let selected = new Set();
+  const completedOneShots = new Set();
   const playing = new Map(), pending = new Set(), errors = new Map();
   const assets = new Map(), loaders = new Map(), decoded = new Map();
   const stopListeners = new Set(), effects = new Set(), retiring = new Set(), timers = new Set();
@@ -156,6 +157,7 @@
     try { voice.source.disconnect(); voice.gain.disconnect(); } catch (_) {}
   }
   function stopVoice(voice, immediate = false) {
+    voice.stopped = true;
     retiring.add(voice);
     try {
       const time = voice.source.context.currentTime;
@@ -180,7 +182,10 @@
   async function setMusicSelection(ids) {
     const allowed = Array.isArray(ids) ? ids.filter(id => typeof id === 'string' && /^[a-z0-9-]{1,40}$/.test(id)) : [];
     const version = ++generation, life = lifecycle;
-    selected = new Set(allowed); errors.clear();
+    // Selection is level-triggered: stale UI snapshots cannot repeat a finished
+    // one-shot. Omit its ID in a selection update before selecting it again.
+    for (const id of completedOneShots) if (!allowed.includes(id)) completedOneShots.delete(id);
+    selected = new Set(allowed.filter(id => !completedOneShots.has(id))); errors.clear();
     for (const [id, voice] of playing) if (!selected.has(id)) { stopVoice(voice); playing.delete(id); }
     pending.clear(); for (const id of selected) if (!playing.has(id)) pending.add(id);
     balance(); emit();
@@ -204,18 +209,24 @@
     for (const result of results) {
       const { id, buffer, meta, error } = result; pending.delete(id);
       if (error) { errors.set(id, error.message); continue; }
-      if (meta.loopable === false) { errors.set(id, 'loop-unverified'); continue; }
       if (!selected.has(id) || playing.has(id)) continue;
       let source, gain;
       try {
         source = current.createBufferSource(); gain = current.createGain();
-        source.buffer = buffer; source.loop = true; source.loopStart = meta.loopStart; source.loopEnd = meta.loopEnd;
+        source.buffer = buffer; source.loop = meta.loopable !== false;
+        if (source.loop) { source.loopStart = meta.loopStart; source.loopEnd = meta.loopEnd; }
         const duration = meta.beats * 60 / bpm;
-        const offset = meta.loopStart + ((when - epoch) % duration + duration) % duration;
+        const offset = source.loop ? meta.loopStart + ((when - epoch) % duration + duration) % duration : 0;
         gain.gain.value = 0; gain.gain.setValueAtTime(0, when); gain.gain.linearRampToValueAtTime(meta.gain, when + 0.008);
         source.connect(gain); gain.connect(output('music'));
         const voice = { source, gain, meta, when, offset, cleaned: false };
-        source.onended = () => disconnectVoice(voice);
+        source.onended = () => {
+          disconnectVoice(voice);
+          if (source.loop || voice.stopped || life !== lifecycle || playing.get(id) !== voice) return;
+          playing.delete(id); selected.delete(id); completedOneShots.add(id);
+          if (!selected.size) epoch = null;
+          balance(); emit();
+        };
         source.start(when, offset); playing.set(id, voice);
       } catch (_) {
         try { source?.stop(); } catch (_) {}
@@ -227,6 +238,7 @@
     later(() => { if (life === lifecycle) emit(); }, Math.max(0, (when - current.currentTime) * 1000 + 25));
   }
   function stopMusic() {
+    completedOneShots.clear();
     generation++; selected.clear(); pending.clear(); errors.clear(); epoch = null;
     for (const voice of playing.values()) stopVoice(voice);
     playing.clear(); balance(); emit();

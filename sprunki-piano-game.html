@@ -881,6 +881,7 @@
     }
 
     .character-button {
+      position: relative;
       min-height: 52px;
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
@@ -897,6 +898,15 @@
     .character-button.is-active {
       border-color: rgba(80, 212, 198, 0.84);
       background: rgba(80, 212, 198, 0.18);
+    }
+
+    .character-button[data-mod]::after {
+      content: "MOD";
+      position: absolute;
+      top: 1px;
+      right: 3px;
+      font-size: 8px;
+      color: #b9edcc;
     }
 
     .character-button img {
@@ -1207,9 +1217,9 @@
       .game-page .result-detail { font-size: 12px; }
     }
   </style>
-  <link rel="stylesheet" href="games-theme.css?v=20260912-audio-polish">
-  <script src="games-theme.js?v=20260912-audio-polish"></script>
-  <script src="game-navigation.js?v=20260912-audio-polish" defer></script>
+  <link rel="stylesheet" href="games-theme.css?v=20260912-characters">
+  <script src="games-theme.js?v=20260912-characters"></script>
+  <script src="game-navigation.js?v=20260912-characters" defer></script>
 </head>
 <body class="game-page" data-game="piano">
   <main aria-label="スプランキーのピアノ音ゲー">
@@ -1293,8 +1303,9 @@
     </section>
   </main>
 
-  <script src="games-audio-manifest.js?v=20260912-audio-polish"></script>
-  <script src="games-audio.js?v=20260912-audio-polish"></script>
+  <script src="sprunki-roster.js?v=20260912-characters"></script>
+  <script src="games-audio-manifest.js?v=20260912-characters"></script>
+  <script src="games-audio.js?v=20260912-characters"></script>
   <script>
     (() => {
       "use strict";
@@ -1669,7 +1680,7 @@
         { id: "traditional", name: "Traditional", ids: ["sakura"] }
       ];
 
-      const characters = [
+      const legacyPianoProfiles = [
         { id: "oren", name: "Oren", color: "#ff7900", image: "sprunki-oren.png", audio: "sounds/oren.wav", timbre: { low: "triangle", high: "sine", detune: 2, filter: 2400, decay: 0.72, gain: 0.18 } },
         { id: "raddy", name: "Raddy", color: "#f51414", image: "sprunki-raddy.png", audio: "sounds/raddy.wav", timbre: { low: "sawtooth", high: "square", detune: -5, filter: 1700, decay: 0.46, gain: 0.13 } },
         { id: "clukr", name: "Clukr", color: "#b9bec4", image: "sprunki-clukr.png", audio: "sounds/clukr.wav", timbre: { low: "square", high: "triangle", detune: 7, filter: 1300, decay: 0.38, gain: 0.12 } },
@@ -1689,6 +1700,13 @@
         { low: "sine", high: "sine", detune: 0, filter: 3200, decay: 0.31, gain: 0.13, highRatio: 2 },
         { low: "triangle", high: "sine", detune: 0, filter: 2800, decay: 0.33, gain: 0.15, highRatio: 2 }
       ];
+      const characters = [...window.SprunkiRoster.characters, ...window.SprunkiRoster.modCharacters].map((character) => {
+        const index = legacyPianoProfiles.findIndex((profile) => profile.id === character.id);
+        const profileIndex = index < 0 ? 0 : index;
+        return { ...character, image: character.file,
+          timbre: legacyPianoProfiles[profileIndex].timbre,
+          strictTimbre: strictSongTimbres[profileIndex] };
+      });
 
       const notes = [];
       const whiteNotes = [];
@@ -1704,6 +1722,8 @@
       const melody = { mode: "idle", studio: false, events: [], startedAt: 0,
         firstAt: null, playbackAt: 0, duration: 0, generation: 0, timers: new Set() };
       let audioGeneration = 0;
+      let previewGeneration = 0;
+      let characterPreview = null;
 
       let audioContext = null;
       let clockOffset = 0;
@@ -1814,13 +1834,23 @@
           const button = document.createElement("button");
           button.type = "button";
           button.className = `character-button${index === selectedCharacter ? " is-active" : ""}`;
-          button.innerHTML = `<img src="${character.image}" alt=""><span>${character.name}</span>`;
+          button.dataset.character = character.id;
+          if (character.sourceGroup) {
+            button.dataset.mod = character.sourceGroup;
+            button.title = `${character.name} - ${character.sourceGroup} MOD`;
+          }
+          button.setAttribute("aria-label", character.name);
+          button.setAttribute("aria-pressed", String(index === selectedCharacter));
+          button.innerHTML = `<img src="${character.image}" alt=""><span>${character.displayName}</span>`;
           button.addEventListener("click", () => {
+            stopCharacterPreview();
             selectedCharacter = index;
             heroFace.src = character.image;
             document.querySelectorAll(".character-button").forEach((item, itemIndex) => {
               item.classList.toggle("is-active", itemIndex === selectedCharacter);
+              item.setAttribute("aria-pressed", String(itemIndex === selectedCharacter));
             });
+            if (character.id === "black" && soundEnabled && !document.hidden) previewBlack(character);
           });
           characterStrip.appendChild(button);
         });
@@ -1974,7 +2004,7 @@
 
       function pianoTimbre() {
         const strict = selectedSong().strictTone === true;
-        const timbre = strict ? strictSongTimbres[selectedCharacter] : characters[selectedCharacter].timbre;
+        const timbre = strict ? characters[selectedCharacter].strictTimbre : characters[selectedCharacter].timbre;
         return { ...timbre, highDetune: strict ? 0 : -timbre.detune * 0.6 };
       }
 
@@ -2043,9 +2073,55 @@
         }
       }
 
+      function stopCharacterPreview() {
+        previewGeneration += 1;
+        const voice = characterPreview;
+        characterPreview = null;
+        voice?.stop();
+      }
+
+      async function previewBlack(character) {
+        const generation = previewGeneration;
+        let source, gain, cleaned = false;
+        const voice = { stop() { cleanup(true); } };
+        function cleanup(stop = false) {
+          if (cleaned) return;
+          cleaned = true;
+          if (characterPreview === voice) characterPreview = null;
+          if (source) source.onended = null;
+          // Partial setup may leave a source that cannot legally be stopped.
+          if (stop) { try { source?.stop(); } catch (_) {} }
+          try { source?.disconnect(); } catch (_) {}
+          try { gain?.disconnect(); } catch (_) {}
+        }
+        try {
+          // Use the piano's continuity-preserving unlock, never the music transport.
+          const context = await unlockAudio();
+          if (generation !== previewGeneration || !soundEnabled || document.hidden) return;
+          await loadCharacterBuffer(character);
+          if (generation !== previewGeneration || !soundEnabled || document.hidden ||
+              characters[selectedCharacter].id !== character.id || context.state !== "running") return;
+          const buffer = audioBuffers.get(character.id);
+          if (!buffer) return;
+          source = context.createBufferSource();
+          gain = context.createGain();
+          source.buffer = buffer;
+          source.loop = false;
+          gain.gain.value = 0.12;
+          source.connect(gain).connect(window.MoonAudio.output("effects"));
+          source.onended = () => cleanup();
+          source.start(context.currentTime);
+          characterPreview = voice;
+        } catch (error) {
+          cleanup(true);
+          // Preview failure must not change the piano clock, score, or sound setting.
+        }
+      }
+
       function playCharacterHit() {
         if (!soundEnabled) return;
         const character = characters[selectedCharacter];
+        if (character.id === "black") return;
         const buffer = audioBuffers.get(character.id);
         if (!buffer) return;
         try {
@@ -2320,6 +2396,7 @@
       }
 
       function silenceInputs() {
+        stopCharacterPreview();
         audioGeneration += 1;
         for (const voice of activeVoices) voice.stop();
         activeVoices.clear();
@@ -2851,6 +2928,7 @@
         if (state.running && !state.paused) pauseGame();
       }
       window.MoonAudio?.onSuspend(leavePiano);
+      window.addEventListener("moon:audio-state", stopCharacterPreview);
       document.addEventListener("visibilitychange", () => { if (document.hidden) leavePiano(); });
       window.addEventListener("blur", leavePiano);
       window.addEventListener("pagehide", leavePiano);

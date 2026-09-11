@@ -29,5 +29,18 @@
     file: 'sprunki-' + id + '.png',
     audio: 'sounds/' + id + (id === 'black' ? '.mp3' : '.wav')
   }));
-  globalThis.SprunkiRoster = Object.freeze({ characters: Object.freeze(characters) });
+  // Bonus characters belong to named fan mods, not the original twenty.
+  // No recording is assigned until its source and playback behavior are checked.
+  const modEntries = [
+    ['acid', 'ACID', 'アシッド', 'あしっど', 'Pyramixed'],
+    ['tox', 'Tox', 'トックス', 'とっくす', 'Pyramixed'],
+    ['sulfur', 'Sulfur', 'サルファー', 'さるふぁー', 'Pyramixed'],
+    ['mard', 'Mard', 'マード', 'まーど', 'Retake'],
+    ['mrbear', 'Mr. Bear', 'ミスターベア', 'みすたーべあ', 'Retake']
+  ];
+  const modCharacters = modEntries.map(([id, name, spokenName, hiragana, sourceGroup]) => Object.freeze({
+    id, name, spokenName, hiragana, displayName: name, sourceGroup,
+    file: 'assets/sprunki-mods/' + id + '.png', color: '#b9edcc', bg: '#242424'
+  }));
+  globalThis.SprunkiRoster = Object.freeze({ characters: Object.freeze(characters), modCharacters: Object.freeze(modCharacters) });
 })();

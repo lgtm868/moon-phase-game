@@ -4,7 +4,7 @@
 
 19 waveform-reviewed candidate loops, not audition-certified or independently authenticated recordings. All 20 roster originals were inspected; Black was actually decoded with Edge Web Audio (48 kHz mono, 838147 frames, 17.461396 s). No audible monitoring or reliable listening interface was available. Envelope peaks are not note transcription: sustained sounds can produce false attacks. Garnold, Sky, Mr. Tree and other melodic/vocal phrase interpretations remain provisional pending human listening. Structural tests do not establish musical correctness.
 
-**Black is preview-only and excluded from synchronized looping.** Its pack contains the original MP3 bytes, unchanged, with `loopable:false`, `beats:null`, `loopStart:0`, `loopEnd:838147/48000` (17.461395833333334 s) and conservative `gain:0.2`. The decoded onset is 0.332813 s; substantial energy continues to about 15 s with decay to 17.46 s. A 100 BPM phrase boundary is not verified. The parent engine should allow `loadTrack` to decode it for one-shot previews, but reject it from `setMusicSelection` with `loop-unverified`. Never enable source.loop or infer a beat count for Black. This deliverable does not claim 20 verified synchronized tracks.
+**Black plays the full original once, without synchronized looping.** Its pack contains the original MP3 bytes, unchanged, with `loopable:false`, `beats:null`, `loopStart:0`, `loopEnd:838147/48000` (17.461395833333334 s) and conservative `gain:0.2`. The decoded onset is 0.332813 s; substantial energy continues to about 15 s with decay to 17.46 s. A 100 BPM phrase boundary is not verified. The engine accepts it in `setMusicSelection`, starts at the next bar with offset zero, and removes it from transport selection at natural end. Other loops continue. A stale selection resend cannot repeat it; omit and reselect it or explicitly stop before replaying. Never enable source.loop or infer a beat count for Black. This does not claim 20 verified synchronized loops.
 
 The existing roster selects `simon.wav`. The alternate `sounds/simon.mp3` is untouched and unused. No sources were downloaded, replaced, renamed, or authenticated against an external reference.
 
@@ -54,7 +54,7 @@ Source threshold times use sample magnitude >= 0.001 (-60 dBFS); RMS is unweight
 | pinki | 9.675011 | 44100/2 | 0.000862 / 6.950726 | 0.043005 | 0.000917 | 234001 | 0.305084 | 0.655167 | 0.000421 |
 | jevin | 8.493729 | 48000/1 | 0.001083 / 6.458312 | 0.048209 | 0.006164 | 177299 | 0.252167 | 0.623518 | 0.000122 |
 
-Black (preview-only): RMS 0.162238; peak 0.823391; first/last >-60dB 0.332813 / 17.414917 s. After gain 0.2: RMS about 0.032448, peak about 0.164678. MP3 decoder details can vary slightly with browser version; re-run analysis for current values.
+Black (one-shot only): RMS 0.162238; peak 0.823391; first/last >-60dB 0.332813 / 17.414917 s. After gain 0.2: RMS about 0.032448, peak about 0.164678. MP3 decoder details can vary slightly with browser version; re-run analysis for current values.
 
 ## Per-Track Decisions
 

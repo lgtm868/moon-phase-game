@@ -1,4 +1,4 @@
-/* Generated. Black is preview-only (loopable:false). See AUDIO-ASSETS.md. */
+/* Generated. Black is one-shot only (loopable:false). See AUDIO-ASSETS.md. */
 window.MoonAudioManifest = {
   "bpm": 100,
   "beatsPerBar": 4,

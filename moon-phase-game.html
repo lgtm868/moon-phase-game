@@ -58,13 +58,14 @@
     .phase-choice { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 2px; font-size: 11px; line-height: 1.25; }
     .phase-choice canvas { width: 26px; height: 26px; }
     .phase-choice.is-active { background: var(--button); color: var(--button-ink); border-color: var(--button); }
-    .sprunki-picker { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 4px; }
+    .sprunki-picker { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 4px; }
     .sprunki-choice { position: relative; min-height: 0; padding: 2px; font-size: 9px; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .sprunki-choice img { width: 28px; height: 29px; object-fit: contain; }
-    .sprunki-choice span { max-width: 100%; overflow-wrap: anywhere; }
+    .sprunki-choice img { width: 28px; height: 29px; min-height: 0; flex: 0 1 auto; object-fit: contain; }
+    .sprunki-choice span { max-width: 100%; flex: 0 0 auto; overflow-wrap: anywhere; }
     .sprunki-choice.is-active { border-color: var(--button); background: #284338; }
     .sprunki-choice.is-active::after { content: "✓"; position: absolute; top: 1px; right: 3px; color: var(--button); font-size: 10px; }
     .sprunki-choice.is-pending::after { content: "◷"; }
+    .sprunki-choice[data-mod="true"]::before { content: "MOD"; position: absolute; top: 1px; left: 1px; padding: 1px; font-size: 6px; line-height: 1; font-weight: 700; background: #b9edcc; color: #16261c; border-radius: 2px; }
     .phase-strip { border-bottom: 1px solid var(--line); }
     .album-button.is-new { outline: 2px solid var(--game-gold, #f4cc72); outline-offset: -2px; }
     @media (prefers-reduced-motion: no-preference) {
@@ -209,11 +210,12 @@
     @media (max-width: 400px) { .album-grid button { font-size: 10px; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
   </style>
-  <link rel="stylesheet" href="games-theme.css?v=20260912-audio-polish">
-  <script src="games-theme.js?v=20260912-audio-polish"></script>
-  <script src="game-navigation.js?v=20260912-audio-polish" defer></script>
-  <script src="games-audio-manifest.js"></script>
-  <script src="games-audio.js?v=20260912-audio-polish"></script>
+  <link rel="stylesheet" href="games-theme.css?v=20260912-characters">
+  <script src="games-theme.js?v=20260912-characters"></script>
+  <script src="game-navigation.js?v=20260912-characters" defer></script>
+  <script src="games-audio-manifest.js?v=20260912-characters"></script>
+  <script src="games-audio.js?v=20260912-characters"></script>
+  <script src="sprunki-roster.js?v=20260912-characters"></script>
 </head>
 <body class="game-page" data-game="moon">
   <main aria-label="月の満ち欠けをみるゲーム">
@@ -350,16 +352,17 @@
         { id: "pinki", name: "Pinki", spokenName: "ピンキー", file: "sprunki-pinki.png", color: "#ff9ed5", music: "treeChord", audio: "sounds/pinki.wav" },
         { id: "jevin", name: "Jevin", spokenName: "ジェヴィン", file: "sprunki-jevin.png", color: "#2867c8", music: "hornPulse", audio: "sounds/jevin.wav" },
         { id: "black", name: "Black", spokenName: "ブラック", file: "sprunki-black.png", color: "#111111", music: "bassPulse", audio: "sounds/black.mp3" },
-        { id: "anpanman", name: "Anpanman", displayName: "アンパン", spokenName: "アンパンマン", sprite: "anpanman", color: "#d9412e", music: "kick" },
-        { id: "baikinman", name: "Baikinman", displayName: "ばいきん", spokenName: "ばいきんまん", sprite: "baikinman", color: "#6c55a3", music: "snare" },
-        { id: "dokinchan", name: "Dokin-chan", displayName: "ドキン", spokenName: "ドキンちゃん", sprite: "dokinchan", color: "#ff7f2a", music: "tinyArp" },
-        { id: "shokupanman", name: "Shokupanman", displayName: "しょくぱん", spokenName: "しょくぱんまん", sprite: "shokupanman", color: "#f6f1dd", music: "sunPiano" },
-        { id: "currypanman", name: "Currypanman", displayName: "カレー", spokenName: "カレーパンマン", sprite: "currypanman", color: "#d88823", music: "hornPulse" },
-        { id: "melonpanna", name: "Melonpanna", displayName: "メロン", spokenName: "メロンパンナ", sprite: "melonpanna", color: "#8fd05a", music: "treeChord" },
-        { id: "rollpanna", name: "Rollpanna", displayName: "ロール", spokenName: "ロールパンナ", sprite: "rollpanna", color: "#f0f0f0", music: "whistle" },
-        { id: "creampanda", name: "Creampanda", displayName: "クリーム", spokenName: "クリームパンダ", sprite: "creampanda", color: "#fff1a8", music: "softClave" },
-        { id: "jamojisan", name: "Jam Ojisan", displayName: "ジャム", spokenName: "ジャムおじさん", sprite: "jamojisan", color: "#f6f1dd", music: "sunPiano" },
-        { id: "batakosan", name: "Batako-san", displayName: "バタコ", spokenName: "バタコさん", sprite: "batakosan", color: "#f18f3b", music: "tinyArp" }
+        { id: "anpanman", name: "Anpanman", displayName: "アンパン", spokenName: "アンパンマン", sprite: "anpanman", file: "assets/anpanman/anpanman.png", color: "#d9412e", music: "kick" },
+        { id: "baikinman", name: "Baikinman", displayName: "ばいきん", spokenName: "ばいきんまん", sprite: "baikinman", file: "assets/anpanman/baikinman.png", color: "#6c55a3", music: "snare" },
+        { id: "dokinchan", name: "Dokin-chan", displayName: "ドキン", spokenName: "ドキンちゃん", sprite: "dokinchan", file: "assets/anpanman/dokinchan.png", color: "#ff7f2a", music: "tinyArp" },
+        { id: "shokupanman", name: "Shokupanman", displayName: "しょくぱん", spokenName: "しょくぱんまん", sprite: "shokupanman", file: "assets/anpanman/shokupanman.png", color: "#f6f1dd", music: "sunPiano" },
+        { id: "currypanman", name: "Currypanman", displayName: "カレー", spokenName: "カレーパンマン", sprite: "currypanman", file: "assets/anpanman/currypanman.png", color: "#d88823", music: "hornPulse" },
+        { id: "melonpanna", name: "Melonpanna", displayName: "メロン", spokenName: "メロンパンナ", sprite: "melonpanna", file: "assets/anpanman/melonpanna.png", color: "#8fd05a", music: "treeChord" },
+        { id: "rollpanna", name: "Rollpanna", displayName: "ロール", spokenName: "ロールパンナ", sprite: "rollpanna", file: "assets/anpanman/rollpanna.png", color: "#f0f0f0", music: "whistle" },
+        { id: "creampanda", name: "Creampanda", displayName: "クリーム", spokenName: "クリームパンダ", sprite: "creampanda", file: "assets/anpanman/creampanda.png", color: "#fff1a8", music: "softClave" },
+        { id: "jamojisan", name: "Jam Ojisan", displayName: "ジャム", spokenName: "ジャムおじさん", sprite: "jamojisan", file: "assets/anpanman/jamojisan.png", color: "#f6f1dd", music: "sunPiano" },
+        { id: "batakosan", name: "Batako-san", displayName: "バタコ", spokenName: "バタコさん", sprite: "batakosan", file: "assets/anpanman/batakosan.png", color: "#f18f3b", music: "tinyArp" },
+        ...globalThis.SprunkiRoster.modCharacters.map(character => ({ ...character }))
       ];
       let selectedSprunkiIndexes = [0];
       let musicEnabled = false;
@@ -797,7 +800,7 @@
         status.hidden = false;
       }
 
-      function restartSelectedSprunkiMusic() {
+      function restartSelectedSprunkiMusic(replayBlack = false) {
         if (!musicEnabled) return;
         const token = ++sprunkiMusicToken;
         const selected = selectedSprunkiIndexes.map(index => sprunkiCharacters[index]).filter(c => c.audio);
@@ -811,6 +814,10 @@
           updateMusicButton();
         };
         try {
+          if (replayBlack && selected.some(c => c.id === "black")) {
+            Promise.resolve(window.MoonAudio.setMusicSelection(selected.filter(c => c.id !== "black").map(c => c.id))).catch(() => {});
+            musicEnabled = true;
+          }
           // Call directly in the tap: the engine unlocks and joins at its next bar.
           Promise.resolve(window.MoonAudio.setMusicSelection(selected.map(c => c.id)))
             .then(() => { if (token === sprunkiMusicToken && musicEnabled) syncMusicState(); }, failed);
@@ -826,11 +833,9 @@
           status.hidden = !errors.length;
           status.textContent = errors.map(error => {
             const character = selected.find(c => c.id === error.id);
-            return error.message === "loop-unverified"
-              ? character.name + " のおとは どうきの じゅんびちゅう"
-              : character.spokenName + "：おとが よめません";
+            return character.spokenName + "：おとが よめません";
           }).join(" / ");
-          if (errors.length && !state.playing.length && !state.pending.length) musicEnabled = false;
+          if (state && !state.playing.length && !state.pending.length) musicEnabled = false;
         }
         sprunkiList.querySelectorAll(".sprunki-choice").forEach((button, index) => {
           const pending = !!(musicEnabled && selectedSprunkiIndexes.includes(index) && state?.pending.includes(sprunkiCharacters[index].id));
@@ -845,7 +850,9 @@
         const hasRecording = selectedSprunkiIndexes.some(index => sprunkiCharacters[index].audio);
         if (!hasRecording && musicEnabled) { musicEnabled = false; stopSprunkiMusic(); }
         musicButton.disabled = !hasRecording;
-        musicButton.title = hasRecording ? "音楽のオン・オフ" : "このなかまの音楽はありません";
+        musicButton.title = !hasRecording ? "このなかまの音楽はありません"
+          : selectedSprunkiIndexes.some(index => sprunkiCharacters[index].id === "black")
+            ? "音楽のオン・オフ（Blackは1回再生）" : "音楽のオン・オフ";
         musicButton.innerHTML = musicEnabled
           ? '<span class="button-icon" aria-hidden="true">♫</span>ON'
           : '<span class="button-icon" aria-hidden="true">♪</span>OFF';
@@ -1512,21 +1519,33 @@
           const label = document.createElement("span");
           button.type = "button";
           button.className = "sprunki-choice";
-          button.setAttribute("aria-label", `${character.name}にする`);
+          button.setAttribute("aria-label", character.id === "black" ? "Blackにする（おとは1回再生）" : `${character.name}にする`);
+          if (character.id === "black") button.title = "1回再生。おわったら おして もう1かい";
+          if (character.sourceGroup) {
+            button.dataset.mod = "true";
+            button.dataset.sourceGroup = character.sourceGroup;
+            button.title = `${character.name} / ${character.sourceGroup} MOD（音楽なし）`;
+          }
           dot.src = character.image.src;
           dot.alt = "";
           dot.width = 28; dot.height = 29;
           dot.decoding = "async";
-          label.textContent = character.displayName || character.name;
+          label.textContent = character.id === "black" ? "Black 1かい" : character.displayName || character.name;
           button.append(dot, label);
           button.addEventListener("click", () => {
             const selectedPosition = selectedSprunkiIndexes.indexOf(index);
-            if (selectedPosition >= 0 && selectedSprunkiIndexes.length > 1) {
-              selectedSprunkiIndexes.splice(selectedPosition, 1);
-            } else if (selectedPosition < 0) {
-              selectedSprunkiIndexes.push(index);
+            const audioState = window.MoonAudio?.getMusicState();
+            if (character.id === "black" && selectedPosition >= 0 && audioState && !audioState.selected.includes("black")) {
+              musicEnabled = true;
+              restartSelectedSprunkiMusic(true);
+            } else {
+              if (selectedPosition >= 0 && selectedSprunkiIndexes.length > 1) {
+                selectedSprunkiIndexes.splice(selectedPosition, 1);
+              } else if (selectedPosition < 0) {
+                selectedSprunkiIndexes.push(index);
+              }
+              if (musicEnabled) restartSelectedSprunkiMusic();
             }
-            if (musicEnabled) restartSelectedSprunkiMusic();
             if (character.sprite) {
               speakJapanese(character.spokenName);
             } else {
@@ -1658,7 +1677,7 @@
       musicButton.addEventListener("click", () => {
         musicEnabled = !musicEnabled;
         if (musicEnabled) {
-          restartSelectedSprunkiMusic();
+          restartSelectedSprunkiMusic(true);
         } else {
           stopSprunkiMusic();
         }

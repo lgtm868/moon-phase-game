@@ -162,9 +162,9 @@ body.game-page{background:var(--game-bg,#151918);color:var(--game-ink,#f4f7f3)}
 @media(min-width:1100px) and (min-height:700px) and (orientation:landscape){.game-page #play{grid-template-columns:minmax(0,1fr) 350px}.game-page .answer{min-height:130px;font-size:52px}.answer-area{gap:24px}.game-page .group .character,.game-page .group.dense .character{max-height:250px}}
 @media(max-width:600px){.game-page main{padding:12px;gap:14px}.game-page h1{font-size:20px}.game-page .logo{font-size:10px}.game-page .sound{font-size:12px;padding:8px}.game-controls{gap:10px}.game-page .mode-picker{width:100%}.game-page .mode-picker button{flex:1;padding-inline:8px;font-size:17px}.game-page .settings{width:100%;justify-content:space-between;font-size:13px}.game-page .settings select{font-size:13px}.game-page .groups{grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);gap:4px}.game-page .group{gap:3px}.game-page .group.dense .character{min-width:36px;flex-basis:36px;height:83px}.game-page .equation{font-size:34px}.answer-area{margin-top:18px;gap:10px}.game-page .prompt{min-height:40px;font-size:19px}.game-page .answer{min-height:86px;font-size:40px}.game-page .music-bar{gap:8px}.game-page .music-bar button,.game-page .music-bar select{font-size:13px;padding-inline:8px}.game-page .music-status{font-size:12px}.game-page .party h2{font-size:25px}}
 </style>
-<link rel="stylesheet" href="games-theme.css?v=20260912-audio-polish">
-<script src="games-theme.js?v=20260912-audio-polish"></script>
-<script src="game-navigation.js?v=20260912-audio-polish" defer></script>
+<link rel="stylesheet" href="games-theme.css?v=20260912-characters">
+<script src="games-theme.js?v=20260912-characters"></script>
+<script src="game-navigation.js?v=20260912-characters" defer></script>
 </head>
 <body class="game-page" data-game="addition">
 <main>
@@ -191,9 +191,9 @@ body.game-page{background:var(--game-bg,#151918);color:var(--game-ink,#f4f7f3)}
   <footer class="music-panel"><div class="music-bar"><button id="musicToggle" aria-pressed="false">▶ おんがくを ながす</button><select id="musicTrack" aria-label="おんがくの キャラクター"></select><label>おんりょう <input id="musicVolume" aria-label="おんがくの おんりょう" type="range" min="0" max="100" value="20"></label></div><p class="music-status" id="musicStatus" role="status" aria-live="polite"></p></footer>
 </main>
 <div class="confetti" id="confetti" aria-hidden="true"></div>
-<script src="sprunki-roster.js?v=20260912-audio-polish"></script>
-<script src="games-audio-manifest.js"></script>
-<script src="games-audio.js?v=20260912-audio-polish"></script>
+<script src="sprunki-roster.js?v=20260912-characters"></script>
+<script src="games-audio-manifest.js?v=20260912-characters"></script>
+<script src="games-audio.js?v=20260912-characters"></script>
 <script>
 "use strict";
 // Pure game model: the UI and automated checks share the same transitions.
@@ -239,15 +239,15 @@ const engine=window.MoonAudio;
 const characters=globalThis.SprunkiRoster.characters;
 const tracks=new Map(characters.map(char=>[char.id,char.audio]));
 const nextCast=AdditionGame.createCastCycle(characters),questionCasts=new WeakMap();
-for(const char of characters){const option=document.createElement('option');option.value=char.id;option.textContent=`${char.hiragana} ♪`;$('musicTrack').append(option);}
+for(const char of characters){const option=document.createElement('option');option.value=char.id;option.textContent=char.id==='black'?`${char.hiragana}（1かい）`:`${char.hiragana} ♪`;$('musicTrack').append(option);}
 function questionCast(){
   let casts=questionCasts.get(state);if(!casts){casts=[];questionCasts.set(state,casts);}
   const p=state.deck[state.index];
   return casts[state.index]??=nextCast(state.operation==='subtract'?p.a:p.a+p.b);
 }
 function renderBand(){document.querySelector('#party .band').replaceChildren(...nextCast(3).map(char=>{const img=document.createElement('img');img.src=char.file;img.alt=char.hiragana;return img;}));}
-function selectMusic(){$('musicStatus').textContent='';if(musicWanted)void playMusic();}
-function musicLabel(){$('musicToggle').setAttribute('aria-pressed',String(musicWanted));$('musicToggle').textContent=musicWanted?'❚❚ おんがくを とめる':'▶ おんがくを ながす';}
+function selectMusic(){$('musicStatus').textContent='';musicLabel();if(musicWanted)void playMusic();}
+function musicLabel(){$('musicToggle').setAttribute('aria-pressed',String(musicWanted));$('musicToggle').textContent=musicWanted?'❚❚ おんがくを とめる':$('musicTrack').value==='black'?'▶ 1かい ながす':'▶ おんがくを ながす';}
 function musicVolume(){engine?.setVolumes?.({music:Number($('musicVolume').value)/100});}
 function syncMusicVolume(){const value=engine?.getVolumes?.().music;if(Number.isFinite(value))$('musicVolume').value=String(value*100);}
 window.addEventListener('moon:audio-volume',syncMusicVolume);
@@ -259,10 +259,30 @@ async function playMusic(){
   const src=tracks.get($('musicTrack').value);
   if(!src)return;
   musicLabel();$('musicStatus').textContent='おんがくを よみこみちゅう…';
-  try{if(!engine)throw new Error('Audio unavailable');await engine.unlock();if(generation!==musicGeneration||!musicWanted||document.hidden)return;await engine.setMusicSelection([$('musicTrack').value]);if(generation!==musicGeneration)return;syncMusicState();}
+  try{
+    if(!engine)throw new Error('Audio unavailable');
+    const id=$('musicTrack').value;
+    if(id==='black'&&!engine.getMusicState().selected.includes(id)){
+      const reset=engine.setMusicSelection([]);
+      musicWanted=true;
+      Promise.resolve(reset).catch(()=>{});
+    }
+    await engine.setMusicSelection([id]);if(generation!==musicGeneration)return;syncMusicState();
+  }
   catch{if(generation!==musicGeneration)return;pauseMusic();$('musicStatus').textContent='おんがくボタンを もういちど おしてね';}
 }
-function syncMusicState(){clearTimeout(musicStateTimer);musicStateTimer=null;if(!musicWanted)return;const status=engine?.getMusicState();if(!status)return;if(status.errors?.length){const unverified=status.errors.some(error=>error.id===$('musicTrack').value&&error.message==='loop-unverified');pauseMusic();$('musicStatus').textContent=unverified?'このおとは どうきの じゅんびちゅう':'おんがくを よめなかったよ。もういちど おしてね';return;}$('musicStatus').textContent=status.pending?.length?'つぎの くぎりから ながれるよ':'';if(status.pending?.length)musicStateTimer=setTimeout(syncMusicState,250);}
+function syncMusicState(){
+  clearTimeout(musicStateTimer);musicStateTimer=null;
+  if(!musicWanted)return;
+  const status=engine?.getMusicState();if(!status)return;
+  const id=$('musicTrack').value;
+  if(status.errors?.some(error=>error.id===id)){pauseMusic();$('musicStatus').textContent='おんがくを よめなかったよ。もういちど おしてね';return;}
+  const pending=status.pending?.includes(id),playing=status.playing?.includes(id);
+  if(!pending&&!playing){musicWanted=false;musicLabel();$('musicStatus').textContent='';return;}
+  musicLabel();
+  $('musicStatus').textContent=pending?'つぎの くぎりから ながれるよ':id==='black'?'このおとは 1かい ながれるよ':'';
+  if(pending)musicStateTimer=setTimeout(syncMusicState,250);
+}
 window.addEventListener('moon:audio-state',syncMusicState);
 const speech=window.speechSynthesis;
 function loadVoices(){voices=speech?.getVoices?.()||[];}loadVoices();speech?.addEventListener?.('voiceschanged',loadVoices);

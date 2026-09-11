@@ -6,7 +6,7 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '..', 'games-audio.js'), 'utf8');
 
 function setup(options = {}) {
-  const sources = [], contexts = [], decoders = [], scripts = [], timers = new Map(), events = new Map();
+  const sources = [], contexts = [], decoders = [], scripts = [], dispatched = [], timers = new Map(), events = new Map();
   const decoderControl = { hook: null };
   const sourceControl = { startHook: null };
   let timerId = 0;
@@ -71,7 +71,7 @@ function setup(options = {}) {
     OfflineAudioContext: options.webkitOnly ? undefined : OfflineAudioContext,
     webkitOfflineAudioContext: OfflineAudioContext,
     MoonAudioManifest: { bpm: 100, beatsPerBar: 4, tracks: {} },
-    addEventListener(name, fn) { events.set('window:' + name, fn); }, dispatchEvent() {}
+    addEventListener(name, fn) { events.set('window:' + name, fn); }, dispatchEvent(event) { dispatched.push(event); }
   };
   const globals = { window, document, location: { href: 'file:///game/index.html' }, URL, Uint8Array,
     localStorage: { getItem() { throw Error('blocked'); }, setItem() { throw Error('blocked'); } },
@@ -87,7 +87,14 @@ function setup(options = {}) {
     if (loaded) window.MoonAudio.registerAsset(id, asset);
     return asset;
   }
-  return { api: window.MoonAudio, document, window, contexts, decoders, decoderControl, sourceControl, sources, scripts, events, timers, add };
+  function addBlack(loaded = true) {
+    const asset = add('black', 0, false, 17.46);
+    asset.loopable = false; asset.type = 'audio/mpeg';
+    window.MoonAudioManifest.tracks.black.loopable = false;
+    if (loaded) window.MoonAudio.registerAsset('black', asset);
+    return asset;
+  }
+  return { api: window.MoonAudio, document, window, contexts, decoders, decoderControl, sourceControl, sources, scripts, events, dispatched, timers, add, addBlack };
 }
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 const deferred = () => {
@@ -166,23 +173,142 @@ async function lifecycleChecks() {
       'Headroom balancing still takes effect after the join');
   });
 
-  await check('Black decodes for preview but never joins synchronized loops', async t => {
-    const asset = t.add('black', 0, false, 17.46);
-    asset.loopable = false;
-    t.window.MoonAudioManifest.tracks.black.loopable = false;
-    t.api.registerAsset('black', asset);
+  await check('Black preview and next-bar original one-shot, natural end and stale selection suppression', async t => {
+    t.addBlack();
     const preview = await t.api.loadTrack('black');
     assert.equal(preview.buffer.duration, 17.46);
     assert.equal(preview.meta.loopable, false);
+    assert.equal(preview.meta.beats, null, 'No verified period is invented');
     assert.equal(t.sources.length, 0, 'Decoding alone cannot start a preview');
     t.add('verified');
+    await t.api.setMusicSelection(['verified']);
+    const keeper = t.sources[0], ctx = t.contexts[0]; ctx.currentTime = .5;
     await t.api.setMusicSelection(['black', 'verified']);
-    assert.equal(t.sources.length, 1, 'Only the verified loop can start');
-    assert.equal(t.sources[0].buffer.duration, 4.8);
-    assert.deepEqual(JSON.parse(JSON.stringify(t.api.getMusicState().errors)), [{ id: 'black', message: 'loop-unverified' }]);
+    const black = t.sources[1], gain = black.connections[0], bus = t.api.output('music').gain;
+    assert.equal(black.buffer, preview.buffer, 'Use the entire original decoded buffer');
+    assert.equal(black.loop, false);
+    assert.equal(black.loopEnd, undefined, 'No cropping or loop boundary on the source');
+    assert.equal(black.playbackRate, undefined, 'No stretching');
+    assert.deepEqual(black.started, [2.5, 0]);
+    assert.equal(black.stopped, undefined, 'No scheduled truncation');
+    assert.equal(t.api.getMusicState().errors.length, 0);
+    assert(t.api.getMusicState().pending.includes('black'));
+    await t.api.setMusicSelection(['black', 'verified']);
+    assert.equal(t.sources.length, 2, 'Unchanged queued selection never restarts');
+    ctx.currentTime = 3;
+    await t.api.setMusicSelection(['black', 'verified']);
+    assert.equal(t.sources.length, 2, 'Unchanged playing selection never restarts');
+    assert(t.api.getMusicState().playing.includes('black'));
+    t.api.setVolumes({ music: .4 }); t.api.setDucking(true);
+    assert(Math.abs(bus.valueAt(3.2) - .4 * .9 / Math.sqrt(2) * .28) < 1e-9);
+    ctx.currentTime = 19.95; t.api.setDucking(false);
+    assert(!gain.disconnected, 'Per-track gain stays connected through the whole original');
+    ctx.currentTime = 19.96;
+    const count = t.dispatched.length;
+    black.onended();
+    assert(black.disconnected && gain.disconnected);
+    assert.equal(t.dispatched.length, count + 1);
+    assert.equal(t.dispatched.at(-1).type, 'moon:audio-state');
+    assert.deepEqual(Array.from(t.dispatched.at(-1).detail.selected), ['verified']);
+    assert.deepEqual(Array.from(t.api.getMusicState().playing), ['verified']);
     assert(!t.api.getMusicState().pending.includes('black'));
-    assert.equal(await t.api.loadTrack('black'), preview, 'Loop rejection preserves the preview cache');
+    assert.equal(keeper.stopped, undefined, 'Other loops continue unchanged');
+    assert(Math.abs(bus.valueAt(20.2) - .4 * .8) < 1e-9, 'Headroom recovers after natural end');
+    await t.api.setMusicSelection(['black', 'verified']);
+    assert.equal(t.sources.length, 2, 'Stale selected UI resync must not retrigger a finished one-shot');
+    assert(!t.api.getMusicState().selected.includes('black'));
+    assert.equal(await t.api.loadTrack('black'), preview, 'Playback preserves the preview cache');
+    await t.api.setMusicSelection(['verified']);
+    await t.api.setMusicSelection(['black', 'verified']);
+    assert.equal(t.sources.length, 3, 'Explicit omit then reselect rearms the one-shot');
+    assert.equal(t.sources[2].started[1], 0);
+    black.onended();
+    assert(t.api.getMusicState().selected.includes('black'), 'Old end callback cannot remove the replacement');
   });
+
+  await check('Black natural end does not cancel another pending track load', async t => {
+    t.addBlack(); const asset = t.add('slow', 8, false);
+    await t.api.setMusicSelection(['black']);
+    const request = t.api.setMusicSelection(['black', 'slow']); await flush();
+    t.contexts[0].currentTime = 17.56; t.sources[0].onended();
+    t.api.registerAsset('slow', asset); t.scripts[0].onload(); await request;
+    assert.deepEqual(Array.from(t.api.getMusicState().selected), ['slow']);
+    assert.equal(t.sources.length, 2);
+    assert.equal(t.sources[1].loop, true);
+  });
+
+  await check('All 19 production loops retain 100 BPM eight-beat playback alongside Black', async t => {
+    const manifestContext = { window: {} };
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'games-audio-manifest.js'), 'utf8'), manifestContext);
+    const manifest = manifestContext.window.MoonAudioManifest;
+    assert.equal(manifest.bpm, 100);
+    const loops = Object.entries(manifest.tracks).filter(([, meta]) => meta.loopable !== false);
+    assert.equal(loops.length, 19);
+    for (const [id, meta] of loops) {
+      assert.equal(meta.beats, 8);
+      const asset = t.add(id, meta.beats, false, meta.loopEnd);
+      Object.assign(asset, meta); t.api.registerAsset(id, asset);
+    }
+    t.addBlack();
+    const ids = loops.map(([id]) => id);
+    await t.api.setMusicSelection(ids);
+    t.contexts[0].currentTime = .5;
+    await t.api.setMusicSelection([...ids, 'black']);
+    for (const node of t.sources.slice(0, 19)) {
+      assert.equal(node.loop, true);
+      assert.deepEqual(node.started, [.1, 0]);
+      assert.equal(node.loopEnd - node.loopStart, 4.8);
+      assert.equal(node.stopped, undefined);
+    }
+    t.contexts[0].currentTime = 19.96; t.sources[19].onended();
+    assert.deepEqual(Array.from(t.api.getMusicState().playing), ids);
+    assert.equal(t.sources.length, 20);
+  });
+
+  await check('Black alone finishes once and explicit stop resets selection intent', async t => {
+    t.addBlack();
+    await t.api.setMusicSelection(['black']);
+    const black = t.sources[0];
+    t.contexts[0].currentTime = 17.56; black.onended();
+    assert.equal(t.api.getMusicState().selected.length, 0);
+    assert.equal(t.api.getMusicState().playing.length, 0);
+    assert.equal(t.api.getMusicState().pending.length, 0);
+    for (let i = 0; i < 3; i++) await t.api.setMusicSelection(['black']);
+    assert.equal(t.sources.length, 1);
+    t.api.stopMusic(); await t.api.setMusicSelection(['black']);
+    assert.equal(t.sources.length, 2, 'An explicit stop begins a new selection session');
+    assert.equal(t.sources[1].started[1], 0);
+  });
+
+  for (const action of ['deselect', 'mute', 'hidden', 'dispose']) {
+    for (const stage of ['loading', 'queued', 'playing']) {
+      await check(`Black ${action} during ${stage} cannot resurrect or remove replacement`, async t => {
+        const asset = t.addBlack(stage !== 'loading');
+        const request = t.api.setMusicSelection(['black']); await flush();
+        if (stage !== 'loading') await request;
+        if (stage === 'playing') t.contexts[0].currentTime = 1;
+        const old = t.sources[0];
+        if (action === 'deselect') await t.api.setMusicSelection([]);
+        else if (action === 'mute') t.api.suspend();
+        else if (action === 'dispose') t.api.dispose();
+        else { t.document.hidden = true; t.events.get('document:visibilitychange')(); }
+        if (stage === 'loading') {
+          t.api.registerAsset('black', asset); t.scripts[0].onload(); await request;
+          assert.equal(t.sources.length, 0);
+        }
+        assert.equal(t.api.getMusicState().selected.length, 0);
+        if (old) assert(Number.isFinite(old.stopped));
+        if (old && action !== 'deselect') assert(old.disconnected);
+        t.document.hidden = false;
+        await t.api.setMusicSelection(['black']);
+        const fresh = t.sources.at(-1);
+        old?.onended();
+        assert(t.api.getMusicState().selected.includes('black'));
+        assert.equal(fresh.stopped, undefined);
+        assert.equal(t.api.getMusicState().errors.length, 0);
+      });
+    }
+  }
 
   await check('Rejected shared resume clears pending state and retries on the same context', async t => {
     t.add('a');

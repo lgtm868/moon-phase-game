@@ -249,6 +249,12 @@ async function checkBrowser() {
       const frame = await (await page.locator('#gameFrame').elementHandle()).contentFrame();
       assert.equal(page.frames().length, 2, game + ': one shell and one game');
       assert.equal(await frame.locator('#gameNavigation').count(), 0, game + ': embedded game does not duplicate navigation');
+      const palette = await page.evaluate(() => ({
+        shell: getComputedStyle(document.body).backgroundColor,
+        navigation: getComputedStyle(document.querySelector('#gameNavigation')).backgroundColor,
+        primary: getComputedStyle(document.documentElement).getPropertyValue('--game-primary').trim()
+      }));
+      assert.deepEqual(palette, { shell: 'rgb(24, 24, 24)', navigation: 'rgb(36, 36, 36)', primary: '#b9edcc' }, game + ': neutral shell and unchanged mint primary');
       return frame;
     }
     const desktopLink = game => page.locator('.game-nav-shortcuts [data-nav-game="' + game + '"]');

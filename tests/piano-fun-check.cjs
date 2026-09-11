@@ -31,9 +31,14 @@ function observeAudio() {
   window.__rankings = [];
   window.MoonRanking = { complete: value => window.__rankings.push(value) };
   window.addEventListener("keydown", event => {
-    if (!event.repeat) window.__inputTimes.push({ code: event.code, at: performance.now() });
+    if (!event.repeat) window.__inputTimes.push({ code: event.code,
+      at: window.MoonAudio.getContext().currentTime * 1000 });
   });
   const proto = (window.AudioContext || window.webkitAudioContext).prototype;
+  const base = Object.getPrototypeOf(proto);
+  const time = Object.getOwnPropertyDescriptor(base, "currentTime");
+  Object.defineProperty(proto, "currentTime", { configurable: true,
+    get() { return time.get.call(this) + (window.__audioAdvanceMs || 0) / 1000; } });
   const create = proto.createOscillator;
   const resume = proto.resume;
   proto.resume = function () {
@@ -135,7 +140,7 @@ async function runViewport(browser, viewport, embedded) {
   await page.keyboard.up("h");
   await page.keyboard.up("f");
   assert.match(await status(), /5おん/, "Repeat keydown is not a new note");
-  assert.equal(await $("#startButton").textContent(), "START", "Recording never auto-starts rhythm game");
+  assert.equal(await $("#startButton").textContent(), "はじめる", "Recording never auto-starts rhythm game");
   const take = (await audio()).filter((_, index) => index % 2 === 0);
   const inputTimes = await frame.evaluate(() => window.__inputTimes);
   assert.equal(take.length, 5);
@@ -264,9 +269,10 @@ async function runViewport(browser, viewport, embedded) {
   await $(".song-card").nth(1).click();
   await $("#startButton").click();
   await $("#pauseButton").click();
-  assert.equal(await $("#pauseButton").textContent(), "RESUME");
+  assert.equal(await $("#pauseButton").textContent(), "つづき");
   await $("#pauseButton").click();
-  assert.equal(await $("#pauseButton").textContent(), "PAUSE");
+  await frame.waitForFunction(() => document.querySelector("#pauseButton").textContent === "とめる");
+  await frame.evaluate(() => { window.__audioAdvanceMs = 240000; });
   await page.clock.fastForward(240000);
   await page.clock.runFor(50);
   assert(await $("#resultOverlay").evaluate(element => element.classList.contains("is-live")));
@@ -281,6 +287,8 @@ async function runViewport(browser, viewport, embedded) {
   await page.clock.runFor(100);
   assert.equal(await frame.evaluate(() => window.__rankings.length), 1, "One ranking per round");
   await $("#startButton").click();
+  await frame.waitForFunction(() => document.querySelector("#startButton").textContent === "もういちど");
+  await frame.evaluate(() => { window.__audioAdvanceMs += 240000; });
   await page.clock.fastForward(240000);
   await page.clock.runFor(50);
   const again = await frame.evaluate(() => window.__rankings);

@@ -2,7 +2,17 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),asse
 const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'sprunki-guess-game.html'),'utf8');
 const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
 scripts.forEach(s=>new vm.Script(s[1]));
-const game=vm.runInNewContext(scripts[0][1]+';GuessGame;');
+const context=vm.createContext({});
+vm.runInContext(fs.readFileSync(path.join(root,'sprunki-roster.js'),'utf8'),context);
+const roster=context.SprunkiRoster.characters,originalRoster=JSON.stringify(roster);
+const rosterScript='<script src="sprunki-roster.js?v=20260912-roster"></script>';
+assert(html.includes(rosterScript)&&html.indexOf(rosterScript)<scripts[0].index,'Roster loads synchronously before model');
+const game=vm.runInContext(scripts[0][1]+';GuessGame;',context);
+assert.equal(game.characters.length,20);
+assert.equal(new Set(game.characters.map(c=>c.id)).size,20);
+for(const [i,c]of game.characters.entries())assert.deepEqual({...c},{...roster[i],name:roster[i].hiragana});
+const legacyIds=['oren','sky','simon','pinki','gray','durple','tunner','vineria'];
+assert.deepEqual(Array.from(game.collectRound(game.createSession(),legacyIds).owned).sort(),legacyIds.slice().sort(),'Existing collection IDs remain valid');
 const seen=new Set();let questions=0;
 for(let seed=1;seed<=500;seed++){
  let n=seed;const random=()=>((n=(Math.imul(1664525,n)+1013904223)>>>0)/4294967296);
@@ -14,6 +24,8 @@ for(let seed=1;seed<=500;seed++){
  }
  assert.equal(state.phase,'complete');assert.equal(state.stars,5);assert.equal(game.answer(state,state.deck[4].target.id),'ignored');
 }
-assert.equal(seen.size,8);
+assert.equal(seen.size,20);
+assert.deepEqual([...seen].sort(),Array.from(roster,c=>c.id).sort());
+assert.equal(JSON.stringify(roster),originalRoster,'Mapping must not modify shared records');
 for(const c of game.characters){assert(/^[ぁ-ゖー]+$/.test(c.name));assert.equal(fs.readFileSync(path.join(root,c.file)).subarray(0,8).toString('hex'),'89504e470d0a1a0a');}
-console.log(`PASS: ${questions} questions; all eight characters; three unique choices; retries; double answers; double next; completion; hiragana names; packaged image integrity.`);
+console.log(`PASS: ${questions} questions; all 20 characters; shared roster mapping; legacy collection IDs; three unique choices; retries; double answers; double next; completion; hiragana names; packaged image integrity.`);

@@ -4,7 +4,7 @@ const script=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]).jo
 new vm.Script(script);
 function setup(seed=1,voices=[{lang:'en-US'}],speech=true){
  const elements=new Map(),events={},windowEvents={},utterances=[];let cancels=0;
- function element(){const classes=new Set();return {hidden:false,children:[],attributes:{},style:{},dataset:{},disabled:false,textContent:'',setAttribute(k,v){this.attributes[k]=String(v)},getAttribute(k){return this.attributes[k]},append(...c){this.children.push(...c)},replaceChildren(...c){this.children=c},focus(){},classList:{add(...n){n.forEach(x=>classes.add(x))},remove(...n){n.forEach(x=>classes.delete(x))}},click(){if(!this.disabled)this.onclick?.()},addEventListener(k,v){this[k]=v}}}
+ function element(){const classes=new Set(),listeners={};return {hidden:false,children:[],attributes:{},style:{},dataset:{},disabled:false,textContent:'',setAttribute(k,v){this.attributes[k]=String(v)},getAttribute(k){return this.attributes[k]},append(...c){this.children.push(...c)},replaceChildren(...c){this.children=c},focus(){},classList:{add(...n){n.forEach(x=>classes.add(x))},remove(...n){n.forEach(x=>classes.delete(x))},contains(n){return classes.has(n)}},click(){if(!this.disabled){for(const fn of listeners.click||[])fn({target:this});this.onclick?.()}},addEventListener(k,v){(listeners[k]??=[]).push(v)}}}
  const el=id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id)};
  const homeButtons=[element(),element(),element()];
  const document={hidden:false,querySelector:()=>element(),getElementById:el,createElement:element,querySelectorAll:()=>homeButtons,addEventListener:(k,v)=>events[k]=v};
@@ -74,6 +74,20 @@ console.log(`PASS: ${count} English questions, all 18 words, unique targets/opti
  const review=app.el('reviewWords').children;assert.equal(review.length,5);
  assert.equal(new Set(review.map(card=>card.attributes['aria-label'])).size,5);
  review[0].click();assert.equal(app.utterances.at(-1).text,app.read('deck[0][0]'));
+ const queued=app.utterances.at(-1);
+ assert(!review[0].classList.contains('speaking'),'Queued speech is not highlighted');
+ queued.onstart();assert(review[0].classList.contains('speaking'));
+ review[1].click();assert(!review[0].classList.contains('speaking'),'Cancel clears old word immediately');
+ const current=app.utterances.at(-1);current.onstart();
+ queued.onend();queued.onerror({error:'network'});queued.onstart();
+ assert(review[1].classList.contains('speaking'),'Stale callbacks cannot clear the new word');
+ current.onend();assert(!review[1].classList.contains('speaking'));
+ current.onstart();assert(!review[1].classList.contains('speaking'),'Ended utterance cannot restart highlight');
+ review[2].click();app.utterances.at(-1).onstart();app.el('sound').click();
+ assert(!review[2].classList.contains('speaking'),'Mute clears highlight');app.el('sound').click();
+ review[3].click();app.utterances.at(-1).onstart();app.utterances.at(-1).onerror({error:'canceled'});
+ assert(!review[3].classList.contains('speaking'),'Cancel event clears highlight');
+ assert.equal(app.read('audioFailed'),false,'Cancellation is not a voice failure');
  assert.equal(app.read('window.results.length'),1);assert.equal(app.read('window.results[0].metrics.firstTry'),4);
  assert.equal(app.read('window.results[0].runId'),firstRun);assert.equal(app.read('window.results[0].metrics.completed'),5);
  app.el('next').onclick();assert.equal(app.read('window.results.length'),1);

@@ -124,7 +124,7 @@ async function theme(frame, route, embedded, label) {
     if (document.documentElement.classList.contains('is-embedded') !== embedded) issues.push('is-embedded does not match actual frame nesting');
     const body = getComputedStyle(document.body);
     if (body.fontFamily !== style.fontFamily) issues.push('Page font differs from shared Japanese system font');
-    if (body.backgroundColor !== 'rgb(21, 25, 24)') issues.push(`Page background differs from shared neutral: ${body.backgroundColor}`);
+    if (body.backgroundColor !== 'rgb(24, 24, 24)') issues.push(`Page background differs from shared neutral: ${body.backgroundColor}`);
     if (body.color !== 'rgb(244, 247, 243)') issues.push(`Page ink differs from shared foreground: ${body.color}`);
     return { issues, font: body.fontFamily, background: body.backgroundColor, color: body.color };
   }, { expected: tokens, route, embedded });
@@ -454,7 +454,7 @@ async function guessFlow(c) {
   await f.locator('#finish').waitFor({ state: 'visible' });
   await checkpoint(c, 'finish', ['#again', '#finishTitle']);
   if (await f.locator('#collectionSummary').count()) {
-    assert.equal(await f.locator('#friends .friend').count(), 8, 'Collection retains all eight slots');
+    assert.equal(await f.locator('#friends .friend').count(), 20, 'Collection retains all twenty slots');
     assert.deepEqual((await f.locator('#friends button.owned').evaluateAll(nodes => nodes.map(node => node.dataset.id))).sort(), [...new Set(collectedTargets)].sort(), 'Completed round earns its pictured targets');
     await f.locator('#friends button.owned').last().click();
     await checkpoint(c, 'collection-selected', ['#collectionSummary', '#friends button.owned', '#again']);
@@ -782,7 +782,7 @@ async function pianoFlow(c) {
   const after = await f.locator('#noteCanvas').evaluate(canvas => canvas.toDataURL());
   assert.notEqual(after, before, 'Playing piano canvas must animate');
   await click(f, '#pauseButton');
-  assert.equal((await f.locator('#pauseButton').textContent()).trim(), 'RESUME');
+  assert.equal((await f.locator('#pauseButton').textContent()).trim(), 'つづき');
   await click(f, '#menuButton');
   await checkpoint(c, 'paused-menu', ['#pauseButton', '#menuCloseButton']);
   await click(f, '#menuCloseButton');

@@ -64,6 +64,13 @@
     .sprunki-choice span { max-width: 100%; overflow-wrap: anywhere; }
     .sprunki-choice.is-active { border-color: var(--button); background: #284338; }
     .sprunki-choice.is-active::after { content: "✓"; position: absolute; top: 1px; right: 3px; color: var(--button); font-size: 10px; }
+    .sprunki-choice.is-pending::after { content: "◷"; }
+    .phase-strip { border-bottom: 1px solid var(--line); }
+    .album-button.is-new { outline: 2px solid var(--game-gold, #f4cc72); outline-offset: -2px; }
+    @media (prefers-reduced-motion: no-preference) {
+      .album-button.is-new { animation: album-found 700ms ease-out; }
+      @keyframes album-found { 50% { background: #365c48; } }
+    }
     [hidden] { display: none !important; }
     .controls { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) repeat(2, 64px); gap: 8px; align-items: stretch; }
     .controls button, .game-link { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 700; min-height: 48px; }
@@ -202,9 +209,11 @@
     @media (max-width: 400px) { .album-grid button { font-size: 10px; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
   </style>
-  <link rel="stylesheet" href="games-theme.css?v=20260907-fun">
-  <script src="games-theme.js?v=20260907-fun"></script>
-  <script src="game-navigation.js?v=20260907-fun" defer></script>
+  <link rel="stylesheet" href="games-theme.css?v=20260912-audio-polish">
+  <script src="games-theme.js?v=20260912-audio-polish"></script>
+  <script src="game-navigation.js?v=20260912-audio-polish" defer></script>
+  <script src="games-audio-manifest.js"></script>
+  <script src="games-audio.js?v=20260912-audio-polish"></script>
 </head>
 <body class="game-page" data-game="moon">
   <main aria-label="月の満ち欠けをみるゲーム">
@@ -358,13 +367,6 @@
         character.image = new Image();
         character.image.src = character.file || (character.sprite ? makeCharacterSprite(character.sprite) : "");
         character.image.addEventListener("load", () => draw());
-        if (character.audio) {
-          character.audioElement = new Audio(character.audio);
-          character.audioElement.loop = false;
-          character.audioElement.preload = "metadata";
-          character.audioElement.volume = 0.82;
-          character.audioElement.playsInline = true;
-        }
       });
 
       function makeCharacterSprite(kind) {
@@ -671,10 +673,10 @@
       let playing = false;
       let lastTime = 0;
       let animationId = 0;
-      let audioContext = null;
-      const activeSprunkiAudios = new Map();
-      const audioAttempts = new WeakMap();
       let sprunkiMusicToken = 0;
+      let speechToken = 0;
+      let speechTimer = 0;
+      const activeTones = new Set();
       let sceneHitAreas = null;
       const tapEffects = {
         sun: 0,
@@ -757,18 +759,14 @@
         return { ...shape, ...phaseLabels[index], index, calendar: [1, 2, 5, 6, 7, 9, 10, 11, 15].includes(index) };
       }
 
-      function getAudioContext() {
-        audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
-        if (audioContext.state === "suspended") {
-          audioContext.resume().catch(() => {});
-        }
-        return audioContext;
-      }
-
       function playTone() {
         try {
-          const context = getAudioContext();
-          const now = context.currentTime;
+          const audio = window.MoonAudio;
+          if (!audio || document.hidden) return;
+          audio.unlock().catch(() => {});
+          const context = audio.getContext();
+          if (!context) return;
+          const now = audio.now();
           const oscillator = context.createOscillator();
           const gain = context.createGain();
           oscillator.type = "sine";
@@ -776,7 +774,10 @@
           gain.gain.setValueAtTime(0.0001, now);
           gain.gain.exponentialRampToValueAtTime(0.08, now + 0.012);
           gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
-          oscillator.connect(gain).connect(context.destination);
+          oscillator.connect(gain).connect(audio.output("effects"));
+          const cleanup = () => { oscillator.disconnect(); gain.disconnect(); activeTones.delete(cleanup); };
+          activeTones.add(cleanup);
+          oscillator.onended = cleanup;
           oscillator.start(now);
           oscillator.stop(now + 0.18);
         } catch (error) {
@@ -786,57 +787,62 @@
 
       function stopSprunkiMusic() {
         sprunkiMusicToken += 1;
-        activeSprunkiAudios.forEach(audio => { audio.onerror = null; audio.pause(); audio.onended = null; });
-        activeSprunkiAudios.clear();
+        window.MoonAudio?.stopMusic();
+        document.getElementById("audioStatus").hidden = true;
       }
 
       function reportAudioError(character) {
         const status = document.getElementById("audioStatus");
-        status.textContent = character.name + " のおとを よみこめませんでした";
+        status.textContent = character.spokenName + "：おとが よめません";
         status.hidden = false;
       }
 
       function restartSelectedSprunkiMusic() {
         if (!musicEnabled) return;
-        const token = sprunkiMusicToken;
-        const selected = selectedSprunkiIndexes.map(index => sprunkiCharacters[index]).filter(c => c.audioElement);
-        const ids = new Set(selected.map(c => c.id));
-        activeSprunkiAudios.forEach((audio, id) => {
-          if (!ids.has(id)) { audio.onerror = null; audio.pause(); activeSprunkiAudios.delete(id); }
-        });
+        const token = ++sprunkiMusicToken;
+        const selected = selectedSprunkiIndexes.map(index => sprunkiCharacters[index]).filter(c => c.audio);
+        if (!selected.length) { musicEnabled = false; stopSprunkiMusic(); updateMusicButton(); return; }
         document.getElementById("audioStatus").hidden = true;
-        // Register the whole batch before play(), which may throw synchronously.
-        selected.forEach(character => activeSprunkiAudios.set(character.id, character.audioElement));
-        // Play within the tap handler, without periodic seeks or synthesized substitutes.
-        selected.forEach(character => {
-          const audio = character.audioElement;
-          audio.volume = Math.min(0.75, 0.85 / Math.sqrt(selected.length));
-          if (activeSprunkiAudios.has(character.id) && !audio.paused) return;
-          audio.loop = true;
-          const attemptId = {};
-          audioAttempts.set(audio, attemptId);
-          const failed = () => {
-            if (token !== sprunkiMusicToken || audioAttempts.get(audio) !== attemptId || !musicEnabled || activeSprunkiAudios.get(character.id) !== audio) return;
-            audio.onerror = null;
-            audio.pause();
-            activeSprunkiAudios.delete(character.id);
-            reportAudioError(character);
-            if (!activeSprunkiAudios.size) musicEnabled = false;
-            updateMusicButton();
-          };
-          audio.onerror = failed;
-          try {
-            audio.currentTime = 0;
-            const attempt = audio.play();
-            if (attempt) attempt.catch(failed);
-          } catch (error) {
-            failed();
-          }
-        });
+        const failed = () => {
+          if (token !== sprunkiMusicToken || !musicEnabled) return;
+          musicEnabled = false;
+          stopSprunkiMusic();
+          reportAudioError(selected[0]);
+          updateMusicButton();
+        };
+        try {
+          // Call directly in the tap: the engine unlocks and joins at its next bar.
+          Promise.resolve(window.MoonAudio.setMusicSelection(selected.map(c => c.id)))
+            .then(() => { if (token === sprunkiMusicToken && musicEnabled) syncMusicState(); }, failed);
+        } catch { failed(); }
       }
 
+      function syncMusicState() {
+        const state = window.MoonAudio?.getMusicState();
+        const selected = selectedSprunkiIndexes.map(index => sprunkiCharacters[index]);
+        const errors = musicEnabled ? (state?.errors || []).filter(error => selected.some(c => c.id === error.id)) : [];
+        const status = document.getElementById("audioStatus");
+        if (musicEnabled) {
+          status.hidden = !errors.length;
+          status.textContent = errors.map(error => {
+            const character = selected.find(c => c.id === error.id);
+            return error.message === "loop-unverified"
+              ? character.name + " のおとは どうきの じゅんびちゅう"
+              : character.spokenName + "：おとが よめません";
+          }).join(" / ");
+          if (errors.length && !state.playing.length && !state.pending.length) musicEnabled = false;
+        }
+        sprunkiList.querySelectorAll(".sprunki-choice").forEach((button, index) => {
+          const pending = !!(musicEnabled && selectedSprunkiIndexes.includes(index) && state?.pending.includes(sprunkiCharacters[index].id));
+          button.classList.toggle("is-pending", pending);
+          button.setAttribute("aria-busy", String(pending));
+        });
+        updateMusicButton();
+      }
+      window.addEventListener("moon:audio-state", syncMusicState);
+
       function updateMusicButton() {
-        const hasRecording = selectedSprunkiIndexes.some(index => sprunkiCharacters[index].audioElement);
+        const hasRecording = selectedSprunkiIndexes.some(index => sprunkiCharacters[index].audio);
         if (!hasRecording && musicEnabled) { musicEnabled = false; stopSprunkiMusic(); }
         musicButton.disabled = !hasRecording;
         musicButton.title = hasRecording ? "音楽のオン・オフ" : "このなかまの音楽はありません";
@@ -847,16 +853,47 @@
         musicButton.setAttribute("aria-pressed", String(musicEnabled));
       }
 
+      function cancelSpeech() {
+        speechToken++;
+        clearTimeout(speechTimer);
+        window.MoonAudio?.setDucking(false);
+        window.speechSynthesis?.cancel();
+      }
+
+      let sharedVoiceVolume = window.MoonAudio?.getVolumes().voice;
+      window.addEventListener("moon:audio-volume", () => {
+        const volume = window.MoonAudio?.getVolumes().voice;
+        if (volume !== sharedVoiceVolume) {
+          sharedVoiceVolume = volume;
+          cancelSpeech();
+        }
+      });
+
+      function speakDucked(utterance) {
+        if (document.hidden) return;
+        const token = speechToken;
+        const finish = () => {
+          if (token !== speechToken) return;
+          clearTimeout(speechTimer);
+          window.MoonAudio?.setDucking(false);
+        };
+        utterance.onend = utterance.onerror = finish;
+        window.MoonAudio?.setDucking(true);
+        // Some browsers omit end/error after speech-service failure.
+        speechTimer = setTimeout(finish, Math.max(6000, utterance.text.length * 350));
+        try { window.speechSynthesis.speak(utterance); } catch { finish(); }
+      }
+
       function speakJapanese(text) {
-        if (!voiceEnabled) return;
+        if (!voiceEnabled || document.hidden) return;
         if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
         try {
-          window.speechSynthesis.cancel();
+          cancelSpeech();
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = "ja-JP";
           utterance.rate = 0.84;
           utterance.pitch = 1.08;
-          utterance.volume = 0.95;
+          utterance.volume = window.MoonAudio?.getVolumes().voice ?? 0.95;
           const voices = window.speechSynthesis.getVoices();
           const japaneseVoices = voices.filter((voice) => voice.lang && voice.lang.toLowerCase().startsWith("ja"));
           const voiceScores = [
@@ -879,22 +916,22 @@
             })
             .sort((a, b) => b.score - a.score)[0];
           if (smoothVoice?.voice || japaneseVoices[0]) utterance.voice = smoothVoice?.voice || japaneseVoices[0];
-          window.speechSynthesis.speak(utterance);
+          speakDucked(utterance);
         } catch (error) {
           // Speech is optional; tapping and visuals still work without it.
         }
       }
 
       function speakEnglish(text) {
-        if (!voiceEnabled) return;
+        if (!voiceEnabled || document.hidden) return;
         if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
         try {
-          window.speechSynthesis.cancel();
+          cancelSpeech();
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = "en-US";
           utterance.rate = 0.78;
           utterance.pitch = 1.08;
-          utterance.volume = 0.95;
+          utterance.volume = window.MoonAudio?.getVolumes().voice ?? 0.95;
           const voices = window.speechSynthesis.getVoices();
           const englishVoices = voices.filter((voice) => voice.lang && voice.lang.toLowerCase().startsWith("en"));
           const preferredVoiceNames = [
@@ -910,7 +947,7 @@
             return preferredVoiceNames.some((candidate) => name.includes(candidate));
           });
           if (preferredVoice || englishVoices[0]) utterance.voice = preferredVoice || englishVoices[0];
-          window.speechSynthesis.speak(utterance);
+          speakDucked(utterance);
         } catch (error) {
           // Speech is optional; tapping and visuals still work without it.
         }
@@ -1607,6 +1644,9 @@
       });
 
       resetButton.addEventListener("click", () => {
+        musicEnabled = false;
+        stopSprunkiMusic();
+        syncMusicState();
         playTone();
         setPlaying(false);
         snapPhase(0);
@@ -1622,7 +1662,7 @@
         } else {
           stopSprunkiMusic();
         }
-        updateMusicButton();
+        syncMusicState();
       });
 
       window.addEventListener("resize", resize, { passive: true });
@@ -1722,7 +1762,7 @@
           if (wasQuiz) snapPhase(explorationPhase);
           phaseSummary.querySelector(".small-label").textContent = "ちきゅうから みえる";
           draw();
-          if (window.speechSynthesis) window.speechSynthesis.cancel();
+          cancelSpeech();
         }
       }
       tabs.forEach((tab, index) => {
@@ -1931,7 +1971,7 @@
       });
       document.getElementById("voiceButton").addEventListener("click", event => {
         voiceEnabled = !voiceEnabled;
-        if (!voiceEnabled && window.speechSynthesis) window.speechSynthesis.cancel();
+        if (!voiceEnabled) cancelSpeech();
         event.currentTarget.setAttribute("aria-pressed", String(voiceEnabled));
         event.currentTarget.setAttribute("aria-label", voiceEnabled ? "読み上げをオフにする" : "読み上げをオンにする");
         event.currentTarget.textContent = voiceEnabled ? "♬" : "♩";
@@ -1958,12 +1998,23 @@
       window.addEventListener("pagehide", () => fullscreenDocument.removeEventListener("fullscreenchange", syncFullscreenState));
       window.addEventListener("pageshow", () => fullscreenDocument.addEventListener("fullscreenchange", syncFullscreenState));
       function pauseForBackground() {
+        activeTones.forEach(cleanup => cleanup());
         cancelDrag();
         setPlaying(false);
         musicEnabled = false;
         stopSprunkiMusic(); updateMusicButton();
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        cancelSpeech();
       }
+      window.MoonAudio?.onSuspend(() => {
+        activeTones.forEach(cleanup => cleanup());
+        cancelDrag();
+        setPlaying(false);
+        musicEnabled = false;
+        sprunkiMusicToken++;
+        document.getElementById("audioStatus").hidden = true;
+        cancelSpeech();
+        syncMusicState();
+      });
       window.addEventListener("pagehide", pauseForBackground);
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) pauseForBackground();
@@ -1988,6 +2039,7 @@
           button.classList.toggle("is-found", observedMoons.has(phaseLabels[index].name));
         });
       }
+      let albumHighlightTimer = 0;
       function collectObservedMoon() {
         if (isQuizActive()) return;
         const index = exactPhaseIndex();
@@ -1995,6 +2047,10 @@
         observedMoons.add(phaseLabels[index].name);
         try { localStorage.setItem(albumKey, JSON.stringify([...observedMoons])); } catch { /* Keep session progress. */ }
         updateAlbumCount();
+        const button = document.getElementById("albumButton");
+        clearTimeout(albumHighlightTimer);
+        button.classList.add("is-new");
+        albumHighlightTimer = setTimeout(() => button.classList.remove("is-new"), 1100);
       }
       document.getElementById("albumButton").addEventListener("click", () => {
         setPlaying(false);

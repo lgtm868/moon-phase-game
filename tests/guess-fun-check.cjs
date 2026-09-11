@@ -14,8 +14,11 @@ const root = path.resolve(__dirname, '..');
 const artifacts = process.env.GUESS_FUN_ARTIFACTS || path.join(os.tmpdir(), 'guess-fun-check');
 const html = fs.readFileSync(path.join(root, 'sprunki-guess-game.html'), 'utf8');
 const source = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1];
-const game = vm.runInNewContext(source + ';GuessGame');
+const modelContext = vm.createContext({});
+vm.runInContext(fs.readFileSync(path.join(root, 'sprunki-roster.js'), 'utf8'), modelContext);
+const game = vm.runInContext(source + ';GuessGame', modelContext);
 const characters = JSON.parse(JSON.stringify(game.characters));
+assert.equal(characters.length, 20);
 const rng = seed => () => ((seed = (Math.imul(1664525, seed) + 1013904223) >>> 0) / 4294967296);
 
 let owned = [], modelQuestions = 0;
@@ -47,7 +50,7 @@ for (let seed = 1; seed <= 100; seed++) {
   assert.equal(JSON.stringify(state), before);
   assert.equal(state.firstTry, 0);
 }
-assert.equal(owned.length, 8);
+assert.equal(owned.length, 20);
 assert.equal(game.collectRound(game.createSession(), ['unknown', 'oren', 'oren']).owned.join(), 'oren');
 const firstTryState = game.createSession();
 const runId = firstTryState.runId;
@@ -69,7 +72,7 @@ assert.equal(typeof runId, 'string');
 function browserSetup() {
   let seed = 43;
   Math.random = () => ((seed = (Math.imul(1664525, seed) + 1013904223) >>> 0) / 4294967296);
-  window.mediaLog = { cancels: 0, spoken: [], contexts: [] };
+  window.mediaLog = { cancels: 0, spoken: [], contexts: [], notes: [], ducking: false };
   window.rankingCalls = [];
   window.MoonRanking = { ready: true, complete(payload) { window.rankingCalls.push(payload); return Promise.resolve(); } };
   Object.defineProperty(window, 'SpeechSynthesisUtterance', { value: class { constructor(text) { this.text = text; } } });
@@ -78,11 +81,15 @@ function browserSetup() {
     getVoices() { return [{ lang: 'ja-JP' }]; },
     speak(utterance) { window.mediaLog.spoken.push(utterance); utterance.onstart?.(); }
   } });
-  Object.defineProperty(window, 'AudioContext', { value: class {
-    constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {}; window.mediaLog.contexts.push(this); }
-    close() { this.state = 'closed'; return Promise.resolve(); }
-    createOscillator() { return { frequency: {}, connect() {}, disconnect() {}, start() {}, stop() {} }; }
-    createGain() { return { gain: { setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {}, disconnect() {} }; }
+  const shared = {
+    state: 'running', currentTime: 0,
+    createOscillator() { const note = { frequency: {}, connect() {}, disconnect() {}, start() { this.stopped = false; }, stop(when) { if (when === undefined) this.stopped = true; } }; mediaLog.notes.push(note); return note; },
+    createGain() { return { gain: { setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect(bus) { if (bus !== 'effects') throw Error('Wrong effects bus'); }, disconnect() {} }; }
+  };
+  mediaLog.contexts.push(shared);
+  Object.defineProperty(window, 'MoonAudio', { configurable: false, value: {
+    getContext: () => shared, unlock: async () => shared, now: () => 0,
+    output: () => 'effects', setDucking(value) { mediaLog.ducking = value; }, onSuspend() {}
   } });
 }
 
@@ -94,10 +101,21 @@ async function layout(frame, label) {
   const issues = await frame.evaluate(() => {
     const errors = [], visible = el => el.getClientRects().length > 0;
     if (document.documentElement.scrollWidth > innerWidth + 1 || document.documentElement.scrollHeight > innerHeight + 1) errors.push('Document overflow');
+    const album = document.querySelector('#friends');
+    if (visible(album)) {
+      const r = album.getBoundingClientRect();
+      if (r.x < 0 || r.right > innerWidth || r.y < 0 || r.bottom > innerHeight) errors.push('Album outside viewport');
+      if (album.scrollWidth > album.clientWidth + 1) errors.push('Album horizontal overflow');
+      if (album.scrollHeight > album.clientHeight + 1) errors.push('All 20 friends must fit without album scrolling on iPad');
+      for (const portrait of album.querySelectorAll('img')) {
+        const r = portrait.getBoundingClientRect();
+        if (r.width < 44 || r.height < 44) errors.push('Album portrait smaller than 44px');
+      }
+    }
     const elements = [...document.querySelectorAll('button,h1,p,.hint,.friend,.question-panel,.cards,.hint-art,.friend span')].filter(visible);
     for (const el of elements) {
       const r = el.getBoundingClientRect();
-      if (r.x < -1 || r.y < -1 || r.right > innerWidth + 1 || r.bottom > innerHeight + 1) errors.push(`Outside viewport: ${el.id || el.className}`);
+      if (r.x < -1 || r.right > innerWidth + 1 || r.y < -1 || r.bottom > innerHeight + 1) errors.push(`Outside viewport: ${el.id || el.className}`);
       if (el.scrollWidth > el.clientWidth + 2 || el.scrollHeight > el.clientHeight + 2) errors.push(`Content overflow: ${el.id || el.className}`);
       if (el.matches('button') && (r.width < 44 || r.height < 44)) errors.push(`Small touch target: ${el.id || el.className}`);
     }
@@ -107,7 +125,7 @@ async function layout(frame, label) {
       const x = a.getBoundingClientRect(), y = b.getBoundingClientRect();
       if (Math.min(x.right, y.right) > Math.max(x.left, y.left) + 1 && Math.min(x.bottom, y.bottom) > Math.max(x.top, y.top) + 1) errors.push(`Overlap: ${selectors}`);
     }
-    if (getComputedStyle(document.body).backgroundColor !== 'rgb(21, 25, 24)') errors.push('Shared theme lost');
+    if (!getComputedStyle(document.body).getPropertyValue('--game-bg').trim()) errors.push('Shared theme lost');
     return errors;
   });
   assert.deepEqual(issues, [], label);
@@ -152,6 +170,13 @@ async function runCase(browser, viewport, embedded) {
         const cardIds = await frame.locator('.card').evaluateAll(cards => cards.map(c => c.dataset.id));
         assert.equal(new Set(cardIds).size, 3); assert(cardIds.includes(target.id));
         assert.deepEqual(await frame.locator('.pick').allTextContents(), ['この こ！', 'この こ！', 'この こ！']);
+        if (!round && !question) {
+          await frame.locator(`.card[data-id="${cardIds.find(id => id !== target.id)}"]`).click();
+          assert.equal(await frame.locator('#hint').isVisible(), false, 'Retry never reveals the hint');
+          assert.equal(await frame.locator('#hintButton').getAttribute('aria-expanded'), 'false');
+          assert(await frame.locator('#hintButton').evaluate(el => el.classList.contains('hint-suggested')));
+          await shot('retry-without-reveal');
+        }
         for (let stage = 1; stage <= 3; stage++) {
           if (stage === 1 && !question) { await frame.locator('#hintButton').focus(); await page.keyboard.press('Enter'); }
           else await frame.locator('#hintButton').click();
@@ -193,8 +218,10 @@ async function runCase(browser, viewport, embedded) {
           await shot('solved');
           await frame.locator('#sound').click();
           await frame.evaluate(() => {
-            if (!mediaLog.contexts.length || mediaLog.contexts.some(c => c.state !== 'closed')) throw Error('Mute must close chime');
+            if (!mediaLog.contexts.length || mediaLog.notes.some(n => !n.stopped)) throw Error('Mute must stop owned chime notes');
             for (const u of mediaLog.spoken) { u.onstart?.(); u.onerror?.({ error: 'network' }); }
+            if (mediaLog.ducking) throw Error('Mute and stale speech must release ducking');
+            if (mediaLog.contexts.some(c => c.state !== 'running')) throw Error('Game must not close shared context');
           });
           assert.equal(await frame.locator('#audioNote').isVisible(), false, 'Stale speech callbacks ignored');
           await frame.locator('#sound').click();
@@ -204,7 +231,7 @@ async function runCase(browser, viewport, embedded) {
           assert.equal(await frame.locator('#finish').isVisible(), false, 'Reward waits for user');
         }
         await frame.locator('#next').click();
-        await frame.evaluate(() => { if (mediaLog.contexts.some(c => c.state !== 'closed')) throw Error('Advance must close chime'); });
+        await frame.evaluate(() => { if (mediaLog.notes.some(n => !n.stopped)) throw Error('Advance must stop owned chime notes'); });
       }
       assert.equal(new Set(targets).size, 5);
       const calls = await frame.evaluate(() => rankingCalls);
@@ -215,10 +242,10 @@ async function runCase(browser, viewport, embedded) {
       await frame.locator('#next').evaluate(button => button.click());
       assert.equal(await frame.evaluate(() => rankingCalls.length), round + 1, 'Completion is queued once');
       targets.forEach(id => collection.add(id));
-      assert.equal(await frame.locator('.friend').count(), 8);
+      assert.equal(await frame.locator('.friend').count(), 20);
       assert.equal(await frame.locator('.friend.owned').count(), collection.size);
       assert.equal(await frame.locator('.friend.new').count(), [...collection].filter(id => !prior.has(id)).length);
-      assert.equal(await frame.locator('#collectionSummary').textContent(), collection.size === 8 ? 'みんな なかよし！ 8 / 8' : `なかよし ${collection.size} / 8`);
+      assert.equal(await frame.locator('#collectionSummary').textContent(), collection.size === 20 ? 'みんな なかよし！ 20 / 20' : `なかよし ${collection.size} / 20`);
       for (const character of characters) {
         const slot = frame.locator(`.friend[data-id="${character.id}"]`);
         assert.equal(await slot.locator('img').count(), collection.has(character.id) ? 1 : 0);
@@ -228,6 +255,8 @@ async function runCase(browser, viewport, embedded) {
           assert.equal(await frame.evaluate(() => mediaLog.spoken.at(-1).text), character.name);
         }
       }
+      await frame.locator('#friends').evaluate(el => { el.scrollTop = el.scrollHeight; });
+      assert.equal(await frame.locator('#friends').evaluate(el => el.scrollTop), 0, 'All 20 slots fit without scrolling');
       await shot(`collection-${round + 1}`);
       await frame.locator('#sound').click();
       const spokenBefore = await frame.evaluate(() => mediaLog.spoken.length);
@@ -241,8 +270,8 @@ async function runCase(browser, viewport, embedded) {
       assert.equal(await frame.locator('#hint').isVisible(), false);
       assert.equal(await frame.locator('#finish').isVisible(), false);
       round++;
-    } while (round < 3 || (collection.size < 8 && round < 12));
-    assert.equal(collection.size, 8);
+    } while (round < 3 || (collection.size < 20 && round < 40));
+    assert.equal(collection.size, 20);
     for (const mode of ['absent', 'throws', 'rejects']) {
       await frame.evaluate(mode => {
         window.MoonRanking = mode === 'absent' ? undefined : { complete() { if (mode === 'throws') throw Error('Optional hook failure'); return Promise.reject(Error('Optional hook failure')); } };
@@ -266,7 +295,7 @@ async function runCase(browser, viewport, embedded) {
           document.dispatchEvent(new Event(event));
           delete document.hidden;
         } else window.dispatchEvent(new Event(event));
-        if (mediaLog.contexts.some(c => c.state !== 'closed')) throw Error(`${event} must stop chime`);
+        if (mediaLog.notes.some(n => !n.stopped)) throw Error(`${event} must stop chime`);
       }, event);
       assert((await frame.evaluate(() => mediaLog.cancels)) > cancels);
       await frame.locator('#next').click();
@@ -282,8 +311,8 @@ async function runCase(browser, viewport, embedded) {
   try {
     browser = await chromium.launch({ channel: 'chrome', headless: true, ...(process.env.CHROME_EXECUTABLE ? { executablePath: process.env.CHROME_EXECUTABLE } : {}) });
     console.log(`Chrome ${browser.version()}; model: ${modelQuestions} questions`);
-    for (const viewport of [{ width: 1024, height: 600 }, { width: 1180, height: 820 }]) {
-      for (const embedded of [false, true]) await runCase(browser, viewport, embedded);
+    for (const viewport of (process.argv.includes('--targeted') ? [{ width: 1024, height: 600 }] : [{ width: 1024, height: 600 }, { width: 1180, height: 820 }])) {
+      for (const embedded of (process.argv.includes('--targeted') ? [false] : [false, true])) await runCase(browser, viewport, embedded);
     }
     console.log(`Screenshots: ${artifacts}`);
   } finally {

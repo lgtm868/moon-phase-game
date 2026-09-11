@@ -1,0 +1,83 @@
+.game-page .moon-audio-host { gap: var(--game-space-2, 8px); }
+.game-page .title-block.moon-audio-host { grid-template-columns: auto minmax(0, 1fr) 44px; }
+.game-page .moon-audio-host > :first-child { min-width: 0; }
+.game-page .moon-audio-launch-row { grid-column: 1 / -1; display: flex; align-items: center; }
+.game-page .moon-audio-launch-row > :is(#moonRankingLaunch, [data-ranking-open]) { flex: 1; min-width: 0; }
+#moonAudioSettings, #moonAudioDialog .moon-audio-icon-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--game-neutral-line, #555555);
+  border-radius: var(--game-radius, 8px);
+  background: var(--game-neutral-raised, #303030);
+  color: var(--game-primary, #b9edcc);
+  font: 24px/1 var(--game-font, sans-serif);
+  letter-spacing: 0;
+  box-shadow: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  pointer-events: auto;
+  transform: none;
+  align-self: center;
+}
+#moonAudioSettings svg { width: 22px; height: 22px; flex: none; }
+#moonAudioDialog, #moonAudioDialog * { box-sizing: border-box; letter-spacing: 0; }
+#moonAudioDialog {
+  width: min(360px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100svh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  margin: auto;
+  padding: var(--game-space-4, 16px);
+  border: 1px solid var(--game-neutral-line, #555555);
+  border-radius: var(--game-radius, 8px);
+  background: var(--game-neutral-surface, #242424);
+  color: var(--game-ink, #f4f7f3);
+  font: 16px/1.5 var(--game-font, sans-serif);
+  overflow: auto;
+  overscroll-behavior: contain;
+  text-align: left;
+}
+#moonAudioDialog:not([open]) { display: none; }
+#moonAudioDialog::backdrop { background: #080808b3; }
+#moonAudioDialog .moon-audio-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
+#moonAudioDialog h2 { margin: 0; font: 800 18px/1.4 var(--game-font, sans-serif); overflow-wrap: anywhere; color: inherit; }
+#moonAudioDialog .moon-audio-row { display: grid; grid-template-columns: minmax(0, 1fr) 4ch; column-gap: 8px; margin-top: 12px; }
+#moonAudioDialog label { font: inherit; color: inherit; }
+#moonAudioDialog output { text-align: right; font: inherit; font-variant-numeric: tabular-nums; color: var(--game-primary, #b9edcc); }
+#moonAudioDialog input[type="range"] { grid-column: 1 / -1; width: 100%; min-width: 0; height: 44px; min-height: 44px; margin: 0; padding: 0; accent-color: var(--game-primary, #b9edcc); cursor: pointer; touch-action: pan-y; }
+#moonAudioSettings:focus-visible, #moonAudioDialog :is(button, input):focus-visible { outline: 3px solid var(--game-gold, #f4cc72); outline-offset: 3px; }
+#moonAudioSettings[aria-expanded="true"] { border-color: var(--game-primary, #b9edcc); }
+@media (hover: hover) {
+  #moonAudioSettings:hover, #moonAudioDialog .moon-audio-icon-button:hover { background: var(--game-neutral-hover, #3a3a3a); }
+}
+#moonAudioSettings:active, #moonAudioDialog .moon-audio-icon-button:active { border-color: var(--game-cyan, #8edce2); }
+@media (max-width: 520px) {
+  .game-page .topbar.moon-audio-title-host { row-gap: 0; }
+  .game-page :is(header.top, header.topbar).moon-audio-host {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    column-gap: 4px;
+    row-gap: 0;
+    padding-bottom: 8px;
+  }
+  .game-page :is(header.top, header.topbar).moon-audio-host > :first-child { flex: 0 0 100%; }
+  .game-page header.moon-audio-host > .brand { font-size: 12px; line-height: 16px; }
+  .game-page header.moon-audio-host > .brand small { display: inline; margin: 0 0 0 4px; font-size: 10px; line-height: 16px; }
+  .game-page .moon-audio-host > :is(.heading, .brand) { font-size: 14px; line-height: 1.3; }
+  .game-page .moon-audio-host > .heading h1,
+  .game-page .moon-audio-host > div:first-child h1 { font-size: 14px; line-height: 1.3; }
+  .game-page .moon-audio-host > div:first-child .subtitle { font-size: 10px; line-height: 1.3; }
+  .game-page .moon-audio-host { gap: 4px; }
+  .game-page .top-actions.moon-audio-host { gap: 4px; }
+}

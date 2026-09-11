@@ -16,7 +16,7 @@ const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].map
   assert(!/^(?:https?:)?\/\//.test(src), 'The quiz must work without third-party scripts');
   const filename = src.split('?')[0];
   // Shared UI bootstraps have independent browser/navigation coverage, not this DOM fixture.
-  if (filename === 'games-theme.js' || filename === 'game-navigation.js') return '';
+  if (filename === 'games-theme.js' || filename === 'game-navigation.js' || filename === 'games-audio.js') return '';
   // The full bank generator ran above and matched Node; each fixture gets its own fresh copy.
   if (filename === 'food-quiz-bank.js') return 'window.FoodQuizBank = __testBank;';
   return fs.readFileSync(path.join(root, filename), 'utf8');
@@ -91,7 +91,7 @@ function setup(seed, withSpeech = false, { storage = new Map(), storageFailure =
   let cancelCount = 0, uuidCount = 0;
   function element(id = '') {
     const item = { id, hidden: ['play', 'finish', 'next', 'audioNote'].includes(id), dataset: {}, attributes: {}, children: [], events: {}, disabled: false, isConnected: true, textContent: '', innerHTML: '', className: '', tabIndex: 0,
-      setAttribute(k, v) { this.attributes[k] = String(v); }, getAttribute(k) { return this.attributes[k] ?? null; }, addEventListener(k, v) { this.events[k] = v; }, focus() { document.activeElement = this; },
+      setAttribute(k, v) { this.attributes[k] = String(v); }, removeAttribute(k) { delete this.attributes[k]; }, getAttribute(k) { return this.attributes[k] ?? null; }, addEventListener(k, v) { this.events[k] = v; }, focus() { document.activeElement = this; },
       open: false, showModal() { this.open = true; }, close() { if (this.open) { this.open = false; this.events.close?.(); } },
       replaceChildren(...children) { for (const child of this.children) child.isConnected = false; this.children = []; this.append(...children); },
       append(...children) { for (const child of children) { child.isConnected = true; this.children.push(child); } }, querySelectorAll() { return this.children; },

@@ -42,9 +42,35 @@ button{border-radius:8px!important;box-shadow:none!important}
 @media(max-width:600px){.review-words{grid-template-columns:repeat(3,minmax(0,1fr))}.review-word strong{font-size:14px}.finish{padding:18px 0 12px}.finish-art{font-size:48px;line-height:1.1}.finish h2{font-size:28px;margin:12px 0}.finish .stars{font-size:32px}.finish p{margin:10px 0}.finish .primary{margin:15px auto 8px;min-height:52px;padding:12px 24px}.review-word{min-height:90px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 .category-picker{display:flex;align-items:center;gap:12px;font-size:18px;font-weight:800}.category-picker select{min-height:44px;padding:8px 12px;font:inherit;font-size:16px;background:var(--game-surface);color:var(--ink);border:1px solid var(--line);border-radius:8px}.screen-head{gap:8px}@media(max-width:600px){.category-picker{gap:6px}.category-picker>span{display:none}.category-picker select{padding:8px 6px;font-size:14px}}
+.review-word.speaking { border-color: var(--game-gold); background: #453e29; box-shadow: inset 0 0 0 2px var(--game-gold)!important; }
+.review-word.speaking strong { color: var(--game-gold); text-decoration: underline; text-underline-offset: 4px; }
+.hint[hidden] { display: block!important; visibility: hidden; }
+.hint { min-height: 28px; }
+.choice .label { overflow-wrap: anywhere; }
+.review-word { min-width: 44px; min-height: 44px; }
+@media (max-width: 899px) {
+ .choices { height: 150px; }
+ .choice { min-height: 0; }
+ .feedback { height: 48px; margin-top: 10px; display: grid; place-items: center; }
+ .next-space { height: 62px; min-height: 62px; }
+ .next-space .primary { margin: 4px auto; min-height: 48px; padding: 10px 20px; }
+}
+@media (max-width: 600px) and (max-height: 650px) {
+ .choices { height: 120px; }
+ .finish { padding: 8px 0; }
+ .finish-art { font-size: 28px; }
+ .finish h2 { font-size: 24px; margin: 4px 0; }
+ .finish .stars { font-size: 26px; }
+ .finish p { margin: 4px 0; }
+ .review-words { margin: 8px auto; }
+ .review-word { height: 90px; grid-template-rows: 32px 20px 18px; padding: 4px 2px; gap: 2px; }
+ .review-word .word-art { font-size: 28px; line-height: 1.1; }
+ .review-word .swatch { width: 28px; height: 28px; }
+ .finish .primary { margin: 8px auto 0; }
+}
 </style>
-<link rel="stylesheet" href="games-theme.css?v=20260907-fun"><script src="games-theme.js?v=20260907-fun"></script>
-<script src="game-navigation.js?v=20260907-fun" defer></script>
+<link rel="stylesheet" href="games-theme.css?v=20260912-audio-polish"><script src="games-theme.js?v=20260912-audio-polish"></script>
+<script src="game-navigation.js?v=20260912-audio-polish" defer></script>
 </head>
 <body class="game-page" data-game="english"><div class="app">
 <header><a class="home" href="index.html" target="_top">☾ <span>MOON</span> GAMES　 /　もどる</a><button id="sound" class="sound" aria-pressed="false">🔊 おと あり</button></header>
@@ -54,6 +80,7 @@ button{border-radius:8px!important;box-shadow:none!important}
 <p id="audio-note" class="note" role="status"></p>
 </main><footer>LISTEN · FIND · GROW</footer>
 </div>
+<script src="games-audio.js?v=20260912-audio-polish"></script>
 <script>
 'use strict';
 document.querySelector('meta[name="theme-color"]').content='#151918';
@@ -62,16 +89,49 @@ const $=id=>document.getElementById(id);
 let screen='quiz',category='animals',deck=[],position=0,answered=false,muted=false,speechToken=0,audioFailed=false,questionVersion=0;
 let runId='',firstTry=0,attempted=false,audioEnabled=false;
 const synth=window.speechSynthesis;
-function stopSpeech(){speechToken++;if(synth)try{synth.cancel()}catch{}}
+const audio=window.MoonAudio;
+let speakingCard=null,audioReady=null,audioEpoch=0;
+document.addEventListener('click',event=>{
+ if(event.target.closest?.('#moonAudioSettings, #moonAudioDialog'))return;
+ if(event.isTrusted&&audio&&!muted&&event.target.closest?.('#listen, #again, #choices .choice, #reviewWords .review-word'))audioReady=audio.unlock().catch(()=>null);
+},true);
+function effect(name){
+ if(muted||!audioReady||document.hidden)return;
+ const epoch=audioEpoch,version=questionVersion;
+ audioReady.then(context=>{if(context?.state==='running'&&!muted&&!document.hidden&&epoch===audioEpoch&&version===questionVersion)return audio.effect(name)}).catch(()=>{});
+}
+function clearSpeaking(){if(speakingCard){speakingCard.classList.remove('speaking');speakingCard.setAttribute('aria-busy','false');speakingCard=null}audio?.setDucking(false)}
+function stopSpeech(){speechToken++;clearSpeaking();if(synth)try{synth.cancel()}catch{}}
 function show(id){questionVersion++;stopSpeech();screen=id;['quiz','finish'].forEach(x=>$(x).hidden=x!==id);$('audio-note').textContent=muted?'おとは おやすみ。えと ヒントで あそべるよ。':'';window.scrollTo({top:0,behavior:'instant'});}
 function art(word){const span=document.createElement('span');span.setAttribute('aria-hidden','true');if(word[2].startsWith('#')){span.className='swatch';span.style.background=word[2]}else{span.className='word-art';span.textContent=word[2]}return span}
 function shuffle(items){const a=[...items];for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function revealHint(){if(screen!=='quiz')return;$('hint').hidden=false;$('hint').textContent='「'+deck[position][1]+'」を さがしてね';$('hint-toggle').setAttribute('aria-expanded','true')}
 function unavailable(){audioFailed=true;$('audio-note').textContent='こえが でないときは、ヒントを みて あそんでね。';revealHint()}
-function speak(word){stopSpeech();if(!audioEnabled||muted||document.hidden)return;if(!synth||!window.SpeechSynthesisUtterance){unavailable();return}const token=speechToken;try{const u=new SpeechSynthesisUtterance(word[0]);u.lang='en-US';u.rate=.78;u.pitch=1.08;const voices=synth.getVoices();const voice=voices.find(v=>/^en-US/i.test(v.lang))||voices.find(v=>/^en/i.test(v.lang));if(voice)u.voice=voice;else if(voices.length){unavailable();return}u.onerror=()=>{if(token===speechToken)unavailable()};synth.speak(u)}catch{if(token===speechToken)unavailable()}}
+function speak(word,card=null){
+ stopSpeech();
+ if(!audioEnabled||muted||document.hidden)return;
+ if(!synth||!window.SpeechSynthesisUtterance){unavailable();return}
+ const token=speechToken;
+ try{
+  const u=new SpeechSynthesisUtterance(word[0]);u.lang='en-US';u.rate=.78;u.pitch=1.08;
+  if(audio?.getVolumes)u.volume=audio.getVolumes().voice;
+  const voices=synth.getVoices(),voice=voices.find(v=>/^en-US/i.test(v.lang))||voices.find(v=>/^en/i.test(v.lang));
+  if(voice)u.voice=voice;else if(voices.length){unavailable();return}
+  let ended=false;
+  u.onstart=()=>{
+   if(ended||token!==speechToken||muted||document.hidden)return;
+   audio?.setDucking(true);
+   if(card){speakingCard=card;card.classList.add('speaking');card.setAttribute('aria-busy','true')}
+  };
+  u.onend=()=>{ended=true;if(token===speechToken)clearSpeaking()};
+  u.onerror=event=>{ended=true;if(token===speechToken){clearSpeaking();if(!['canceled','interrupted'].includes(event?.error))unavailable()}};
+  synth.speak(u);
+ }catch{if(token===speechToken){clearSpeaking();unavailable()}}
+}
 function start(){deck=shuffle(DATA[category].words).slice(0,5);position=0;firstTry=0;runId=window.crypto?.randomUUID?.()||'english-'+Date.now()+'-'+Math.random().toString(36).slice(2);show('quiz');question()}
 function finishRound(){
  show('finish');
+ effect('complete');
  const version=questionVersion;
  $('reviewWords').replaceChildren();
  for(const word of deck){
@@ -79,13 +139,43 @@ function finishRound(){
   button.setAttribute('aria-label',word[1]+'、'+word[0]+' をきく');button.append(art(word));
   const en=document.createElement('strong');en.lang='en';en.textContent=word[0];
   const ja=document.createElement('small');ja.textContent=word[1];button.append(en,ja);
-  button.onclick=()=>{if(screen==='finish'&&version===questionVersion){audioEnabled=true;speak(word)}};
+  button.onclick=()=>{if(screen==='finish'&&version===questionVersion){audioEnabled=true;speak(word,button)}};
   $('reviewWords').append(button);
  }
  try{Promise.resolve(window.MoonRanking?.complete({game:'english',mode:category,runId,metrics:{firstTry,completed:5,total:5}})).catch(()=>{})}catch{/* Optional rankings must not interrupt play. */}
 }
-function question(){const version=++questionVersion;stopSpeech();answered=false;attempted=false;$('next').hidden=true;$('feedback').textContent='きいて、えを おしてね';$('hint').hidden=true;$('hint-toggle').setAttribute('aria-expanded','false');$('count').textContent=(position+1)+' / 5';$('stars').textContent='★'.repeat(position)+'☆'.repeat(5-position);const target=deck[position];$('english').textContent=target[0];$('choices').replaceChildren();const options=shuffle([target,...shuffle(DATA[category].words.filter(w=>w!==target)).slice(0,2)]);for(const word of options){const b=document.createElement('button');b.className='choice';b.setAttribute('aria-label',word[1]);b.append(art(word));const label=document.createElement('span');label.className='label';label.textContent=word[1];b.append(label);b.onclick=()=>{if(screen!=='quiz'||version!==questionVersion||answered)return;audioEnabled=true;$('listen-label').textContent='🔊 もういちど きく';if(word!==target){attempted=true;b.classList.add('retry');$('feedback').textContent='もういちど やってみよう！';speak(target);return}answered=true;if(!attempted)firstTry++;stopSpeech();b.classList.remove('retry');b.classList.add('correct');for(const choice of $('choices').children)choice.disabled=true;$('stars').textContent='★'.repeat(position+1)+'☆'.repeat(4-position);$('feedback').textContent='🌼 せいかい！ '+target[0];$('next').textContent=position===4?'ごほうびを みる ★':'つぎへ →';$('next').hidden=false;speak(target)};$('choices').append(b)}if(muted||audioFailed||!synth)revealHint();speak(target)}
+function question(){
+ const version=++questionVersion;stopSpeech();answered=false;attempted=false;
+ $('next').hidden=true;$('feedback').textContent='きいて、えを おしてね';$('hint').hidden=true;
+ $('hint-toggle').setAttribute('aria-expanded','false');$('count').textContent=(position+1)+' / 5';
+ $('stars').textContent='★'.repeat(position)+'☆'.repeat(5-position);
+ const target=deck[position];$('english').textContent=target[0];$('choices').replaceChildren();
+ const options=shuffle([target,...shuffle(DATA[category].words.filter(w=>w!==target)).slice(0,2)]);
+ for(const word of options){
+  const b=document.createElement('button');b.className='choice';b.setAttribute('aria-label',word[1]);b.append(art(word));
+  const label=document.createElement('span');label.className='label';label.textContent=word[1];b.append(label);
+  b.onclick=()=>{
+   if(screen!=='quiz'||version!==questionVersion||answered)return;
+   audioEnabled=true;$('listen-label').textContent='🔊 もういちど きく';
+   if(word!==target){attempted=true;b.classList.add('retry');$('feedback').textContent='もういちど やってみよう！';speak(target);return}
+   answered=true;if(!attempted)firstTry++;stopSpeech();b.classList.remove('retry');b.classList.add('correct');
+   for(const choice of $('choices').children)choice.disabled=true;
+   $('stars').textContent='★'.repeat(position+1)+'☆'.repeat(4-position);$('feedback').textContent='🌼 せいかい！ '+target[0];
+   $('next').textContent=position===4?'ごほうびを みる ★':'つぎへ →';$('next').hidden=false;
+   speak(target);effect('correct');
+  };
+  $('choices').append(b);
+ }
+ if(muted||audioFailed||!synth)revealHint();speak(target);
+}
 $('category').onchange=()=>{const key=$('category').value;if(!Object.prototype.hasOwnProperty.call(DATA,key))return;category=key;audioEnabled=true;$('listen-label').textContent='🔊 もういちど きく';start()};$('again').onclick=()=>{audioEnabled=true;start()};$('next').onclick=()=>{if(screen!=='quiz'||!answered)return;answered=false;position++;if(position===5)finishRound();else question()};$('listen').onclick=()=>{if(screen==='quiz'){audioEnabled=true;$('listen-label').textContent='🔊 もういちど きく';speak(deck[position])}};$('hint-toggle').onclick=revealHint;$('sound').onclick=()=>{audioEnabled=true;muted=!muted;stopSpeech();$('sound').textContent=muted?'🔇 おと なし':'🔊 おと あり';$('sound').setAttribute('aria-pressed',String(muted));$('audio-note').textContent=muted?'おとは おやすみ。えと ヒントで あそべるよ。':'';if(muted)revealHint();else if(screen==='quiz')speak(deck[position])};document.addEventListener('visibilitychange',()=>{if(document.hidden)stopSpeech()});window.addEventListener('pagehide',stopSpeech);
+audio?.onSuspend(()=>{audioEpoch++;stopSpeech()});
+let speechVolume=audio?.getVolumes?.().voice;
+window.addEventListener('moon:audio-volume',event=>{
+ const volume=event.detail?.voice;
+ if(typeof volume==='number'&&volume!==speechVolume){speechVolume=volume;audioEpoch++;stopSpeech()}
+});
+$('sound').addEventListener('click',()=>{audioEpoch++},true);
 start();
 if(!synth||!window.SpeechSynthesisUtterance)unavailable();
 </script></body></html>

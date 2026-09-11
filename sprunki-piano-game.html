@@ -8,7 +8,7 @@
   <style>
     :root {
       color-scheme: dark;
-      --bg: var(--game-bg, #151918);
+      --bg: var(--game-neutral-bg, #181818);
       --panel: var(--game-surface, #202824);
       --panel-2: var(--game-line, #3b4942);
       --ink: var(--game-ink, #f4f7f3);
@@ -809,6 +809,15 @@
       box-shadow: inset 0 -9px 10px rgba(255, 255, 255, 0.04), 0 5px 9px rgba(0, 0, 0, 0.42);
     }
 
+    .piano-key.is-approaching::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border: 3px solid #18bda3;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
     .piano-key.is-active {
       filter: brightness(1.08);
     }
@@ -1198,9 +1207,9 @@
       .game-page .result-detail { font-size: 12px; }
     }
   </style>
-  <link rel="stylesheet" href="games-theme.css?v=20260907-fun">
-  <script src="games-theme.js?v=20260907-fun"></script>
-  <script src="game-navigation.js?v=20260907-fun" defer></script>
+  <link rel="stylesheet" href="games-theme.css?v=20260912-audio-polish">
+  <script src="games-theme.js?v=20260912-audio-polish"></script>
+  <script src="game-navigation.js?v=20260912-audio-polish" defer></script>
 </head>
 <body class="game-page" data-game="piano">
   <main aria-label="スプランキーのピアノ音ゲー">
@@ -1215,8 +1224,8 @@
         <div class="hud-item"><span class="hud-label">Score</span><strong class="hud-value" id="score">0</strong></div>
         <div class="hud-item"><span class="hud-label">Combo</span><strong class="hud-value" id="combo">0</strong></div>
         <div class="hud-item"><span class="hud-label">Best</span><strong class="hud-value" id="best">0</strong></div>
-        <button class="menu-button" id="songButton" type="button" aria-haspopup="dialog" aria-controls="songPicker">SONG</button>
-        <button class="menu-button" id="menuButton" type="button" aria-haspopup="dialog" aria-controls="gameMenu">MENU</button>
+        <button class="menu-button" id="songButton" type="button" aria-haspopup="dialog" aria-controls="songPicker">きょく</button>
+        <button class="menu-button" id="menuButton" type="button" aria-haspopup="dialog" aria-controls="gameMenu">メニュー</button>
         <div class="judge-counts" id="stats" aria-label="Judgment counts">
           <div class="judge-count perfect"><span>Perfect</span><strong id="countPerfect">0</strong></div>
           <div class="judge-count great"><span>Great</span><strong id="countGreat">0</strong></div>
@@ -1228,10 +1237,10 @@
     </section>
 
     <div class="menu-grid transport" aria-label="演奏の操作">
-      <div class="song-control"><span>SONG</span><select class="visually-hidden" id="songSelect" aria-label="Song" tabindex="-1"></select><button class="song-current" id="songCurrent" type="button"><span class="song-current-name" id="songCurrentName">Twinkle</span><span class="song-current-category" id="songCurrentCategory">Starter</span></button><strong class="difficulty-pill" id="difficultyLabel" data-level="1">Lv.1</strong></div>
-      <button class="control-button" id="startButton" type="button">START</button>
-      <button class="control-button secondary" id="pauseButton" type="button">PAUSE</button>
-      <button class="control-button secondary" id="resetButton" type="button">RESET</button>
+      <div class="song-control"><span>きょく</span><select class="visually-hidden" id="songSelect" aria-label="きょく" tabindex="-1"></select><button class="song-current" id="songCurrent" type="button"><span class="song-current-name" id="songCurrentName">Twinkle</span><span class="song-current-category" id="songCurrentCategory">Starter</span></button><strong class="difficulty-pill" id="difficultyLabel" data-level="1">Lv.1</strong></div>
+      <button class="control-button" id="startButton" type="button">はじめる</button>
+      <button class="control-button secondary" id="pauseButton" type="button">とめる</button>
+      <button class="control-button secondary" id="resetButton" type="button">やりなおし</button>
       <button class="control-button secondary" id="soundButton" type="button" aria-pressed="true">SOUND ON</button>
       <a class="control-button secondary switch-link" href="index.html?game=moon" target="_top" aria-label="Switch to moon phase game">MOON</a>
     </div>
@@ -1252,16 +1261,16 @@
 
     <section class="controls" id="gameMenu" role="dialog" aria-modal="true" aria-label="Game menu" aria-hidden="true">
       <div class="menu-header">
-        <div class="menu-title">Menu</div>
-        <button class="menu-button" id="menuCloseButton" type="button">PLAY</button>
+        <div class="menu-title">メニュー</div>
+        <button class="menu-button" id="menuCloseButton" type="button">もどる</button>
       </div>
       <div class="character-strip" id="characterStrip" aria-label="スプランキーを選ぶ"></div>
     </section>
 
     <section class="song-picker" id="songPicker" role="dialog" aria-modal="true" aria-label="Song picker" aria-hidden="true">
       <div class="song-picker-header">
-        <div class="song-picker-title">Select Song</div>
-        <button class="song-picker-close" id="songPickerClose" type="button">PLAY</button>
+        <div class="song-picker-title">きょく</div>
+        <button class="song-picker-close" id="songPickerClose" type="button">もどる</button>
       </div>
       <div class="song-picker-body">
         <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Song categories"></div>
@@ -1284,6 +1293,8 @@
     </section>
   </main>
 
+  <script src="games-audio-manifest.js?v=20260912-audio-polish"></script>
+  <script src="games-audio.js?v=20260912-audio-polish"></script>
   <script>
     (() => {
       "use strict";
@@ -1695,6 +1706,19 @@
       let audioGeneration = 0;
 
       let audioContext = null;
+      let clockOffset = 0;
+      let startGeneration = 0;
+      let starting = false;
+
+      function clockNow() {
+        return audioContext ? audioContext.currentTime * 1000 + clockOffset : performance.now() + clockOffset;
+      }
+
+      function useSilentClock() {
+        const before = clockNow();
+        audioContext = null;
+        clockOffset = before - performance.now();
+      }
       let animationId = 0;
       let canvasWidth = 0;
       let canvasHeight = 0;
@@ -1835,10 +1859,11 @@
         resetGame();
         state.feedbackText = `${selectedSong().name} Ready`;
         state.feedbackKind = "";
-        state.feedbackUntil = performance.now() + 900;
+        state.feedbackUntil = clockNow() + 900;
       }
 
       function openSongPicker() {
+        if (starting || (state.running && !state.paused)) pauseGame();
         stopMelody();
         closeGameMenu();
         selectedCategoryId = categoryForSong(selectedSongId).id;
@@ -1857,6 +1882,7 @@
       }
 
       function openGameMenu() {
+        if (starting || (state.running && !state.paused)) pauseGame();
         stopMelody();
         gameMenu.classList.add("is-open");
         gameMenu.setAttribute("aria-hidden", "false");
@@ -1935,17 +1961,14 @@
       }
 
       function getAudioContext() {
-        if (!audioContext) {
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        return audioContext;
+        return window.MoonAudio?.getContext();
       }
 
       async function unlockAudio() {
-        const context = getAudioContext();
-        if (context.state === "suspended") {
-          await context.resume();
-        }
+        const context = await window.MoonAudio?.unlock();
+        if (!context || context.state !== "running") throw new Error("Audio unavailable");
+        if (audioContext !== context) clockOffset = clockNow() - context.currentTime * 1000;
+        audioContext = context;
         return context;
       }
 
@@ -1959,9 +1982,12 @@
         if (!soundEnabled) return;
         try {
           const context = getAudioContext();
-          if (context.state === "suspended") {
-            context.resume().then(() => {
-              if (generation === audioGeneration && !document.hidden) playPianoTone(note, velocity, scheduledAt, timbre, generation);
+          if (!audioContext || context?.state !== "running") {
+            unlockAudio().then(() => {
+              if (generation === audioGeneration && !document.hidden &&
+                  (scheduledAt !== null || keyElements.get(note.id)?.classList.contains("is-active"))) {
+                playPianoTone(note, velocity, scheduledAt, timbre, generation);
+              }
             }).catch(() => {
               if (generation !== audioGeneration) return;
               soundEnabled = false;
@@ -1984,14 +2010,17 @@
           filter.frequency.setValueAtTime(timbre.filter, now);
           filter.frequency.exponentialRampToValueAtTime(Math.max(420, timbre.filter * 0.28), now + Math.min(0.45, timbre.decay));
           master.gain.setValueAtTime(0.0001, now);
-          master.gain.exponentialRampToValueAtTime(timbre.gain * velocity, now + 0.012);
-          master.gain.exponentialRampToValueAtTime(timbre.gain * 0.32 * velocity, now + 0.16);
+          const peak = Math.min(0.045, timbre.gain * 0.3) * velocity;
+          master.gain.exponentialRampToValueAtTime(peak, now + 0.008);
+          master.gain.exponentialRampToValueAtTime(peak * 0.3, now + 0.12);
           master.gain.exponentialRampToValueAtTime(0.0001, now + timbre.decay);
           low.connect(filter);
-          high.connect(filter);
-          filter.connect(master).connect(context.destination);
+          const overtone = context.createGain();
+          overtone.gain.value = 0.28;
+          high.connect(overtone).connect(filter);
+          filter.connect(master).connect(window.MoonAudio.output("effects"));
           const voice = { stop() { low.stop(); high.stop(); master.disconnect(); },
-            disconnect() { low.disconnect(); high.disconnect(); filter.disconnect(); master.disconnect(); } };
+            disconnect() { low.disconnect(); high.disconnect(); overtone.disconnect(); filter.disconnect(); master.disconnect(); } };
           activeVoices.add(voice);
           high.onended = () => { voice.disconnect(); activeVoices.delete(voice); };
           low.start(now);
@@ -2007,13 +2036,10 @@
       async function loadCharacterBuffer(character) {
         if (!soundEnabled || !character.audio || audioBuffers.has(character.id)) return;
         try {
-          const context = await unlockAudio();
-          const response = await fetch(character.audio);
-          const data = await response.arrayBuffer();
-          const buffer = await context.decodeAudioData(data);
+          const { buffer } = await window.MoonAudio.loadTrack(character.id);
           audioBuffers.set(character.id, buffer);
         } catch (error) {
-          audioBuffers.set(character.id, null);
+          // A later user gesture may retry an unavailable offline track.
         }
       }
 
@@ -2030,7 +2056,7 @@
           gain.gain.setValueAtTime(0.0001, context.currentTime);
           gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.01);
           gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.28);
-          source.connect(gain).connect(context.destination);
+          source.connect(gain).connect(window.MoonAudio.output("effects"));
           const voice = { stop() { source.stop(); gain.disconnect(); } };
           activeVoices.add(voice);
           source.onended = () => { source.disconnect(); gain.disconnect(); activeVoices.delete(voice); };
@@ -2078,17 +2104,29 @@
         draw();
       }
 
-      function startGame() {
+      async function startGame() {
+        if (starting) return;
         stopMelody(true);
+        const generation = ++startGeneration;
+        starting = true;
         try {
-          unlockAudio();
-          characters.forEach((character) => loadCharacterBuffer(character));
+          await unlockAudio();
         } catch (error) {
-          soundEnabled = false;
-          updateSoundButton();
+          if (generation !== startGeneration) return;
+          if (soundEnabled) {
+            starting = false;
+            state.feedbackText = "おとを たしかめてね";
+            state.feedbackUntil = clockNow() + 1400;
+            return;
+          }
+          // Silent play may use a performance clock, fixed until this run ends.
+          useSilentClock();
         }
+        if (generation !== startGeneration || document.hidden) return;
+        starting = false;
+        if (soundEnabled) characters.forEach((character) => loadCharacterBuffer(character));
         if (state.running && state.paused) {
-          const now = performance.now();
+          const now = clockNow();
           state.pauseTotal += now - state.pauseAt;
           state.paused = false;
           state.feedbackText = "Resume";
@@ -2100,17 +2138,19 @@
           state.chart = makeChart();
           state.running = true;
           state.paused = false;
-          state.startAt = performance.now();
+          state.startAt = clockNow();
           state.feedbackText = `${selectedSong().name} Go`;
           state.feedbackKind = "good";
-          state.feedbackUntil = performance.now() + 700;
+          state.feedbackUntil = clockNow() + 700;
         }
-        startButton.textContent = "RESTART";
-        pauseButton.textContent = "PAUSE";
+        startButton.textContent = "もういちど";
+        pauseButton.textContent = "とめる";
         updateHud();
       }
 
       function pauseGame() {
+        startGeneration += 1;
+        starting = false;
         stopMelody();
         if (!state.running) return;
         if (state.paused) {
@@ -2118,18 +2158,20 @@
           return;
         }
         state.paused = true;
-        state.pauseAt = performance.now();
-        pauseButton.textContent = "RESUME";
+        state.pauseAt = clockNow();
+        pauseButton.textContent = "つづき";
         state.feedbackText = "Pause";
         state.feedbackKind = "";
-        state.feedbackUntil = performance.now() + 600;
+        state.feedbackUntil = clockNow() + 600;
       }
 
       function resetGame() {
+        startGeneration += 1;
+        starting = false;
         stopMelody(true);
         state = makeInitialState();
-        startButton.textContent = "START";
-        pauseButton.textContent = "PAUSE";
+        startButton.textContent = "はじめる";
+        pauseButton.textContent = "とめる";
         hideResult();
         updateHud();
         draw();
@@ -2166,11 +2208,12 @@
       }
 
       function updateSoundButton() {
-        soundButton.textContent = soundEnabled ? "SOUND ON" : "SOUND OFF";
+        soundButton.textContent = soundEnabled ? "おと あり" : "おと なし";
         soundButton.setAttribute("aria-pressed", soundEnabled ? "true" : "false");
       }
 
       function songTime(now) {
+        now = clockNow();
         if (!state.running) return state.songTime;
         if (state.paused) return state.pauseAt - state.startAt - state.pauseTotal;
         return now - state.startAt - state.pauseTotal;
@@ -2259,8 +2302,8 @@
         const lastNote = state.chart[state.chart.length - 1];
         if (lastNote && currentTime > lastNote.hitTime + 2300 && state.chart.every((note) => note.judged)) {
           state.running = false;
-          startButton.textContent = "START";
-          pauseButton.textContent = "PAUSE";
+          startButton.textContent = "はじめる";
+          pauseButton.textContent = "とめる";
           showResult();
         }
       }
@@ -2282,7 +2325,7 @@
         activeVoices.clear();
         for (const timer of pressedVisualTimers.values()) clearTimeout(timer);
         pressedVisualTimers.clear();
-        for (const key of keyElements.values()) key.classList.remove("is-active");
+        for (const key of keyElements.values()) key.classList.remove("is-active", "is-approaching");
         for (const pointer of activePointers.keys()) {
           if (typeof pointer === "number" && piano.hasPointerCapture?.(pointer)) piano.releasePointerCapture(pointer);
         }
@@ -2290,7 +2333,7 @@
         activeKeys.clear();
       }
 
-      function updateMelodyUi(now = performance.now()) {
+      function updateMelodyUi(now = clockNow()) {
         const recording = melody.mode === "recording";
         const playing = melody.mode === "playing";
         melodyRecord.setAttribute("aria-pressed", String(recording));
@@ -2334,13 +2377,21 @@
         hideResult();
       }
 
-      function recordMelody() {
+      async function recordMelody() {
         if (melody.mode === "recording") { stopMelody(); return; }
         enterMelody();
+        const generation = melody.generation;
+        melody.mode = "arming";
+        updateMelodyUi();
+        try { await unlockAudio(); } catch (error) {
+          if (generation !== melody.generation) return;
+          useSilentClock();
+        }
+        if (generation !== melody.generation || document.hidden) return;
         melody.events = [];
         melody.firstAt = null;
         melody.duration = 0;
-        melody.startedAt = performance.now();
+        melody.startedAt = clockNow();
         melody.mode = "recording";
         melodyLater(stopMelody, MELODY_MAX_MS);
         updateMelodyUi();
@@ -2350,27 +2401,25 @@
         if (!melody.events.length || melody.mode !== "idle") return;
         enterMelody();
         melody.mode = "playing";
-        melody.playbackAt = performance.now();
+        melody.playbackAt = Infinity;
         const generation = melody.generation;
         updateMelodyUi();
         let context = null;
         try {
-          if (soundEnabled) context = await unlockAudio();
+          context = await unlockAudio();
         } catch (error) {
           if (generation !== melody.generation) return;
-          soundEnabled = false;
-          updateSoundButton();
+          if (soundEnabled) { stopMelody(); return; }
+          useSilentClock();
         }
         if (generation !== melody.generation || document.hidden) return;
         const leadMs = 60;
         const audioStart = context ? context.currentTime + leadMs / 1000 : 0;
-        melody.playbackAt = performance.now() + leadMs;
+        melody.playbackAt = clockNow() + leadMs;
         // One Web Audio clock for every onset: timer delays cannot accumulate in the music.
         for (const event of melody.events) {
           if (context) playPianoTone(noteById.get(event.noteId), 0.75, audioStart + event.at / 1000, event.timbre);
-          melodyLater(() => showKey(event.noteId, true), leadMs + event.at);
         }
-        melodyLater(stopMelody, leadMs + melody.duration + 30);
       }
 
       function showKey(noteId, on) {
@@ -2385,6 +2434,7 @@
       }
 
       function playInput(noteId, now = performance.now()) {
+        now = clockNow();
         const note = noteById.get(noteId);
         if (!note || melody.mode === "playing" || document.hidden) return;
         if (melody.studio) {
@@ -2652,7 +2702,7 @@
         ctx.restore();
       }
 
-      function draw(now = performance.now()) {
+      function draw(now = clockNow()) {
         drawNotes(now);
         feedbackEl.classList.remove("is-perfect", "is-great", "is-good", "is-ok", "is-bad", "is-miss");
         if (now < state.feedbackUntil) {
@@ -2665,9 +2715,24 @@
       }
 
       function tick(now) {
+        now = clockNow();
         const elapsed = now - lastFrame;
         lastFrame = now;
         if (elapsed < 1000) registerMisses(now);
+        const approaching = new Set();
+        if (state.running && !state.paused && !melody.studio) {
+          for (const note of state.chart) {
+            if (!note.judged && Math.abs(note.hitTime - songTime(now)) <= OK_MS) approaching.add(note.noteId);
+          }
+        }
+        for (const [id, key] of keyElements) key.classList.toggle("is-approaching", approaching.has(id));
+        if (melody.mode === "playing") {
+          const position = now - melody.playbackAt;
+          for (const [id, key] of keyElements) {
+            key.classList.toggle("is-active", melody.events.some(event => event.noteId === id && position >= event.at && position < event.at + 140));
+          }
+          if (position > melody.duration + 30) stopMelody();
+        }
         draw(now);
         updateHud();
         if (melody.mode !== "idle") updateMelodyUi(now);
@@ -2718,13 +2783,13 @@
         piano.addEventListener("touchend", handleTouchEnd, { passive: false });
         piano.addEventListener("touchcancel", handleTouchEnd, { passive: false });
       }
-      soundButton.addEventListener("click", () => {
+      soundButton.addEventListener("click", async () => {
         stopMelody();
         soundEnabled = !soundEnabled;
         updateSoundButton();
         if (soundEnabled) {
           try {
-            unlockAudio();
+            await unlockAudio();
             characters.forEach((character) => loadCharacterBuffer(character));
           } catch (error) {
             soundEnabled = false;
@@ -2780,9 +2845,12 @@
       new ResizeObserver(resizeCanvas).observe(stage);
       window.addEventListener("orientationchange", () => setTimeout(resizeCanvas, 150), { passive: true });
       function leavePiano() {
+        startGeneration += 1;
+        starting = false;
         stopMelody();
         if (state.running && !state.paused) pauseGame();
       }
+      window.MoonAudio?.onSuspend(leavePiano);
       document.addEventListener("visibilitychange", () => { if (document.hidden) leavePiano(); });
       window.addEventListener("blur", leavePiano);
       window.addEventListener("pagehide", leavePiano);

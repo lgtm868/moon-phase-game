@@ -1,0 +1,8 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Audio asset contract fixture</title>
+<script>
+  window.assetCalls = [];
+  window.MoonAudio = { registerAsset(id, asset) { window.assetCalls.push({ id, asset }); } };
+</script>
+<script src="../games-audio-manifest.js"></script>

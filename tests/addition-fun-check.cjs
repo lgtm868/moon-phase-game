@@ -41,6 +41,7 @@ for (const max of [5, 10, 20]) for (let a = 1; a <= max; a++) for (let b = 1; b 
   }
   assert.equal(state.counted.length, p.total);
   assert.equal(game.answer(state, p.total + 1), 'retry');
+  assert.equal(state.counted.length, p.total, 'Retry preserves counted marks');
   assert.equal(state.removed.length, b, 'Retry preserves completed manipulation');
   assert.equal(game.answer(state, p.total), 'correct');
   assert.equal(state.firstTry, 0);
@@ -193,6 +194,7 @@ async function browserChecks() {
               await f.locator('#answers button').filter({ hasText: new RegExp(`^${choices.find(n => Number(n) !== total)}$`) }).tap();
               assert.equal(await f.locator('.star.earned').count(), 0);
               assert(await f.locator('#next').isHidden());
+              assert.equal(await f.locator('.counted').count(), total, 'Wrong answer preserves counted marks');
               if (operation === 'subtract') assert.equal(await f.locator('#left .gone').count(), b);
             }
             await layout(`${operation}-${max}-${round}`);

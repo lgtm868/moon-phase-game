@@ -234,10 +234,30 @@ body[data-phase="start"] .app, body[data-phase="finish"] .app { height: auto; mi
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+.finish-food { flex: 1; min-width: 44px; min-height: 44px; display: grid; grid-template-rows: 80px 2.8em; align-items: center; padding: 4px; border: 1px solid var(--line); background: var(--surface); }
+.finish-foods .finish-food svg { width: 100%; height: 80px; }
+.finish-food span { font-size: 14px; font-weight: 800; line-height: 1.4; overflow-wrap: anywhere; }
+.prompt { height: 224px; min-height: 224px; font-size: 22px; line-height: 1.4; display: grid; align-content: center; }
+.food-name { min-height: 3em; display: grid; align-content: center; }
+@media (max-width: 899px) {
+  .prompt { height: 156px; min-height: 156px; font-size: 18px; line-height: 1.3; }
+  .play { grid-template-rows: auto 144px 48px 52px; }
+  .cards { min-height: 0; }
+}
+@media (max-width: 600px) {
+  .finish-food { grid-template-rows: 56px 42px; }
+  .finish-foods .finish-food svg { height: 56px; }
+  .finish-food span { font-size: 12px; }
+}
+@media (max-width: 600px) and (max-height: 650px) {
+  .prompt { height: 132px; min-height: 132px; font-size: 17px; }
+  .play { grid-template-rows: auto 110px 36px 48px; }
+  .foot p:not(.audio-note) { display: none; }
+}
 </style>
-<link rel="stylesheet" href="games-theme.css?v=20260907-fun">
-<script src="games-theme.js?v=20260907-fun"></script>
-<script src="game-navigation.js?v=20260907-fun" defer></script>
+<link rel="stylesheet" href="games-theme.css?v=20260912-audio-polish">
+<script src="games-theme.js?v=20260912-audio-polish"></script>
+<script src="game-navigation.js?v=20260912-audio-polish" defer></script>
 </head>
 <body class="game-page" data-game="food" data-phase="start">
 <main class="app">
@@ -259,6 +279,7 @@ body[data-phase="start"] .app, body[data-phase="finish"] .app { height: auto; mi
 </main><noscript>あそぶには、ぶらうざの じゃばすくりぷとを おんにしてね。</noscript>
 <dialog class="album-dialog" id="albumDialog" aria-labelledby="albumTitle" aria-describedby="albumStatus"><div class="album-heading"><h2 id="albumTitle">おいしい あるばむ</h2><button type="button" class="album-close" id="albumClose" aria-label="とじる" autofocus>×</button></div><p class="album-status" id="albumStatus" role="status"></p><div class="album-grid" id="albumGrid"></div></dialog>
 <script src="food-quiz-bank.js?v=20260907-wording"></script>
+<script src="games-audio.js?v=20260912-audio-polish"></script>
 <script>
 'use strict';
 window.FoodQuiz = (() => {
@@ -333,6 +354,19 @@ window.FoodQuiz = (() => {
   let phase = 'start', difficulty = 'easy', deck = [], index = 0;
   let answered = false, stars = 0, sound = true, speechToken = 0, session = 0;
   let firstAttempt = true, firstTry = 0, runId = '';
+  let audioReady = null, audioEpoch = 0;
+  const audio = window.MoonAudio;
+  document.addEventListener('click', event => {
+    if (event.target.closest?.('#moonAudioSettings, #moonAudioDialog')) return;
+    if (event.isTrusted && audio) audioReady = audio.unlock().catch(() => null);
+  }, true);
+  function effect(name) {
+    if (!sound || !audioReady || document.hidden) return;
+    const epoch = audioEpoch, currentSession = session, currentIndex = index;
+    audioReady.then(context => {
+      if (context?.state === 'running' && sound && !document.hidden && epoch === audioEpoch && currentSession === session && currentIndex === index) return audio.effect(name);
+    }).catch(() => {});
+  }
   function newRunId() {
     try { return window.crypto.randomUUID(); } catch {
       return 'food-' + Date.now().toString(36) + '-' + session + '-' + Math.random().toString(36).slice(2);
@@ -340,6 +374,7 @@ window.FoodQuiz = (() => {
   }
   function stopSpeech() {
     speechToken++;
+    audio?.setDucking(false);
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   }
   function speak(text) {
@@ -349,14 +384,22 @@ window.FoodQuiz = (() => {
       $('audioNote').hidden = false;
       return;
     }
-    const token = speechToken;
+      const token = speechToken;
     try {
       const utterance = new SpeechSynthesisUtterance(text);
+      if (audio?.getVolumes) utterance.volume = audio.getVolumes().voice;
       utterance.lang = 'ja-JP';
       utterance.rate = .83;
       const voice = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
       if (voice) utterance.voice = voice;
+      let ended = false;
+      utterance.onstart = () => {
+        if (!ended && token === speechToken && sound && !document.hidden) audio?.setDucking(true);
+      };
+      utterance.onend = () => { ended = true; if (token === speechToken) audio?.setDucking(false); };
       utterance.onerror = event => {
+        ended = true;
+        if (token === speechToken) audio?.setDucking(false);
         if (token === speechToken && sound && !['canceled', 'interrupted'].includes(event.error)) $('audioNote').hidden = false;
       };
       speechSynthesis.speak(utterance);
@@ -476,15 +519,31 @@ window.FoodQuiz = (() => {
     updateProgress();
     $('next').focus({ preventScroll: true });
     speak('せいかい！ ' + name + ' だね！');
+    effect('correct');
   }
   function next() {
     if (phase !== 'play' || !answered) return;
     if (index < 4) { index++; showQuestion(); return; }
     setPhase('finish');
     $('finishLevel').textContent = levelById.get(difficulty).name + '、ごもん できたよ！';
-    $('finishFoods').innerHTML = deck.map(question => svg(question.answer)).join('');
+    const currentSession = session;
+    $('finishFoods').removeAttribute('aria-hidden');
+    $('finishFoods').setAttribute('aria-label', 'みつけた ごはん');
+    $('finishFoods').replaceChildren();
+    for (const question of deck) {
+      const food = foodById.get(question.answer), button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'finish-food';
+      button.setAttribute('aria-label', food.name + ' をきく');
+      button.innerHTML = food.svg + '<span>' + food.name + '</span>';
+      button.addEventListener('click', () => {
+        if (phase === 'finish' && session === currentSession && button.isConnected) speak(food.name);
+      });
+      $('finishFoods').append(button);
+    }
     $('finishTitle').focus({ preventScroll: true });
     speak('ぜんぶ できたね！ おいしい ものを いつつ みつけたね。');
+    effect('complete');
     try {
       window.MoonRanking?.complete({ game: 'food', mode: difficulty, runId, metrics: { firstTry, completed: 5, total: 5 } })?.catch?.(() => {});
     } catch {}
@@ -520,6 +579,7 @@ window.FoodQuiz = (() => {
   $('listen').addEventListener('click', () => { if (phase === 'play') speak(deck[index].clue); });
   $('sound').addEventListener('click', () => {
     sound = !sound;
+    audioEpoch++;
     stopSpeech();
     $('sound').setAttribute('aria-pressed', String(sound));
     $('soundLabel').textContent = sound ? 'こえ あり' : 'こえ なし';
@@ -529,6 +589,16 @@ window.FoodQuiz = (() => {
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopSpeech(); });
   window.addEventListener('pagehide', stopSpeech);
+  audio?.onSuspend(() => { audioEpoch++; stopSpeech(); });
+  let speechVolume = audio?.getVolumes?.().voice;
+  window.addEventListener('moon:audio-volume', event => {
+    const volume = event.detail?.voice;
+    if (typeof volume === 'number' && volume !== speechVolume) {
+      speechVolume = volume;
+      audioEpoch++;
+      stopSpeech();
+    }
+  });
   selectDifficulty(difficulty);
   return {
     foods: foods.map(food => ({ ...food })),

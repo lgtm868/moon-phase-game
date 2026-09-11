@@ -200,123 +200,10 @@ async function checkDragInterruptions(browser, url, failures) {
   } finally { await page.close(); }
 }
 
-async function checkLateMediaErrors(browser, url, failures) {
-  const page = await browser.newPage();
-  page.on('pageerror', error => failures.push(error.message));
-  try {
-    await page.addInitScript(() => {
-      window.__audios = [];
-      const NativeAudio = window.Audio;
-      window.Audio = function(src) {
-        const audio = new NativeAudio(src);
-        audio.__originalSrc = src;
-        __audios.push(audio);
-        return audio;
-      };
-    });
-    await page.goto(url);
-    await page.locator('#voiceButton').click();
-    await page.locator('#tabFriends').click();
-    await page.locator('.sprunki-choice').nth(1).click();
-    await page.locator('#musicButton').click();
-    await page.waitForFunction(() => __audios.slice(0, 2).every(a => !a.paused && a.currentTime > .1));
-    await page.evaluate(() => { window.__oldErrors = __audios.slice(0, 2).map(a => a.onerror); });
-    for (const index of [0, 1]) {
-      // Change only the browser media source after real playback; Chrome emits its native error.
-      await page.evaluate(index => {
-        const audio = __audios[index];
-        audio.src = `/sounds/audit-missing-${index}.wav`;
-        audio.load();
-      }, index);
-      await page.waitForFunction(index => __audios[index].error !== null, index);
-      await page.locator('#audioStatus').waitFor({ state: 'visible' });
-      assert.match(await page.locator('#audioStatus').textContent(), index === 0 ? /Oren/ : /Raddy/);
-      assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), String(index === 0),
-        'one failed track leaves its peer on; removing the final failed track turns music off');
-      assert.ok(await page.evaluate(index => __audios[index].paused && __audios[index].onerror === null, index),
-        'failed track is paused and its handler detached');
-      if (index === 0) assert.ok(await page.evaluate(() => !__audios[1].paused), 'healthy peer keeps playing');
-    }
-    await page.evaluate(() => __audios.slice(0, 2).forEach(a => { a.src = a.__originalSrc; a.load(); }));
-    await page.locator('#musicButton').click();
-    await page.waitForFunction(() => __audios.slice(0, 2).every(a => !a.paused && a.currentTime > .1));
-    await page.evaluate(() => __oldErrors.forEach((handler, i) => handler.call(__audios[i], new Event('error'))));
-    assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), 'true', 'old failed attempts cannot stop retry');
-    assert.ok(await page.locator('#audioStatus').isHidden(), 'old failure cannot replace retry status');
-    await page.evaluate(() => { window.__oldErrors = __audios.slice(0, 2).map(a => a.onerror); });
-    await page.locator('#musicButton').click();
-    assert.ok(await page.evaluate(() => __audios.slice(0, 2).every(a => a.paused && a.onerror === null)), 'stop clears handlers');
-    await page.evaluate(() => __oldErrors.forEach((handler, i) => handler.call(__audios[i], new Event('error'))));
-    assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), 'false', 'stale errors while off do nothing');
-    assert.ok(await page.locator('#audioStatus').isHidden());
-    await page.locator('#musicButton').click();
-    await page.waitForFunction(() => __audios.slice(0, 2).every(a => !a.paused && a.currentTime > .1));
-    await page.evaluate(() => __oldErrors.forEach((handler, i) => handler.call(__audios[i], new Event('error'))));
-    assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), 'true', 'pre-stop errors cannot affect new play');
-    assert.ok(await page.locator('#audioStatus').isHidden());
-    await page.evaluate(() => { window.__deselectedError = __audios[1].onerror; });
-    await page.locator('.sprunki-choice').nth(1).click();
-    assert.ok(await page.evaluate(() => __audios[1].paused && __audios[1].onerror === null), 'deselect clears handler');
-    await page.evaluate(() => __deselectedError.call(__audios[1], new Event('error')));
-    assert.ok(await page.locator('#audioStatus').isHidden(), 'deselected failure is ignored');
-    await page.locator('.sprunki-choice').nth(1).click();
-    await page.waitForFunction(() => !__audios[1].paused && __audios[1].currentTime > .1);
-    await page.evaluate(() => __deselectedError.call(__audios[1], new Event('error')));
-    assert.ok(await page.evaluate(() => __audios.slice(0, 2).every(a => !a.paused)), 'old same-token failure cannot stop reselection');
-    assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), 'true');
-    assert.ok(await page.locator('#audioStatus').isHidden());
-    return { nativeLateErrors: 2, staleNativeErrors: 8 };
-  } finally { await page.close(); }
-}
-
-async function checkSynchronousAudioFailure(browser, url, failures) {
-  const page = await browser.newPage();
-  page.on('pageerror', error => failures.push(error.message));
-  try {
-    await page.addInitScript(() => {
-      window.__attempts = [];
-      HTMLMediaElement.prototype.play = function() {
-        const attempt = { audio: this, onerror: this.onerror };
-        __attempts.push(attempt);
-        if (__attempts.length === 1) throw new DOMException('Synchronous first-track failure', 'NotSupportedError');
-        return new Promise((resolve, reject) => { attempt.reject = reject; });
-      };
-    });
-    await page.goto(url);
-    await page.locator('#voiceButton').click();
-    await page.locator('#tabFriends').click();
-    await page.locator('.sprunki-choice').nth(1).click();
-    await page.locator('#musicButton').click();
-    assert.equal(await page.evaluate(() => __attempts.length), 2, 'a synchronous first failure must still attempt the peer');
-    assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), 'true', 'pending peer keeps batch on');
-    assert.match(await page.locator('#audioStatus').textContent(), /Oren/);
-    await page.evaluate(() => __attempts[1].reject(new DOMException('Peer failed', 'NotAllowedError')));
-    await page.waitForFunction(() => document.querySelector('#musicButton').getAttribute('aria-pressed') === 'false');
-    assert.match(await page.locator('#audioStatus').textContent(), /Raddy/, 'final peer failure is not discarded');
-    await page.locator('#musicButton').click();
-    await page.evaluate(() => { window.__staleAttempts = __attempts.slice(-2); });
-    await page.locator('#musicButton').click();
-    await page.locator('#musicButton').click();
-    await page.evaluate(() => __staleAttempts.forEach(attempt => {
-      attempt.reject(new DOMException('Old pending play rejected', 'NotAllowedError'));
-      attempt.onerror.call(attempt.audio, new Event('error'));
-    }));
-    assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), 'true', 'stale promises and errors leave new batch active');
-    assert.ok(await page.locator('#audioStatus').isHidden());
-    await page.evaluate(() => __attempts.at(-2).reject(new DOMException('Current Oren failed', 'NotAllowedError')));
-    assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), 'true', 'one current rejection retains its pending peer');
-    await page.evaluate(() => __attempts.at(-1).reject(new DOMException('Current Raddy failed', 'NotAllowedError')));
-    await page.waitForFunction(() => document.querySelector('#musicButton').getAttribute('aria-pressed') === 'false');
-    assert.match(await page.locator('#audioStatus').textContent(), /Raddy/);
-    return { synchronousFirstFailure: 1, stalePlayRejections: 2 };
-  } finally { await page.close(); }
-}
-
 async function checkInterruptions(browser, url, failures) {
   return {
     ...await checkDragInterruptions(browser, url, failures),
-    ...await checkLateMediaErrors(browser, url, failures),
-    ...await checkSynchronousAudioFailure(browser, url, failures)
+    ...await require('./moon-music-check.cjs').checkMoonMusic(browser, url)
   };
 }
 
@@ -346,15 +233,12 @@ const server = http.createServer((req, res) => {
       console.log(JSON.stringify({ passed: true, report }, null, 2));
       return;
     }
-    for (const [width, height] of [[390, 844], [375, 667], [320, 568], [1280, 800], [844, 390], [667, 375], [740, 360]]) {
+    for (const [width, height] of [[1024, 600], [390, 844], [375, 667], [320, 568], [1280, 800], [844, 390], [667, 375], [740, 360]]) {
       const page = await browser.newPage({ viewport: { width, height } });
       page.on('pageerror', error => failures.push(error.message));
       await page.addInitScript(() => {
         let seed = 12345;
         Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
-        window.__audios = [];
-        const NativeAudio = window.Audio;
-        window.Audio = function(src) { const audio = new NativeAudio(src); window.__audios.push(audio); return audio; };
       });
       await page.goto(url);
       await page.evaluate(() => document.fonts.ready);
@@ -415,15 +299,6 @@ const server = http.createServer((req, res) => {
       await page.locator('.sprunki-choice').nth(1).click();
       assert.equal(await page.locator('.sprunki-choice.is-active').count(), 2);
       await page.screenshot({ path: path.join(artifacts, `friends-${width}x${height}.png`) });
-      if (width === 390) {
-        await page.locator('#musicButton').click();
-        await page.waitForTimeout(800);
-        const audio = await page.evaluate(() => window.__audios.slice(0, 2).map(a => ({ paused: a.paused, time: a.currentTime, error: a.error?.code })));
-        assert.ok(audio.every(a => !a.paused && a.time > .1 && !a.error), JSON.stringify(audio));
-        await page.locator('#musicButton').click();
-        assert.ok(await page.evaluate(() => window.__audios.every(a => a.paused)), 'audio off');
-        report.push({ audio });
-      }
       const saved = {};
       for (const [tab, mode] of quizModes) {
         await page.locator(tab).click();
@@ -515,39 +390,6 @@ const server = http.createServer((req, res) => {
     assert.deepEqual(await menuLinks.evaluateAll(links => links.map(link => link.getAttribute('aria-current'))),
       gameKeys.map(game => game === 'piano' ? 'page' : null), 'current-page selection follows navigation');
     await wrapper.close();
-
-    const race = await browser.newPage();
-    race.on('pageerror', error => failures.push(error.message));
-    await race.addInitScript(() => {
-      const play = HTMLMediaElement.prototype.play;
-      let first = true;
-      HTMLMediaElement.prototype.play = function() {
-        if (first) { first = false; return new Promise((resolve, reject) => { window.__rejectOld = reject; }); }
-        return play.call(this);
-      };
-    });
-    await race.goto(url);
-    await race.locator('#musicButton').click();
-    await race.locator('#musicButton').click();
-    await race.locator('#musicButton').click();
-    await race.evaluate(() => window.__rejectOld(new DOMException('Old request', 'NotAllowedError')));
-    await race.waitForTimeout(150);
-    assert.equal(await race.locator('#musicButton').getAttribute('aria-pressed'), 'true');
-    assert.ok(await race.locator('#audioStatus').isHidden());
-    await race.evaluate(() => window.dispatchEvent(new Event('pagehide')));
-    assert.equal(await race.locator('#musicButton').getAttribute('aria-pressed'), 'false');
-    await race.close();
-
-    const rejected = await browser.newPage();
-    rejected.on('pageerror', error => failures.push(error.message));
-    await rejected.addInitScript(() => {
-      HTMLMediaElement.prototype.play = () => Promise.reject(new DOMException('Blocked', 'NotAllowedError'));
-    });
-    await rejected.goto(url);
-    await rejected.locator('#musicButton').click();
-    await rejected.locator('#audioStatus').waitFor({ state: 'visible' });
-    assert.equal(await rejected.locator('#musicButton').getAttribute('aria-pressed'), 'false');
-    await rejected.close();
 
     report.push(await checkInterruptions(browser, url, failures));
 

@@ -53,6 +53,7 @@ button:disabled{cursor:default}
 @media(max-width:600px){.stars{gap:7px}.star{font-size:23px}.sound{gap:5px}.card .pick{min-width:0}.card .mark{top:7px;right:7px;width:26px;height:26px;font-size:19px;line-height:26px}.friends{gap:2px}.friend span{font-size:11px}}
 @media(max-width:360px){.friends{flex-wrap:wrap}.friend{flex:0 1 28%}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+#hintButton.hint-suggested{outline:3px solid var(--game-primary,#66ad8b);outline-offset:3px;background:#edf8f0;color:#151918}
 </style>
 <style>
 :root{color-scheme:dark;--paper:var(--game-bg,#151918);--ink:var(--game-ink,#f4f7f3);--muted:var(--game-muted,#a9b7b0);--green:var(--game-primary,#b9edcc);--line:var(--game-line,#3b4942);font-family:system-ui,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif}
@@ -127,23 +128,35 @@ button:disabled{cursor:default}
 .hint[data-level="2"] #hintColor{visibility:visible}
 .game-page #hintButton{min-width:108px}
 .game-page #hintButton:disabled{opacity:.8}
-.game-page .friends{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;width:100%;max-width:720px;margin:12px auto}
+.game-page .friends{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-auto-rows:max-content;align-content:start;gap:10px;width:100%;max-width:850px;min-height:0;max-height:50svh;margin:12px auto;padding:6px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable}
 .game-page .friend{display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;background:var(--game-surface,#202824);padding:6px;min-width:0}
 .game-page .friend.owned{border-color:var(--green)}
 .game-page .friend.new{border-color:var(--game-gold,#f4cc72)}
 .game-page .friend img,.game-page .friend .unknown{height:100px;width:100%;object-fit:contain;margin:0}
 .game-page .friend .unknown{display:grid;place-items:center;color:var(--muted);font-size:44px}
-.game-page .friend span{margin:4px 0 0;font-size:13px;line-height:18px}
-.game-page .friend .badge{height:18px;margin:0;color:var(--game-gold,#f4cc72);font-size:11px}
+.game-page .friend span{margin:4px 0 0;font-size:13px;line-height:18px;min-height:36px;max-width:100%}
+.game-page .friend .badge{height:18px;min-height:18px;margin:0;color:var(--game-gold,#f4cc72);font-size:11px}
 .game-page .finish h1{font-size:28px;margin:6px 0}
 .game-page .finish-stars{font-size:26px}
 .game-page .finish p{font-size:16px;margin:4px 0}
-@media(min-width:900px) and (orientation:landscape){.game-page .friend img,.game-page .friend .unknown{height:min(100px,10svh)}.game-page .friends{margin:8px auto}.game-page .finish{padding:0}.question-panel{gap:14px}}
-@media(max-width:600px){.game-page .friends{gap:6px}.game-page .friend{padding:4px}.game-page .friend img,.game-page .friend .unknown{height:70px}.game-page .friend span{font-size:11px}.game-page .friend .badge{font-size:10px}}
+@media(min-width:900px) and (orientation:landscape){
+ .game-page .friends{grid-template-rows:repeat(4,minmax(0,1fr));gap:6px;margin:0;padding:4px;max-height:none;height:100%;overflow:visible;scrollbar-gutter:auto}
+ .game-page .friend{display:grid;grid-template-columns:44px minmax(0,1fr);grid-template-rows:auto auto;align-content:center;gap:0 4px;padding:4px;min-height:44px}
+ .game-page .friend img,.game-page .friend .unknown{grid-column:1;grid-row:1/3;height:44px;width:44px}
+ .game-page .friend span{min-height:0;margin:0;font-size:12px;line-height:18px}
+ .game-page .friend .unknown{font-size:32px}
+ .game-page .friend .badge{grid-column:2;grid-row:1;font-size:10px}
+ .game-page .friend>span:last-child{grid-column:2;grid-row:2}
+ .game-page .friend:not(.new)>span:last-child{grid-row:1/3;align-self:center}
+ .game-page .finish{padding:0;grid-template-rows:auto auto auto minmax(0,1fr) auto;gap:8px;align-content:stretch}
+ .question-panel{gap:14px}
+}
+@media(min-width:1100px) and (min-height:700px) and (orientation:landscape){.game-page .friend{grid-template-columns:64px minmax(0,1fr)}.game-page .friend img,.game-page .friend .unknown{height:64px;width:64px}}
+@media(max-width:600px){.game-page .friends{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.game-page .friend{padding:4px}.game-page .friend img,.game-page .friend .unknown{height:70px}.game-page .friend span{font-size:12px}.game-page .friend .badge{font-size:10px}}
 </style>
-<link rel="stylesheet" href="games-theme.css?v=20260907-fun">
-<script src="games-theme.js?v=20260907-fun"></script>
-<script src="game-navigation.js?v=20260907-fun" defer></script>
+<link rel="stylesheet" href="games-theme.css?v=20260912-audio-polish">
+<script src="games-theme.js?v=20260912-audio-polish"></script>
+<script src="game-navigation.js?v=20260912-audio-polish" defer></script>
 </head>
 <body class="game-page" data-game="guess">
 <main class="app">
@@ -164,18 +177,11 @@ button:disabled{cursor:default}
  <p class="foot">ゆっくりで だいじょうぶ。なんどでも あそぼう。</p>
 </main>
 <noscript>あそぶには、ぶらうざの じゃばすくりぷとを おんにしてね。</noscript>
+<script src="sprunki-roster.js?v=20260912-audio-polish"></script>
+<script src="games-audio.js?v=20260912-audio-polish"></script>
 <script>
 const GuessGame=(()=>{
- const characters=[
-  {id:'oren',name:'おれん',file:'sprunki-oren.png',bg:'#fff0d9'},
-  {id:'sky',name:'すかい',file:'sprunki-sky.png',bg:'#e6f3fc'},
-  {id:'simon',name:'さいもん',file:'sprunki-simon.png',bg:'#fbf4ce'},
-  {id:'pinki',name:'ぴんきー',file:'sprunki-pinki.png',bg:'#fbe8f0'},
-  {id:'gray',name:'ぐれー',file:'sprunki-gray.png',bg:'#ecefea'},
-  {id:'durple',name:'だーぷる',file:'sprunki-durple.png',bg:'#f0e8fa'},
-  {id:'tunner',name:'たなー',file:'sprunki-tunner.png',bg:'#f0e8dc'},
-  {id:'vineria',name:'ゔぃねりあ',file:'sprunki-vineria.png',bg:'#e6f0d9'}
- ];
+ const characters=globalThis.SprunkiRoster.characters.map(character=>({...character,name:character.hiragana}));
  function shuffle(items,rng){const a=[...items];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
  let runSequence=0;
  function createRunId(){try{if(typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function')return crypto.randomUUID();}catch{}return `guess-${Date.now()}-${++runSequence}-${Math.random().toString(36).slice(2)}`;}
@@ -190,21 +196,25 @@ const GuessGame=(()=>{
 </script>
 <script>
 (()=>{'use strict';
- const $=id=>document.getElementById(id);let state=GuessGame.createSession(),collection=[],sound=true,speechVersion=0,audioContext;const counts=['ぜろ','ひとつ','ふたつ','みっつ','よっつ','いつつ'];const remaining=['','あと いちもん','あと にもん','あと さんもん','あと よんもん','あと ごもん'];
+ const $=id=>document.getElementById(id);let state=GuessGame.createSession(),collection=[],sound=true,speechVersion=0,chimeVersion=0;const engine=window.MoonAudio,activeNotes=new Set();const counts=['ぜろ','ひとつ','ふたつ','みっつ','よっつ','いつつ'];const remaining=['','あと いちもん','あと にもん','あと さんもん','あと よんもん','あと ごもん'];
  const supportsSpeech='speechSynthesis'in window&&'SpeechSynthesisUtterance'in window;
- function stopVoice(){speechVersion++;if(supportsSpeech)try{window.speechSynthesis.cancel();}catch{}}
- function speak(text){stopVoice();if(!sound)return;if(!supportsSpeech){$('audioNote').hidden=false;return;}try{const synth=window.speechSynthesis,voices=synth.getVoices(),voice=voices.find(v=>/^ja(?:[-_]|$)/i.test(v.lang));if(!voice){$('audioNote').hidden=false;return;}const utterance=new SpeechSynthesisUtterance(text),version=speechVersion;utterance.lang='ja-JP';utterance.voice=voice;utterance.rate=.78;utterance.volume=.85;utterance.onstart=()=>{if(version===speechVersion)$('audioNote').hidden=true;};utterance.onerror=event=>{if(version===speechVersion&&!['canceled','interrupted'].includes(event.error))$('audioNote').hidden=false;};synth.speak(utterance);}catch{$('audioNote').hidden=false;}}
- function stopChime(){if(audioContext){const previous=audioContext;audioContext=undefined;void previous.close().catch(()=>{});}}
- function chime(){if(!sound)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audioContext??=new Audio();if(audioContext.state==='suspended')void audioContext.resume().catch(()=>{});[523.25,659.25,783.99].forEach((note,i)=>{const oscillator=audioContext.createOscillator(),gain=audioContext.createGain(),t=audioContext.currentTime+i*.12;oscillator.type='sine';oscillator.frequency.value=note;gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.055,t+.02);gain.gain.exponentialRampToValueAtTime(.001,t+.28);oscillator.connect(gain);gain.connect(audioContext.destination);oscillator.start(t);oscillator.stop(t+.3);oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};});}catch{}}
+ function stopVoice(){speechVersion++;engine?.setDucking(false);if(supportsSpeech)try{window.speechSynthesis.cancel();}catch{}}
+ let sharedVoiceVolume=engine?.getVolumes?.().voice;
+ window.addEventListener('moon:audio-volume',()=>{const volume=engine?.getVolumes?.().voice;if(volume!==sharedVoiceVolume){sharedVoiceVolume=volume;stopVoice();}});
+ function speak(text){stopVoice();if(!sound||document.hidden)return;if(!supportsSpeech){$('audioNote').hidden=false;return;}try{const synth=window.speechSynthesis,voices=synth.getVoices(),voice=voices.find(v=>/^ja(?:[-_]|$)/i.test(v.lang));if(!voice){$('audioNote').hidden=false;return;}const utterance=new SpeechSynthesisUtterance(text),version=speechVersion;utterance.lang='ja-JP';utterance.voice=voice;utterance.rate=.78;utterance.volume=engine?.getVolumes?.().voice??.85;utterance.onstart=()=>{if(version===speechVersion){$('audioNote').hidden=true;engine?.setDucking(true);}};utterance.onend=()=>{if(version===speechVersion)engine?.setDucking(false);};utterance.onerror=event=>{if(version===speechVersion)engine?.setDucking(false);if(version===speechVersion&&!['canceled','interrupted'].includes(event.error))$('audioNote').hidden=false;};synth.speak(utterance);}catch{engine?.setDucking(false);$('audioNote').hidden=false;}}
+ function stopChime(){chimeVersion++;for(const note of activeNotes){try{note.stop();note.disconnect();}catch{}}activeNotes.clear();}
+ async function chime(){stopChime();if(!sound||document.hidden||!engine)return;const version=chimeVersion;try{const audioContext=await engine.unlock();if(version!==chimeVersion||!sound||document.hidden)return;[523.25,659.25,783.99].forEach((note,i)=>{const oscillator=audioContext.createOscillator(),gain=audioContext.createGain(),t=engine.now()+i*.12;oscillator.type='sine';oscillator.frequency.value=note;gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.055,t+.02);gain.gain.exponentialRampToValueAtTime(.001,t+.28);oscillator.connect(gain);gain.connect(engine.output('effects'));activeNotes.add(oscillator);oscillator.start(t);oscillator.stop(t+.3);oscillator.onended=()=>{activeNotes.delete(oscillator);oscillator.disconnect();gain.disconnect();};});}catch{}}
+ engine?.onSuspend(()=>{stopVoice();stopChime();});
  function updateStars(){[...$('stars').children].forEach((star,i)=>{star.textContent=i<state.stars?'★':'☆';star.classList.toggle('earned',i<state.stars);});$('stars').setAttribute('aria-label',`ほし いつつのうち ${counts[state.stars]}`);$('progressLabel').textContent=state.stars===5?'ぜんぶ できた！':remaining[5-state.stars];}
  function readQuestion(){speak(`${state.deck[state.index].target.name} は、どれかな？`);}
- function choose(id,session=state,index=state.index){if(session!==state||index!==state.index)return 'ignored';const result=GuessGame.answer(state,id);if(result==='ignored')return result;if(result==='retry'){$('feedback').textContent='もういちど みてみよう';speak('もういちど、みてみよう');return result;}updateStars();const target=state.deck[state.index].target;$('feedback').textContent=`そう！ ${target.name} だね！`;$('feedback').classList.add('success');for(const card of $('cards').children){card.disabled=true;if(card.dataset.id===target.id){card.classList.add('correct','bounce');card.querySelector('.pick').textContent=target.name;const mark=document.createElement('span');mark.className='mark';mark.textContent='✓';mark.setAttribute('aria-hidden','true');card.append(mark);}}$('next').hidden=false;$('next').textContent=state.stars===5?'ごほうびへ →':'つぎへ →';chime();speak(`そう！ ${target.name} だね！`);$('next').focus();return result;}
- function renderHint(){const level=state.hintLevel,target=state.deck[state.index].target;$('hint').hidden=level===0;$('hint').dataset.level=String(level);$('hintButton').setAttribute('aria-expanded',String(level>0));$('hintButton').disabled=level===3;$('hintButton').textContent=['かげを みる','いろを みる','ぜんぶ みる','おてほん'][level];$('hintCaption').textContent=['','かたちは どの こ？','いろも みえた！','この こを さがしてね'][level];$('hintImage').alt=target.name+['','の かげ','の いろの ひんと','の おてほん'][level];}
+ function choose(id,session=state,index=state.index){if(session!==state||index!==state.index)return 'ignored';const result=GuessGame.answer(state,id);if(result==='ignored')return result;if(result==='retry'){$('hintButton').classList.add('hint-suggested');$('feedback').textContent='もういちど みてみよう';speak('もういちど、みてみよう');return result;}$('hintButton').classList.remove('hint-suggested');updateStars();const target=state.deck[state.index].target;$('feedback').textContent=`そう！ ${target.name} だね！`;$('feedback').classList.add('success');for(const card of $('cards').children){card.disabled=true;if(card.dataset.id===target.id){card.classList.add('correct','bounce');card.querySelector('.pick').textContent=target.name;const mark=document.createElement('span');mark.className='mark';mark.textContent='✓';mark.setAttribute('aria-hidden','true');card.append(mark);}}$('next').hidden=false;$('next').textContent=state.stars===5?'ごほうびへ →':'つぎへ →';chime();speak(`そう！ ${target.name} だね！`);$('next').focus();return result;}
+ function renderHint(){$('hintButton').classList.remove('hint-suggested');const level=state.hintLevel,target=state.deck[state.index].target;$('hint').hidden=level===0;$('hint').dataset.level=String(level);$('hintButton').setAttribute('aria-expanded',String(level>0));$('hintButton').disabled=level===3;$('hintButton').textContent=['かげを みる','いろを みる','ぜんぶ みる','おてほん'][level];$('hintCaption').textContent=['','かたちは どの こ？','いろも みえた！','この こを さがしてね'][level];$('hintImage').alt=target.name+['','の かげ','の いろの ひんと','の おてほん'][level];}
  function renderQuestion(focus=false){const q=state.deck[state.index],session=state,index=state.index;updateStars();$('play').hidden=false;$('finish').hidden=true;$('targetName').textContent=q.target.name;$('next').hidden=true;$('hintImage').src=q.target.file;$('hintColor').src=q.target.file;renderHint();$('feedback').textContent='えを たっぷしてね';$('feedback').classList.remove('success');$('cards').replaceChildren();for(const character of q.choices){const button=document.createElement('button');button.type='button';button.className='card';button.dataset.id=character.id;button.style.setProperty('--card-bg',character.bg);button.setAttribute('aria-label',`この こ！ ${character.name}を えらぶ`);const img=document.createElement('img');img.src=character.file;img.alt='';img.width=240;img.height=300;img.draggable=false;img.addEventListener('error',()=>{if(session!==state||index!==state.index||!img.isConnected)return;$('feedback').textContent='えが よみこめなかったよ。ぺーじを ひらきなおしてね';});const label=document.createElement('span');label.className='pick';label.textContent='この こ！';button.append(img,label);button.addEventListener('click',()=>choose(character.id,session,index));$('cards').append(button);}if(focus)$('prompt').focus();}
  function showFinish(){
   stopVoice();stopChime();const reward=GuessGame.collectRound(state,collection);collection=reward.owned;
   $('play').hidden=true;$('finish').hidden=false;$('friends').replaceChildren();
-  $('collectionSummary').textContent=collection.length===8?'みんな なかよし！ 8 / 8':`なかよし ${collection.length} / 8`;
+  const total=GuessGame.characters.length;
+  $('collectionSummary').textContent=collection.length===total?`みんな なかよし！ ${total} / ${total}`:`なかよし ${collection.length} / ${total}`;
   for(const character of GuessGame.characters){
    const owned=collection.includes(character.id),isNew=reward.newIds.includes(character.id),box=document.createElement(owned?'button':'div');
    box.className='friend'+(owned?' owned':'')+(isNew?' new':'');box.dataset.id=character.id;

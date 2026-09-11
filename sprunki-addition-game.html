@@ -162,9 +162,9 @@ body.game-page{background:var(--game-bg,#151918);color:var(--game-ink,#f4f7f3)}
 @media(min-width:1100px) and (min-height:700px) and (orientation:landscape){.game-page #play{grid-template-columns:minmax(0,1fr) 350px}.game-page .answer{min-height:130px;font-size:52px}.answer-area{gap:24px}.game-page .group .character,.game-page .group.dense .character{max-height:250px}}
 @media(max-width:600px){.game-page main{padding:12px;gap:14px}.game-page h1{font-size:20px}.game-page .logo{font-size:10px}.game-page .sound{font-size:12px;padding:8px}.game-controls{gap:10px}.game-page .mode-picker{width:100%}.game-page .mode-picker button{flex:1;padding-inline:8px;font-size:17px}.game-page .settings{width:100%;justify-content:space-between;font-size:13px}.game-page .settings select{font-size:13px}.game-page .groups{grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);gap:4px}.game-page .group{gap:3px}.game-page .group.dense .character{min-width:36px;flex-basis:36px;height:83px}.game-page .equation{font-size:34px}.answer-area{margin-top:18px;gap:10px}.game-page .prompt{min-height:40px;font-size:19px}.game-page .answer{min-height:86px;font-size:40px}.game-page .music-bar{gap:8px}.game-page .music-bar button,.game-page .music-bar select{font-size:13px;padding-inline:8px}.game-page .music-status{font-size:12px}.game-page .party h2{font-size:25px}}
 </style>
-<link rel="stylesheet" href="games-theme.css?v=20260907-fun">
-<script src="games-theme.js?v=20260907-fun"></script>
-<script src="game-navigation.js?v=20260907-fun" defer></script>
+<link rel="stylesheet" href="games-theme.css?v=20260912-audio-polish">
+<script src="games-theme.js?v=20260912-audio-polish"></script>
+<script src="game-navigation.js?v=20260912-audio-polish" defer></script>
 </head>
 <body class="game-page" data-game="addition">
 <main>
@@ -187,15 +187,24 @@ body.game-page{background:var(--game-bg,#151918);color:var(--game-ink,#f4f7f3)}
     <div class="actions"><button id="next" class="next" hidden>つぎへ →</button><p id="tip" class="tip">なかまを タッチすると かぞえられるよ</p></div>
     </div>
   </section>
-  <section class="stage party" id="party" hidden aria-labelledby="partyTitle"><div class="party-stars" aria-hidden="true">★★★★★</div><h2 id="partyTitle" tabindex="-1">やったね！ だいせいこう！</h2><p>みんなで おいわいの おんがくかい ♪</p><div class="band"><img src="sprunki-oren.png" alt="オレン"><img src="sprunki-simon.png" alt="サイモン"><img src="sprunki-sky.png" alt="スカイ"></div><button class="next" id="again">もういちど あそぶ ↻</button></section>
-  <footer class="music-panel"><div class="music-bar"><button id="musicToggle" aria-pressed="false">▶ おんがくを ながす</button><select id="musicTrack" aria-label="おんがくの キャラクター"><option value="oren">オレン ♪</option><option value="sky">スカイ ♪</option><option value="simon">サイモン ♪</option></select><label>おんりょう <input id="musicVolume" aria-label="おんがくの おんりょう" type="range" min="0" max="50" value="20"></label></div><p class="music-status" id="musicStatus" role="status" aria-live="polite"></p><audio id="musicAudio" loop preload="none"></audio></footer>
+  <section class="stage party" id="party" hidden aria-labelledby="partyTitle"><div class="party-stars" aria-hidden="true">★★★★★</div><h2 id="partyTitle" tabindex="-1">やったね！ だいせいこう！</h2><p>みんなで おいわいの おんがくかい ♪</p><div class="band"></div><button class="next" id="again">もういちど あそぶ ↻</button></section>
+  <footer class="music-panel"><div class="music-bar"><button id="musicToggle" aria-pressed="false">▶ おんがくを ながす</button><select id="musicTrack" aria-label="おんがくの キャラクター"></select><label>おんりょう <input id="musicVolume" aria-label="おんがくの おんりょう" type="range" min="0" max="100" value="20"></label></div><p class="music-status" id="musicStatus" role="status" aria-live="polite"></p></footer>
 </main>
 <div class="confetti" id="confetti" aria-hidden="true"></div>
+<script src="sprunki-roster.js?v=20260912-audio-polish"></script>
+<script src="games-audio-manifest.js"></script>
+<script src="games-audio.js?v=20260912-audio-polish"></script>
 <script>
 "use strict";
 // Pure game model: the UI and automated checks share the same transitions.
 const AdditionGame = (() => {
   function shuffle(values, rng = Math.random) { const list = [...values]; for(let i=list.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[list[i],list[j]]=[list[j],list[i]];}return list; }
+  // A page-long cycle exposes everyone before repeating, including across restarts.
+  function createCastCycle(characters,rng=Math.random){
+    if(!characters.length)throw new RangeError('Empty character roster');
+    const deck=shuffle(characters,rng);let cursor=0;
+    return n=>Array.from({length:n},()=>deck[cursor++%deck.length]);
+  }
   function createSession(max=5, rng=Math.random,operation='add'){
     if(![5,10,20].includes(max))throw new RangeError('Unsupported level');
     if(!['add','subtract'].includes(operation))throw new RangeError('Unsupported operation');
@@ -216,7 +225,7 @@ const AdditionGame = (() => {
   // Hands-on counters retain their physical IDs even when any member goes home.
   function count(state,id){const p=state.deck[state.index],limit=state.handsOn?p.a:p.total;if(state.phase!=='playing'||needsRemoval(state)||!Number.isInteger(id)||id<0||id>=limit||(state.handsOn&&state.removed.includes(id))||state.counted.includes(id))return null;state.counted.push(id);return state.counted.length;}
   function next(state){if(state.phase!=='solved')return false;if(state.stars===5){state.phase='complete';return true;}state.index++;state.counted=[];state.removed=[];state.attempted=false;state.phase='playing';return true;}
-  return {createSession,answer,count,next,setHandsOn,remove,needsRemoval};
+  return {createSession,createCastCycle,answer,count,next,setHandsOn,remove,needsRemoval};
 })();
 </script>
 <script>
@@ -225,33 +234,51 @@ const $=id=>document.getElementById(id);
 let state=AdditionGame.createSession(),sound=false,audio=null,voices=[],timers=[];
 let advanceTimer=null,advanceGeneration=0;
 const activeNotes=new Set();
-let operation='add',musicWanted=false,musicGeneration=0;
-const music=$('musicAudio');
-const tracks={oren:'sounds/oren.wav',sky:'sounds/sky.wav',simon:'sounds/simon.wav'};
+let operation='add',musicWanted=false,musicGeneration=0,musicStateTimer=null;
+const engine=window.MoonAudio;
+const characters=globalThis.SprunkiRoster.characters;
+const tracks=new Map(characters.map(char=>[char.id,char.audio]));
+const nextCast=AdditionGame.createCastCycle(characters),questionCasts=new WeakMap();
+for(const char of characters){const option=document.createElement('option');option.value=char.id;option.textContent=`${char.hiragana} ♪`;$('musicTrack').append(option);}
+function questionCast(){
+  let casts=questionCasts.get(state);if(!casts){casts=[];questionCasts.set(state,casts);}
+  const p=state.deck[state.index];
+  return casts[state.index]??=nextCast(state.operation==='subtract'?p.a:p.a+p.b);
+}
+function renderBand(){document.querySelector('#party .band').replaceChildren(...nextCast(3).map(char=>{const img=document.createElement('img');img.src=char.file;img.alt=char.hiragana;return img;}));}
+function selectMusic(){$('musicStatus').textContent='';if(musicWanted)void playMusic();}
 function musicLabel(){$('musicToggle').setAttribute('aria-pressed',String(musicWanted));$('musicToggle').textContent=musicWanted?'❚❚ おんがくを とめる':'▶ おんがくを ながす';}
-function musicVolume(){music.volume=Number($('musicVolume').value)/100;}
-function pauseMusic(){musicGeneration++;music.pause();musicLabel();}
+function musicVolume(){engine?.setVolumes?.({music:Number($('musicVolume').value)/100});}
+function syncMusicVolume(){const value=engine?.getVolumes?.().music;if(Number.isFinite(value))$('musicVolume').value=String(value*100);}
+window.addEventListener('moon:audio-volume',syncMusicVolume);
+syncMusicVolume();
+function pauseMusic(){musicGeneration++;musicWanted=false;clearTimeout(musicStateTimer);musicStateTimer=null;engine?.stopMusic();musicLabel();$('musicStatus').textContent='';}
 async function playMusic(){
   if(!musicWanted||document.hidden)return;
   const generation=++musicGeneration;
-  const src=tracks[$('musicTrack').value];
+  const src=tracks.get($('musicTrack').value);
   if(!src)return;
-  if(music.getAttribute('src')!==src){music.pause();music.setAttribute('src',src);}
-  musicVolume();musicLabel();$('musicStatus').textContent='おんがくを よみこみちゅう…';
-  try{await music.play();if(generation!==musicGeneration){if(!musicWanted||document.hidden)music.pause();return;}if(!musicWanted||document.hidden){music.pause();return;}musicLabel(true);$('musicStatus').textContent='';}
-  catch{if(generation!==musicGeneration)return;music.pause();musicWanted=false;musicLabel();$('musicStatus').textContent='おんがくボタンを もういちど おしてね';}
+  musicLabel();$('musicStatus').textContent='おんがくを よみこみちゅう…';
+  try{if(!engine)throw new Error('Audio unavailable');await engine.unlock();if(generation!==musicGeneration||!musicWanted||document.hidden)return;await engine.setMusicSelection([$('musicTrack').value]);if(generation!==musicGeneration)return;syncMusicState();}
+  catch{if(generation!==musicGeneration)return;pauseMusic();$('musicStatus').textContent='おんがくボタンを もういちど おしてね';}
 }
-const characters=[{file:'sprunki-oren.png',name:'オレン'},{file:'sprunki-sky.png',name:'スカイ'},{file:'sprunki-simon.png',name:'サイモン'}];
+function syncMusicState(){clearTimeout(musicStateTimer);musicStateTimer=null;if(!musicWanted)return;const status=engine?.getMusicState();if(!status)return;if(status.errors?.length){const unverified=status.errors.some(error=>error.id===$('musicTrack').value&&error.message==='loop-unverified');pauseMusic();$('musicStatus').textContent=unverified?'このおとは どうきの じゅんびちゅう':'おんがくを よめなかったよ。もういちど おしてね';return;}$('musicStatus').textContent=status.pending?.length?'つぎの くぎりから ながれるよ':'';if(status.pending?.length)musicStateTimer=setTimeout(syncMusicState,250);}
+window.addEventListener('moon:audio-state',syncMusicState);
 const speech=window.speechSynthesis;
 function loadVoices(){voices=speech?.getVoices?.()||[];}loadVoices();speech?.addEventListener?.('voiceschanged',loadVoices);
-function speak(text){if(!sound||!speech||!window.SpeechSynthesisUtterance||document.hidden)return;speech.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='ja-JP';u.rate=.82;u.pitch=1.12;const v=voices.find(v=>v.lang.startsWith('ja'));if(v)u.voice=v;speech.speak(u);}
-function unlock(){if(!sound)return;try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;audio??=new AC();if(audio.state==='suspended')void audio.resume().catch(()=>{});}catch{}}
-function tone(freq,delay=0,duration=.18){if(!sound||!audio||document.hidden)return;try{const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=freq;const start=audio.currentTime+delay;g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(.12,start+.02);g.gain.exponentialRampToValueAtTime(.001,start+duration);o.connect(g);g.connect(audio.destination);activeNotes.add(o);o.onended=()=>{activeNotes.delete(o);o.disconnect();g.disconnect();};o.start(start);o.stop(start+duration+.03);}catch{}}
+let speechVersion=0;
+function stopVoice(){speechVersion++;engine?.setDucking(false);speech?.cancel();}
+let sharedVoiceVolume=engine?.getVolumes?.().voice;
+window.addEventListener('moon:audio-volume',()=>{const volume=engine?.getVolumes?.().voice;if(volume!==sharedVoiceVolume){sharedVoiceVolume=volume;stopVoice();}});
+function speak(text){stopVoice();if(!sound||!speech||!window.SpeechSynthesisUtterance||document.hidden)return;const version=speechVersion,u=new SpeechSynthesisUtterance(text);u.lang='ja-JP';u.volume=engine?.getVolumes?.().voice??.85;u.rate=.82;u.pitch=1.12;const v=voices.find(v=>v.lang.startsWith('ja'));if(v)u.voice=v;u.onstart=()=>{if(version===speechVersion)engine?.setDucking(true);};u.onend=u.onerror=()=>{if(version===speechVersion)engine?.setDucking(false);};try{speech.speak(u);}catch{engine?.setDucking(false);}}
+function unlock(){if(!sound)return;try{audio=engine?.getContext();void engine?.unlock().catch(()=>{});}catch{}}
+function tone(freq,delay=0,duration=.18){if(!sound||!audio||document.hidden)return;try{const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=freq;const start=engine.now()+delay;g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(.12,start+.02);g.gain.exponentialRampToValueAtTime(.001,start+duration);o.connect(g);g.connect(engine.output('effects'));activeNotes.add(o);o.onended=()=>{activeNotes.delete(o);o.disconnect();g.disconnect();};o.start(start);o.stop(start+duration+.03);}catch{}}
 function tune(party=false){unlock();(party?[262,330,392,523,392,440,494,523]:[330,440,554,660]).forEach((f,i)=>tone(f,i*(party?.24:.12),.23));}
 function stopNotes(){for(const o of activeNotes){try{o.stop();o.disconnect();}catch{}}activeNotes.clear();}
-function stopAudio(){speech?.cancel();stopNotes();if(audio&&audio.state==='running')void audio.suspend().catch(()=>{});}
+function stopAudio(){stopVoice();stopNotes();}
+engine?.onSuspend(()=>{stopAudio();pauseMusic();});
 function cancelAdvance(){clearTimeout(advanceTimer);advanceTimer=null;advanceGeneration++;}
-function clearEffects(){cancelAdvance();timers.forEach(clearTimeout);timers=[];$('confetti').replaceChildren();speech?.cancel();stopNotes();}
+function clearEffects(){cancelAdvance();timers.forEach(clearTimeout);timers=[];$('confetti').replaceChildren();stopVoice();stopNotes();}
 function scheduleAdvance(){
   cancelAdvance();
   if(state.phase!=='solved'||document.hidden)return;
@@ -275,11 +302,11 @@ function syncHandsOn(){
   if(!state.handsOn)return;
   const p=state.deck[state.index],pending=AdditionGame.needsRemoval(state);
   $('groupLabel').textContent=`かえった ${state.removed.length} / ${p.b} にん`;
-  for(const button of $('left').children){const gone=state.removed.includes(Number(button.dataset.counterId));button.classList.toggle('gone',gone);button.disabled=gone||state.phase!=='playing';if(gone){button.setAttribute('aria-label','おうちに かえったよ');button.querySelector('span').textContent='かえった';}else if(!button.classList.contains('counted'))button.setAttribute('aria-label',pending?'おうちへ かえす':'のこった なかまを かぞえる');}
+  for(const button of $('left').children){const gone=state.removed.includes(Number(button.dataset.counterId)),name=button.querySelector('img').alt;button.classList.toggle('gone',gone);button.disabled=gone||state.phase!=='playing';if(gone){button.setAttribute('aria-label',`${name}は おうちに かえったよ`);button.querySelector('span').textContent='かえった';}else if(!button.classList.contains('counted'))button.setAttribute('aria-label',pending?`${name}を おうちへ かえす`:`のこった ${name}を かぞえる`);}
   for(const button of $('answers').children)button.disabled=pending||state.phase!=='playing';
   if(state.phase==='playing'){$('message').textContent=pending?`あと ${p.b-state.removed.length}にん おうちへ`:prompt();$('tip').textContent=pending?`${p.b}にん おうちへ`:p.total===0?'だれも いないね。「0」を おしてね':'のこっている なかまを タッチして かぞえよう';}
 }
-function renderGroup(id,n,offset,char,remaining=n){const group=$(id);group.replaceChildren();group.classList.toggle('many',n>3);group.classList.toggle('dense',state.max===20);
+function renderGroup(id,n,offset,cast,remaining=n){const group=$(id);group.replaceChildren();group.classList.toggle('many',n>3);group.classList.toggle('dense',state.max===20);
   // Two rows keep each counting target reachable without changing the question.
   const columns=n>4?Math.ceil(n/2):n;
   group.style.setProperty('--group-columns',String(columns));
@@ -287,31 +314,30 @@ function renderGroup(id,n,offset,char,remaining=n){const group=$(id);group.repla
   $('groups').style.setProperty(id==='left'?'--left-weight':'--right-weight',`${Math.max(2,columns)}fr`);
   for(let i=0;i<n;i++){
   // Default hints remove the last b; hands-on play preserves the child's selection.
-  const gone=state.handsOn?state.removed.includes(i):i>=remaining,button=document.createElement(gone&&!state.handsOn?'div':'button');button.className=gone?'character gone':'character';button.dataset.counterId=offset+i;button.setAttribute('aria-label',gone?`${char.name}は かえったよ`:`${char.name}を かぞえる`);button.innerHTML=`<img src="${char.file}" alt="" draggable="false"><span class="count-tag" aria-hidden="true">${gone?'かえった':'♪'}</span>`;
+  const char=cast[offset+i],gone=state.handsOn?state.removed.includes(i):i>=remaining,button=document.createElement(gone&&!state.handsOn?'div':'button');button.className=gone?'character gone':'character';button.dataset.counterId=offset+i;button.dataset.characterId=char.id;button.setAttribute('aria-label',gone?`${char.hiragana}は かえったよ`:`${char.hiragana}を かぞえる`);const img=document.createElement('img');img.src=char.file;img.alt=char.hiragana;img.draggable=false;const tag=document.createElement('span');tag.className='count-tag';tag.setAttribute('aria-hidden','true');tag.textContent=gone?'かえった':'♪';button.append(img,tag);
   if(!gone)button.addEventListener('click',()=>{
     if(AdditionGame.needsRemoval(state)){const removed=AdditionGame.remove(state,offset+i);if(removed===null)return;unlock();syncHandsOn();tone(440-removed*8);speak(AdditionGame.needsRemoval(state)?`あと${state.deck[state.index].b-removed}にん`:`${removed}にん かえったね。のこりは なんにん？`);if(button.disabled){const target=$('left').querySelector('button:not(:disabled)')||$('answers').querySelector('button:not(:disabled)');target?.focus({preventScroll:true});}return;}
-    const number=AdditionGame.count(state,offset+i);if(number===null)return;unlock();button.classList.add('counted');button.setAttribute('aria-label',`${number}にんめ、かぞえたよ`);button.setAttribute('aria-pressed','true');button.querySelector('span').textContent=number;$('message').textContent=`${number}にん！`;tone(262+number*30);speak(`${number}にん`);
+    const number=AdditionGame.count(state,offset+i);if(number===null)return;unlock();button.classList.add('counted');button.setAttribute('aria-label',`${char.hiragana}、${number}にんめ、かぞえたよ`);button.setAttribute('aria-pressed','true');button.querySelector('span').textContent=number;$('message').textContent=`${number}にん！`;tone(262+number*30);speak(`${number}にん`);
   });group.append(button);
 }}
-function renderCharacters(){const p=state.deck[state.index],subtract=state.operation==='subtract';$('groups').classList.toggle('subtract',subtract);renderGroup('left',p.a,0,characters[state.index%3],subtract?p.total:p.a);if(subtract)$('right').replaceChildren();else renderGroup('right',p.b,p.a,characters[(state.index+1)%3]);$('groupLabel').textContent=subtract?`${p.a}にんから ${p.b}にん かえったよ`:'なかまを タッチしてね';}
+function renderCharacters(){const p=state.deck[state.index],subtract=state.operation==='subtract',cast=questionCast();$('groups').classList.toggle('subtract',subtract);renderGroup('left',p.a,0,cast,subtract?p.total:p.a);if(subtract)$('right').replaceChildren();else renderGroup('right',p.b,p.a,cast);$('groupLabel').textContent=subtract?`${p.a}にんから ${p.b}にん かえったよ`:'なかまを タッチしてね';}
 function render(){const p=state.deck[state.index];$('play').hidden=false;$('party').hidden=true;$('play').setAttribute('aria-label',state.operation==='subtract'?'ひきざん あそび':'たしざん あそび');$('round').textContent=`${state.index+1} / 5 もんめ`;$('equation').innerHTML=`<span>${p.a}</span><span class="operator">${state.operation==='subtract'?'−':'+'}</span><span>${p.b}</span><span class="operator">=</span><span class="mystery">?</span>`;$('equation').setAttribute('aria-label',`${p.a}${operatorWord()}${p.b}は？`);renderCharacters();$('message').textContent=prompt();$('next').hidden=true;$('tip').hidden=false;$('tip').textContent=p.total===0?'だれも いないね。「0」を おしてね':'のこっている なかまを タッチして かぞえよう';if(state.operation==='add')$('tip').textContent='なかまを タッチすると かぞえられるよ';$('answers').replaceChildren();for(const n of p.choices){const b=document.createElement('button');b.className='answer';b.textContent=n;b.setAttribute('aria-label',`${n}にん`);b.addEventListener('click',()=>choose(n));$('answers').append(b);}renderStars();syncHandsOn();}
 function choose(n){
   const result=AdditionGame.answer(state,n);
-  if(result==='retry'){state.counted=[];renderCharacters();syncHandsOn();$('message').textContent=state.deck[state.index].total===0?'だれも いないね。0にんだよ':'いっしょに かぞえてみよう ♪';speak(state.deck[state.index].total===0?'だれもいないね。ゼロにんだよ':'いっしょに、なかまをタッチして、かぞえてみよう');return result;}
+  if(result==='retry'){$('message').textContent=state.deck[state.index].total===0?'だれも いないね。0にんだよ':'いっしょに かぞえてみよう ♪';speak(state.deck[state.index].total===0?'だれもいないね。ゼロにんだよ':'いっしょに、なかまをタッチして、かぞえてみよう');return result;}
   if(result!=='correct')return result;
   const p=state.deck[state.index];unlock();syncHandsOn();$('message').textContent=`せいかい！ ${p.total}にんだね！`;$('equation').querySelector('.mystery').textContent=p.total;$('equation').setAttribute('aria-label',`${p.a}${operatorWord()}${p.b}は${p.total}`);for(const b of $('answers').children){b.disabled=true;b.classList.toggle('correct',Number(b.textContent)===p.total);}$('next').textContent=state.stars===5?'おんがくかいへ ♪':'つぎへ →';$('next').hidden=false;$('tip').hidden=true;renderStars();tune();speak(`せいかい！ ${p.total}にんだね！`);confetti();scheduleAdvance();$('next').focus({preventScroll:true});return result;
 }
 function completeRanking(){
   try{void Promise.resolve(window.MoonRanking?.complete({game:'addition',mode:`${state.operation==='subtract'?'sub':'add'}-${state.max}`,runId:state.runId,metrics:{firstTry:state.firstTry,completed:5,total:5}})).catch(()=>{});}catch{}
 }
-function advance(){if(!AdditionGame.next(state))return false;clearEffects();if(state.phase==='complete'){$('play').hidden=true;$('party').hidden=false;$('party').querySelector('p').textContent=state.handsOnStars?`じぶんで ${state.handsOnStars}もん ひけたね！`:'みんなで おいわいの おんがくかい ♪';confetti();tune(true);speak('やったね！ ぜんぶできたね！');$('partyTitle').focus({preventScroll:true});completeRanking();}else{render();speak(question());$('read').focus({preventScroll:true});}return true;}
-function restart(){clearEffects();stopAudio();state=AdditionGame.createSession(Number($('level').value),Math.random,operation);AdditionGame.setHandsOn(state,$('handsOn').checked);render();speak(question());}
+function advance(){if(!AdditionGame.next(state))return false;clearEffects();if(state.phase==='complete'){$('play').hidden=true;renderBand();$('party').hidden=false;$('party').querySelector('p').textContent=state.handsOnStars?`じぶんで ${state.handsOnStars}もん ひけたね！`:'みんなで おいわいの おんがくかい ♪';confetti();tune(true);speak('やったね！ ぜんぶできたね！');$('partyTitle').focus({preventScroll:true});completeRanking();}else{render();speak(question());$('read').focus({preventScroll:true});}return true;}
+function restart(){clearEffects();stopAudio();pauseMusic();state=AdditionGame.createSession(Number($('level').value),Math.random,operation);AdditionGame.setHandsOn(state,$('handsOn').checked);render();speak(question());}
 function setOperation(value){operation=value;$('addMode').setAttribute('aria-pressed',String(value==='add'));$('subtractMode').setAttribute('aria-pressed',String(value==='subtract'));restart();}
 $('addMode').addEventListener('click',()=>setOperation('add'));$('subtractMode').addEventListener('click',()=>setOperation('subtract'));
 $('handsOn').addEventListener('change',()=>{if(!AdditionGame.setHandsOn(state,$('handsOn').checked))return;clearEffects();stopAudio();render();speak(question());});
 $('musicToggle').addEventListener('click',()=>{musicWanted=!musicWanted;if(musicWanted)void playMusic();else{pauseMusic();$('musicStatus').textContent='';}});
-$('musicTrack').addEventListener('change',()=>{pauseMusic();if(musicWanted)void playMusic();});$('musicVolume').addEventListener('input',musicVolume);
-music.addEventListener('error',()=>{if(musicWanted){musicWanted=false;pauseMusic();$('musicStatus').textContent='おんがくを よめなかったよ。もういちど おしてね';}});
+$('musicTrack').addEventListener('change',selectMusic);$('musicVolume').addEventListener('input',musicVolume);
 $('sound').addEventListener('click',()=>{sound=!sound;soundLabel();if(sound){unlock();tone(440);speak(state.phase==='complete'?'やったね！':question());}else stopAudio();});
 $('read').addEventListener('click',()=>{sound=true;soundLabel();unlock();speak(question());});$('next').addEventListener('click',advance);$('again').addEventListener('click',restart);$('restart').addEventListener('click',restart);$('level').addEventListener('change',restart);document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAdvance();stopAudio();pauseMusic();}else{scheduleAdvance();if(musicWanted)void playMusic();}});window.addEventListener('pageshow',()=>{scheduleAdvance();if(musicWanted)void playMusic();});window.addEventListener('pagehide',()=>{clearEffects();stopAudio();pauseMusic();});
 render();

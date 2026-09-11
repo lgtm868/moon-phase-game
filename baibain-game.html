@@ -27,7 +27,7 @@
     .game-page .hud-label{font-size:9px;color:var(--game-muted,#a9b7b0)}
     .game-page .hud-time{font-size:24px;line-height:1.2}
     .game-page .camera-controls{position:static;grid-row:2;justify-content:flex-end;align-items:center;background:none;border-radius:0;padding:0;gap:4px}
-    .game-page .camera-controls button{padding:6px 10px;font-size:11px;min-height:40px}
+    .game-page .camera-controls button{padding:6px 10px;font-size:11px;min-height:44px}
     .game-page .camera-controls button[aria-pressed=true]{background:var(--game-primary,#b9edcc);color:var(--game-bg,#151918)}
     .game-page .scene-status{position:static;grid-row:2;grid-column:1;max-width:none;background:none;padding:0;border-radius:0;color:var(--muted);font-size:10px;align-self:center;line-height:1.4}
     .game-page .stage{grid-template-columns:minmax(0,1fr) auto;column-gap:8px}
@@ -97,6 +97,11 @@
     .game-page .prediction-choice{display:flex;flex-direction:column;justify-content:center;gap:8px;min-width:0;height:142px;padding:10px 4px;border-width:2px}
     .game-page .prediction-number{font-size:28px;line-height:1.2;font-weight:700}
     .game-page .prediction-choice[data-correct]{border-color:var(--accent);background:#b9edcc18;opacity:1}
+    .game-page .prediction-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:94px;max-width:100%;height:77px;align-items:center}
+    .game-page .prediction-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;padding-top:3px;border-top:2px solid var(--game-primary,#b9edcc)}
+    .game-page .prediction-group+ .prediction-group{border-color:var(--game-cyan,#8edce2)}
+    .game-page .prediction-group .prediction-bun{width:100%;max-width:20px;height:17px;justify-self:center}
+    .game-page #predictionSound{font-size:12px;white-space:nowrap;margin-left:auto;min-height:44px}
     .game-page .prediction-feedback{display:flex;align-items:center;justify-content:center;gap:8px;min-height:62px}
     .game-page #predictionFeedback{margin:0;font-size:15px;line-height:1.5}
     .game-page .prediction-star{color:var(--game-gold,#f4cc72);font-size:28px;animation:prediction-pop .5s ease-out}
@@ -110,9 +115,10 @@
     @media(max-width:640px){.game-page .app{display:flex;gap:12px;padding:12px}.game-page .top{order:0;align-items:center}.game-page .eyebrow{font-size:8px}.game-page h1{font-size:21px}.game-page .subtitle{font-size:10px;max-width:230px}.game-page .rule{font-size:10px;white-space:normal;min-width:64px;display:block}.game-page .workspace{display:contents}.game-page .stage{order:1;height:320px;min-height:320px;flex:none}.game-page .stage.is-space{min-height:360px;height:360px}.game-page .transport{order:2;display:flex;flex-direction:column;gap:8px}.game-page .transport-top{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.game-page .transport-top>*{min-width:0}.game-page .primary{grid-column:span 2;min-width:0}.game-page .speed-label{margin:0;grid-column:span 2;display:grid;grid-template-columns:auto minmax(0,1fr)}.game-page .range-control{grid-column:span 2;display:grid;grid-template-columns:auto minmax(0,1fr)}.game-page #openMilestones{grid-column:3}.game-page .reference-control{grid-template-columns:auto minmax(0,1fr);align-items:center;font-size:11px}.game-page .readout{order:3;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0}.game-page .main-count{grid-column:1/-1}.game-page .comparison,.game-page .next{grid-column:1/-1}.game-page .stat-pair{border:0;grid-template-columns:1fr;padding:0;gap:12px}.game-page .below{order:4;flex-wrap:wrap}.game-page .hud-time{font-size:22px}.game-page .count{font-size:27px}.game-page .dialog-heading h2{font-size:16px}}
     @media(max-width:640px){.game-page .app{flex-direction:column}.game-page .rule{min-width:76px;white-space:nowrap}.game-page .stage{grid-template-rows:minmax(0,1fr) 40px 28px}.game-page .camera-controls{grid-column:1/-1;justify-content:center}.game-page .scene-status{grid-row:3;grid-column:1/-1;text-align:center}}
   </style>
-  <link rel="stylesheet" href="games-theme.css?v=20260907-fun">
-  <script src="games-theme.js?v=20260907-fun"></script>
-  <script src="game-navigation.js?v=20260907-fun" defer></script>
+  <link rel="stylesheet" href="games-theme.css?v=20260912-audio-polish">
+  <script src="games-theme.js?v=20260912-audio-polish"></script>
+  <script src="game-navigation.js?v=20260912-audio-polish" defer></script>
+  <script src="games-audio.js?v=20260912-audio-polish"></script>
 </head>
 <body class="game-page" data-game="baibain">
   <main class="app">
@@ -256,6 +262,17 @@
       function seek(value) { rankingObservationStarted=true; seconds = Math.min(M.DEFAULTS.maxTime,Math.max(0,Number(value)||0)); snapCamera=true; ensureRange(); setPlaying(false); update(true); }
       // Independent practice snapshots never seek or replace the observation state.
       let predictionRound = 0, predictionSolved = false, predictionAnswer = 0;
+      let predictionSound = false;
+      const soundButton = document.createElement('button');
+      soundButton.id='predictionSound';soundButton.type='button';soundButton.textContent='♪ OFF';
+      soundButton.setAttribute('aria-label','せいかいの おと');soundButton.setAttribute('aria-pressed','false');
+      $('predictionDialog').querySelector('.dialog-heading h2').after(soundButton);
+      function setPredictionSound(enabled){predictionSound=enabled;soundButton.textContent=enabled?'♫ ON':'♪ OFF';soundButton.setAttribute('aria-pressed',String(enabled));}
+      soundButton.addEventListener('click',()=>{
+        setPredictionSound(!predictionSound);
+        if(predictionSound) void window.MoonAudio.unlock().catch(()=>setPredictionSound(false));
+      });
+      window.MoonAudio.onSuspend(()=>setPredictionSound(false));
       function predictionImages(count) {
         return Array.from({length:count},()=>{
           const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -302,6 +319,9 @@
         button.dataset.correct='true';
         for(const choice of $('predictionChoices').children) choice.disabled=true;
         const count=Number($('predictionCount').textContent);
+        const pair=button.querySelector('.prediction-images');pair.className='prediction-pair';
+        pair.replaceChildren(...[0,1].map(()=>{const group=document.createElement('span');group.className='prediction-group';group.append(...predictionImages(count));return group;}));
+        if(predictionSound) void window.MoonAudio.effect('correct');
         $('predictionFeedback').textContent='だいせいかい！ '+count+' + '+count+' = '+predictionAnswer+'こ';
         $('predictionStar').hidden=false;
         $('predictionNext').disabled=false;

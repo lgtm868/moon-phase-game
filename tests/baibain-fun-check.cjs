@@ -122,6 +122,8 @@ async function exercise(page, frame, label) {
     }
     assert.match(await frame.locator('#predictionFeedback').textContent(), new RegExp(`だいせいかい！ ${answer / 2} \\+ ${answer / 2} = ${answer}こ`));
     assert(await frame.locator('#predictionStar').isVisible());
+    const groups = await frame.locator('.prediction-choice[data-correct] .prediction-group').evaluateAll(nodes => nodes.map(node => node.querySelectorAll('.prediction-bun').length));
+    assert.deepEqual(groups, [answer / 2, answer / 2], 'Correct answer shows two equal groups without changing the total');
     assert.equal(await frame.locator('#predictionStar').evaluate(el => getComputedStyle(el).animationName), 'none', 'Celebration respects reduced motion');
     assert(await frame.locator('#predictionNext').isEnabled());
     assert.equal(await frame.locator('.prediction-choice:disabled').count(), 3);

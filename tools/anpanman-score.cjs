@@ -20,7 +20,9 @@ const scores = [
   { id: 'batakosan', title: 'Busy little hands', instrument: 'wood', notes: Array.from({length:16},(_,i)=>note(i*.5,i%4===2?79:72,.13,i%4===0?.9:i%2===0?.65:.38)) }
 ];
 const timbres = {
-  brass: [[1,1],[2,.27],[3,.12],[4,.045]],
+  brass: [[1,1],[2,.48],[3,.28],[4,.15],[5,.08],[6,.035]],
+  reed: [[1,1],[3,.38],[5,.14],[7,.04]],
+  strings: [[1,1],[2,.32],[3,.2],[4,.1],[5,.045]],
   plucked: [[1,1],[2,.35],[3,.17],[4,.06]],
   bell: [[1,1],[2,.25],[3,.09],[4.01,.05]],
   piano: [[1,1],[2,.43],[3,.15],[4,.065]],
@@ -31,29 +33,66 @@ const timbres = {
   wood: [[1,1],[2.76,.3],[4.1,.08]]
 };
 
+// Original two-bar arrangements: melody, character-specific countermelody and
+// a quiet C/F/G accompaniment share one clock with the existing Sprunki stems.
+const colors = ['brass','reed','bell','strings','brass','musicbox','strings','marimba','reed','piano'];
+for (const [index, score] of scores.entries()) {
+  score.notes = score.notes.map(event => ({ ...event, instrument: colors[index] }));
+  const add = (beat, midi, length, velocity, instrument) =>
+    score.notes.push({ ...note(beat, midi, length, velocity), instrument });
+  for (let beat=0; beat<8; beat++) {
+    const root = beat<4?48:beat<6?53:55;
+    add(beat, root+(beat%2?7:0), .3, .24, 'bass');
+    if (beat%2) for (const interval of [12,16,19]) add(beat,root+interval,.22,.1,'piano');
+    add(beat+.5, 84, .07, .045, 'shaker');
+  }
+  if ([0,4,7,9].includes(index)) {
+    for (const beat of [1,3,5,7]) add(beat,50,.12,.1,'snare');
+    for (const beat of [0,2,4,6]) add(beat,36,.18,.13,'drum');
+  }
+  // Distinct responses keep each solo recognizable without crowding the mix.
+  const responses = [
+    [[2.5,67],[3.5,72],[7.5,71]], [[1.75,60],[3.75,55],[7.75,59]],
+    [[2.75,88],[3.5,86],[7.5,83]], [[3.5,76],[6.5,74],[7.5,71]],
+    [[1.5,67],[3.5,64],[7.5,71]], [[3.5,88],[6.5,86],[7.5,83]],
+    [[2.75,64],[3.5,67],[7.5,71]], [[1,84],[3.5,79],[7.5,83]],
+    [[1.5,64],[3.5,67],[7.5,62]], [[2.75,76],[3.5,79],[7.5,74]]
+  ];
+  for(const [beat,midi] of responses[index]) add(beat,midi,.18,.24,index===1?'wood':'bell');
+}
+
 function renderTrack(score) {
   const data = [new Float32Array(FRAMES), new Float32Array(FRAMES)];
   for (let index=0; index<score.notes.length; index++) {
     const event=score.notes[index];
+    const instrument=event.instrument || score.instrument;
     const f=440 * 2 ** ((event.midi-69)/12);
     const gate=event.length*60/BPM;
-    const duration=score.instrument==='drum'?.24:score.instrument==='wood'?.13:gate+.42;
+    const percussion=['drum','wood','snare','shaker'].includes(instrument);
+    const duration=percussion?(instrument==='drum'?.24:.13):gate+.42;
     const count=Math.round(duration*RATE), start=Math.round(event.beat*60/BPM*RATE);
     const pan=(index%3-1)*.18;
     const gains=[Math.sqrt((1-pan)/2),Math.sqrt((1+pan)/2)];
     for(let i=0;i<count;i++) {
       const t=i/RATE;
-      const attack=score.instrument==='brass'?.023:.004;
+      const attack=instrument==='brass'?.018:instrument==='strings'?.035:.004;
       const onset=.5-.5*Math.cos(Math.PI*Math.min(1,t/attack));
       const release=.5-.5*Math.cos(Math.PI*Math.min(1,(duration-t)/.045));
       let sample=0;
-      if(score.instrument==='drum') {
+      if(instrument==='snare'||instrument==='shaker') {
+        // Deterministic pseudo-noise: reproducible builds without random state.
+        const raw=Math.sin((i+1)*(index+17)*12.9898)*43758.5453;
+        const noise=2*(raw-Math.floor(raw))-1;
+        sample=noise*Math.exp(-t/(instrument==='snare'?.026:.016));
+        if(instrument==='snare') sample+=.25*Math.sin(TAU*185*t)*Math.exp(-t/.03);
+      } else if(instrument==='drum') {
         const phase=TAU*f*(t+.006*(1-Math.exp(-t/.018)));
         sample=Math.sin(phase)*Math.exp(-t/.062)+.13*Math.sin(TAU*f*2.4*t)*Math.exp(-t/.025);
       } else {
-        const decay=score.instrument==='bass'?2.8:score.instrument==='brass'?2.2:score.instrument==='wood'?37:5;
-        for(const [partial,amplitude] of timbres[score.instrument]) {
-          sample+=amplitude*Math.sin(TAU*f*partial*t)*Math.exp(-t*(decay+partial*.75));
+        const decay=instrument==='bass'?2.8:instrument==='brass'?1.4:instrument==='strings'?1.1:instrument==='wood'?37:5;
+        for(const [partial,amplitude] of timbres[instrument]) {
+          const vibrato=['brass','reed','strings'].includes(instrument)? .003*Math.sin(TAU*5*t)*Math.min(1,t/.12):0;
+          sample+=amplitude*Math.sin(TAU*f*partial*t+vibrato*f/5)*Math.exp(-t*(decay+partial*.75));
         }
         if(t>gate) sample*=Math.exp(-(t-gate)*14);
       }

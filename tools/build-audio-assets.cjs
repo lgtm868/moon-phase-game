@@ -207,7 +207,7 @@ function build() {
   const composedRows = [];
   for (const { track, wav } of composed) {
     const { id, gain, title, instrument } = track;
-    const entry = { file: `sounds/packed/${id}.js`, loopable: true, beats: 8, loopStart: 0, loopEnd: 4.8, gain, title, instrument, provenance: 'game-original' };
+    const entry = { file: `sounds/packed/${id}.js`, loopable: true, beats: 8, loopStart: 0, loopEnd: 4.8, gain, title, instrument, provenance: 'game-original', revision: hash(wav).slice(0, 16) };
     manifest.tracks[id] = entry;
     const { file, ...metadata } = entry;
     files.push([`sounds/${id}.wav`, wav]);

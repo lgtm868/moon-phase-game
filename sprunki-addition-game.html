@@ -162,9 +162,9 @@ body.game-page{background:var(--game-bg,#151918);color:var(--game-ink,#f4f7f3)}
 @media(min-width:1100px) and (min-height:700px) and (orientation:landscape){.game-page #play{grid-template-columns:minmax(0,1fr) 350px}.game-page .answer{min-height:130px;font-size:52px}.answer-area{gap:24px}.game-page .group .character,.game-page .group.dense .character{max-height:250px}}
 @media(max-width:600px){.game-page main{padding:12px;gap:14px}.game-page h1{font-size:20px}.game-page .logo{font-size:10px}.game-page .sound{font-size:12px;padding:8px}.game-controls{gap:10px}.game-page .mode-picker{width:100%}.game-page .mode-picker button{flex:1;padding-inline:8px;font-size:17px}.game-page .settings{width:100%;justify-content:space-between;font-size:13px}.game-page .settings select{font-size:13px}.game-page .groups{grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);gap:4px}.game-page .group{gap:3px}.game-page .group.dense .character{min-width:36px;flex-basis:36px;height:83px}.game-page .equation{font-size:34px}.answer-area{margin-top:18px;gap:10px}.game-page .prompt{min-height:40px;font-size:19px}.game-page .answer{min-height:86px;font-size:40px}.game-page .music-bar{gap:8px}.game-page .music-bar button,.game-page .music-bar select{font-size:13px;padding-inline:8px}.game-page .music-status{font-size:12px}.game-page .party h2{font-size:25px}}
 </style>
-<link rel="stylesheet" href="games-theme.css?v=20260912-anpan-music">
-<script src="games-theme.js?v=20260912-anpan-music"></script>
-<script src="game-navigation.js?v=20260912-anpan-music" defer></script>
+<link rel="stylesheet" href="games-theme.css?v=20260912-anpan-arrange">
+<script src="games-theme.js?v=20260912-anpan-arrange"></script>
+<script src="game-navigation.js?v=20260912-anpan-arrange" defer></script>
 </head>
 <body class="game-page" data-game="addition">
 <main>
@@ -191,9 +191,9 @@ body.game-page{background:var(--game-bg,#151918);color:var(--game-ink,#f4f7f3)}
   <footer class="music-panel"><div class="music-bar"><button id="musicToggle" aria-pressed="false">▶ おんがくを ながす</button><select id="musicTrack" aria-label="おんがくの キャラクター"></select><label>おんりょう <input id="musicVolume" aria-label="おんがくの おんりょう" type="range" min="0" max="100" value="20"></label></div><p class="music-status" id="musicStatus" role="status" aria-live="polite"></p></footer>
 </main>
 <div class="confetti" id="confetti" aria-hidden="true"></div>
-<script src="sprunki-roster.js?v=20260912-anpan-music"></script>
-<script src="games-audio-manifest.js?v=20260912-anpan-music"></script>
-<script src="games-audio.js?v=20260912-anpan-music"></script>
+<script src="sprunki-roster.js?v=20260912-anpan-arrange"></script>
+<script src="games-audio-manifest.js?v=20260912-anpan-arrange"></script>
+<script src="games-audio.js?v=20260912-anpan-arrange"></script>
 <script>
 "use strict";
 // Pure game model: the UI and automated checks share the same transitions.

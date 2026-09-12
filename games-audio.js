@@ -119,7 +119,9 @@
         if (error || !assets.has(id)) reject(error || new Error('missing-audio-data'));
         else resolve(assets.get(id));
       }
-      script.src = new URL(path, assetBase).href;
+      const assetUrl = new URL(path, assetBase);
+      if (metadata.revision) assetUrl.searchParams.set('v', metadata.revision);
+      script.src = assetUrl.href;
       script.onload = () => finish(); script.onerror = () => finish(new Error('audio-load-failed'));
       document.head.append(script);
     }).catch(error => { loaders.delete(id); throw error; });

@@ -35,11 +35,13 @@ function main() {
     const pack = readPack(id), pcm = Buffer.from(pack.data, 'base64');
     assert.equal(pack.data, pcm.toString('base64'), 'Canonical base64');
     const generated = anpanIds.includes(id);
-    assert.deepEqual(Object.keys(pack).sort(), ['data', 'type', 'loopable', 'beats', 'loopStart', 'loopEnd', 'gain', ...(generated ? ['title', 'instrument', 'provenance'] : [])].sort());
+    assert.deepEqual(Object.keys(pack).sort(), ['data', 'type', 'loopable', 'beats', 'loopStart', 'loopEnd', 'gain', ...(generated ? ['title', 'instrument', 'provenance', 'revision'] : [])].sort());
     for (const key of ['loopable', 'beats', 'loopStart', 'loopEnd', 'gain']) assert.equal(pack[key], track[key]);
     if (generated) {
       assert.equal(track.provenance, 'game-original');
       assert.equal(track.gain, .26);
+      assert.equal(track.revision, hash(pcm).slice(0, 16));
+      assert.equal(pack.revision, track.revision);
       for (const key of ['title', 'instrument', 'provenance']) {
         assert.equal(typeof track[key], 'string'); assert(track[key].trim().length > 0);
         assert.equal(pack[key], track[key]);

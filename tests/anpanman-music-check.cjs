@@ -206,7 +206,7 @@ async function checkPendingCancellation(browser, url, reason) {
   let release;
   const gate = new Promise(resolve => { release = resolve; });
   let requested = false;
-  await page.route('**/sounds/packed/anpanman.js', async route => { requested = true; await gate; await route.continue(); });
+  await page.route(url => url.pathname.endsWith('/sounds/packed/anpanman.js'), async route => { requested = true; await gate; await route.continue(); });
   try {
     await page.locator('#musicButton').click();
     await page.waitForFunction(() => MoonAudio.getMusicState().playing.includes('oren'));

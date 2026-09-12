@@ -114,16 +114,16 @@ Each generated `sounds/<id>.wav` is the source for the identical WAV bytes embed
 
 | ID | Title | Instrument | Gain | Source / packed WAV SHA-256 |
 |---|---|---|---:|---|
-| anpanman | Sunny steps | brass | 0.26 | e5c59197a3f24ed2112868f37d9203fcf93e4c71492a35046cb68bc9d68622f8 |
-| baikinman | Tiptoe bounce | plucked | 0.26 | c59cb0be879fb2caa9cc50ecd688bc3cc94ced5b73d673dcb50e6e7a5c3a1c09 |
-| dokinchan | Little sparkles | bell | 0.26 | 9ba06ec25cdd587870e50f3185810c4595ae531f16a2f0dfa0a61aa5913d9d4a |
-| shokupanman | Soft morning | piano | 0.26 | 419cb2fe3531d8426e5de69f34ef0ea6e334984f1768c7516ee1bf8dbd615531 |
-| currypanman | Round drum dance | drum | 0.26 | fba22352059dd40940d38e7c4720becaedcba5102cd4ac89200eb64c0bfed20a |
-| melonpanna | Floating petals | musicbox | 0.26 | 2c59afed29d5bd940ebc95003db3a9624ad8b88aff3eacc2766cfbd6bfaf8b27 |
-| rollpanna | Ribbon breeze | harp | 0.26 | 5daf6b423909b64b6a4261c221686754cbabaaa6aa2bc032b409e2b6578d0a5b |
-| creampanda | Hop and smile | marimba | 0.26 | e90daf0f789333c7287dcbe17878ca3e2125c13b4f2b19f1f197a7ab3f8e9711 |
-| jamojisan | Warm kitchen | bass | 0.26 | 9545f1606029a3324d25ed68e3ae44b844788a31398a4438fc384096368036dd |
-| batakosan | Busy little hands | wood | 0.26 | f4e3ee69193f712837f035af36ade9bf5886d8fe06212f6bdd1b285ca1596bb9 |
+| anpanman | Sunny steps | brass | 0.26 | ae4b56531c6fb07f1d95f4e545315f0a0680eb858d2d2311d576d1caf8e1adf7 |
+| baikinman | Tiptoe bounce | plucked | 0.26 | 43ea898397b210272300cb3259fc2f29e3b2169d84dd70787f55e8f4cd2fa01b |
+| dokinchan | Little sparkles | bell | 0.26 | 466b98ebb9b4647d0313cdc8e9065bc3aa648c191d67a476e5d2dc7a469712bb |
+| shokupanman | Soft morning | piano | 0.26 | c0e17c6b524e7da4ee4f26dc97746679d79d4da667d94652b6a2d6db647e1ed5 |
+| currypanman | Round drum dance | drum | 0.26 | 39fc1a6b9564eba5cc139f5813bb7494b58f694bb1b131fcf1129ab5a7e8df35 |
+| melonpanna | Floating petals | musicbox | 0.26 | 621bbc33a257c2f3c2e9870296cc6d5f803836f33dc8e1da0d52a75e8bd732af |
+| rollpanna | Ribbon breeze | harp | 0.26 | 73d0b886b8c2f292d28bfe8d3176ca1518ef90f1ddd705b1e50a1ed8b1bc8c62 |
+| creampanda | Hop and smile | marimba | 0.26 | 0bcf3cdba64492d89a042ef969d29df1851b6f40728ed2a31391200a8ff8c2f3 |
+| jamojisan | Warm kitchen | bass | 0.26 | 876d35f6fecdd01c57b01e82b062d43e639ad34a65c5c451ba5bd062236763c3 |
+| batakosan | Busy little hands | wood | 0.26 | 83d243216e8a262b190d9a47f2519ca01e1aa6f0939a91a24e0fec7e4cf1d04d |
 
 ## Generated Files
 
@@ -157,24 +157,24 @@ Total pack bytes: 17584116. Each pack is separate for on-demand loading.
 
 - `tools/anpanman-score.cjs` (composition renderer)
 - `sounds/anpanman.wav`
-- `sounds/packed/anpanman.js` (1229174 bytes)
+- `sounds/packed/anpanman.js` (1229204 bytes)
 - `sounds/baikinman.wav`
-- `sounds/packed/baikinman.js` (1229179 bytes)
+- `sounds/packed/baikinman.js` (1229209 bytes)
 - `sounds/dokinchan.wav`
-- `sounds/packed/dokinchan.js` (1229178 bytes)
+- `sounds/packed/dokinchan.js` (1229208 bytes)
 - `sounds/shokupanman.wav`
-- `sounds/packed/shokupanman.js` (1229178 bytes)
+- `sounds/packed/shokupanman.js` (1229208 bytes)
 - `sounds/currypanman.wav`
-- `sounds/packed/currypanman.js` (1229181 bytes)
+- `sounds/packed/currypanman.js` (1229211 bytes)
 - `sounds/melonpanna.wav`
-- `sounds/packed/melonpanna.js` (1229183 bytes)
+- `sounds/packed/melonpanna.js` (1229213 bytes)
 - `sounds/rollpanna.wav`
-- `sounds/packed/rollpanna.js` (1229176 bytes)
+- `sounds/packed/rollpanna.js` (1229206 bytes)
 - `sounds/creampanda.wav`
-- `sounds/packed/creampanda.js` (1229180 bytes)
+- `sounds/packed/creampanda.js` (1229210 bytes)
 - `sounds/jamojisan.wav`
-- `sounds/packed/jamojisan.js` (1229175 bytes)
+- `sounds/packed/jamojisan.js` (1229205 bytes)
 - `sounds/batakosan.wav`
-- `sounds/packed/batakosan.js` (1229180 bytes)
+- `sounds/packed/batakosan.js` (1229210 bytes)
 
-Game-original pack bytes: 12291784. Total across all 30 packs: 29875900.
+Game-original pack bytes: 12292084. Total across all 30 packs: 29876200.

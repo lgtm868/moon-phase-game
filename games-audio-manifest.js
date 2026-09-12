@@ -172,7 +172,8 @@ window.MoonAudioManifest = {
       "gain": 0.26,
       "title": "Sunny steps",
       "instrument": "brass",
-      "provenance": "game-original"
+      "provenance": "game-original",
+      "revision": "ae4b56531c6fb07f"
     },
     "baikinman": {
       "file": "sounds/packed/baikinman.js",
@@ -183,7 +184,8 @@ window.MoonAudioManifest = {
       "gain": 0.26,
       "title": "Tiptoe bounce",
       "instrument": "plucked",
-      "provenance": "game-original"
+      "provenance": "game-original",
+      "revision": "43ea898397b21027"
     },
     "dokinchan": {
       "file": "sounds/packed/dokinchan.js",
@@ -194,7 +196,8 @@ window.MoonAudioManifest = {
       "gain": 0.26,
       "title": "Little sparkles",
       "instrument": "bell",
-      "provenance": "game-original"
+      "provenance": "game-original",
+      "revision": "466b98ebb9b4647d"
     },
     "shokupanman": {
       "file": "sounds/packed/shokupanman.js",
@@ -205,7 +208,8 @@ window.MoonAudioManifest = {
       "gain": 0.26,
       "title": "Soft morning",
       "instrument": "piano",
-      "provenance": "game-original"
+      "provenance": "game-original",
+      "revision": "c0e17c6b524e7da4"
     },
     "currypanman": {
       "file": "sounds/packed/currypanman.js",
@@ -216,7 +220,8 @@ window.MoonAudioManifest = {
       "gain": 0.26,
       "title": "Round drum dance",
       "instrument": "drum",
-      "provenance": "game-original"
+      "provenance": "game-original",
+      "revision": "39fc1a6b9564eba5"
     },
     "melonpanna": {
       "file": "sounds/packed/melonpanna.js",
@@ -227,7 +232,8 @@ window.MoonAudioManifest = {
       "gain": 0.26,
       "title": "Floating petals",
       "instrument": "musicbox",
-      "provenance": "game-original"
+      "provenance": "game-original",
+      "revision": "621bbc33a257c2f3"
     },
     "rollpanna": {
       "file": "sounds/packed/rollpanna.js",
@@ -238,7 +244,8 @@ window.MoonAudioManifest = {
       "gain": 0.26,
       "title": "Ribbon breeze",
       "instrument": "harp",
-      "provenance": "game-original"
+      "provenance": "game-original",
+      "revision": "73d0b886b8c2f292"
     },
     "creampanda": {
       "file": "sounds/packed/creampanda.js",
@@ -249,7 +256,8 @@ window.MoonAudioManifest = {
       "gain": 0.26,
       "title": "Hop and smile",
       "instrument": "marimba",
-      "provenance": "game-original"
+      "provenance": "game-original",
+      "revision": "0bcf3cdba64492d8"
     },
     "jamojisan": {
       "file": "sounds/packed/jamojisan.js",
@@ -260,7 +268,8 @@ window.MoonAudioManifest = {
       "gain": 0.26,
       "title": "Warm kitchen",
       "instrument": "bass",
-      "provenance": "game-original"
+      "provenance": "game-original",
+      "revision": "876d35f6fecdd01c"
     },
     "batakosan": {
       "file": "sounds/packed/batakosan.js",
@@ -271,7 +280,8 @@ window.MoonAudioManifest = {
       "gain": 0.26,
       "title": "Busy little hands",
       "instrument": "wood",
-      "provenance": "game-original"
+      "provenance": "game-original",
+      "revision": "83d243216e8a262b"
     }
   }
 };

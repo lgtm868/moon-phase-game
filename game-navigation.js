@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const version = '20260912-anpan-arrange';
+  const version = '20260913-moon-names';
   const games = Object.freeze({
     moon: { label: 'つき', title: 'おつきさま', icon: '🌙', file: 'moon-phase-game.html' },
     piano: { label: 'ぴあの', title: 'すぷらんきー ぴあの', icon: '🎹', file: 'sprunki-piano-game.html' },

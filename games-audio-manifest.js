@@ -162,6 +162,116 @@ window.MoonAudioManifest = {
       "loopStart": 0,
       "loopEnd": 17.461395833333334,
       "gain": 0.2
+    },
+    "anpanman": {
+      "file": "sounds/packed/anpanman.js",
+      "loopable": true,
+      "beats": 8,
+      "loopStart": 0,
+      "loopEnd": 4.8,
+      "gain": 0.26,
+      "title": "Sunny steps",
+      "instrument": "brass",
+      "provenance": "game-original"
+    },
+    "baikinman": {
+      "file": "sounds/packed/baikinman.js",
+      "loopable": true,
+      "beats": 8,
+      "loopStart": 0,
+      "loopEnd": 4.8,
+      "gain": 0.26,
+      "title": "Tiptoe bounce",
+      "instrument": "plucked",
+      "provenance": "game-original"
+    },
+    "dokinchan": {
+      "file": "sounds/packed/dokinchan.js",
+      "loopable": true,
+      "beats": 8,
+      "loopStart": 0,
+      "loopEnd": 4.8,
+      "gain": 0.26,
+      "title": "Little sparkles",
+      "instrument": "bell",
+      "provenance": "game-original"
+    },
+    "shokupanman": {
+      "file": "sounds/packed/shokupanman.js",
+      "loopable": true,
+      "beats": 8,
+      "loopStart": 0,
+      "loopEnd": 4.8,
+      "gain": 0.26,
+      "title": "Soft morning",
+      "instrument": "piano",
+      "provenance": "game-original"
+    },
+    "currypanman": {
+      "file": "sounds/packed/currypanman.js",
+      "loopable": true,
+      "beats": 8,
+      "loopStart": 0,
+      "loopEnd": 4.8,
+      "gain": 0.26,
+      "title": "Round drum dance",
+      "instrument": "drum",
+      "provenance": "game-original"
+    },
+    "melonpanna": {
+      "file": "sounds/packed/melonpanna.js",
+      "loopable": true,
+      "beats": 8,
+      "loopStart": 0,
+      "loopEnd": 4.8,
+      "gain": 0.26,
+      "title": "Floating petals",
+      "instrument": "musicbox",
+      "provenance": "game-original"
+    },
+    "rollpanna": {
+      "file": "sounds/packed/rollpanna.js",
+      "loopable": true,
+      "beats": 8,
+      "loopStart": 0,
+      "loopEnd": 4.8,
+      "gain": 0.26,
+      "title": "Ribbon breeze",
+      "instrument": "harp",
+      "provenance": "game-original"
+    },
+    "creampanda": {
+      "file": "sounds/packed/creampanda.js",
+      "loopable": true,
+      "beats": 8,
+      "loopStart": 0,
+      "loopEnd": 4.8,
+      "gain": 0.26,
+      "title": "Hop and smile",
+      "instrument": "marimba",
+      "provenance": "game-original"
+    },
+    "jamojisan": {
+      "file": "sounds/packed/jamojisan.js",
+      "loopable": true,
+      "beats": 8,
+      "loopStart": 0,
+      "loopEnd": 4.8,
+      "gain": 0.26,
+      "title": "Warm kitchen",
+      "instrument": "bass",
+      "provenance": "game-original"
+    },
+    "batakosan": {
+      "file": "sounds/packed/batakosan.js",
+      "loopable": true,
+      "beats": 8,
+      "loopStart": 0,
+      "loopEnd": 4.8,
+      "gain": 0.26,
+      "title": "Busy little hands",
+      "instrument": "wood",
+      "provenance": "game-original"
     }
   }
 };

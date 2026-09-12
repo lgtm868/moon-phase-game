@@ -5,7 +5,10 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { root, ids } = require('../tools/build-audio-assets.cjs');
+const { root } = require('../tools/build-audio-assets.cjs');
+const originalIds = 'oren raddy clukr funbot vineria gray brud garnold owakcx sky mrsun durple mrtree simon tunner mrfun wenda pinki jevin black'.split(' ');
+const anpanIds = 'anpanman baikinman dokinchan shokupanman currypanman melonpanna rollpanna creampanda jamojisan batakosan'.split(' ');
+const ids = [...originalIds, ...anpanIds];
 
 async function main() {
   const playwright = require(process.env.AUDIO_PLAYWRIGHT || 'playwright');
@@ -33,6 +36,9 @@ async function main() {
             document.head.append(script);
           });
           const call = window.assetCalls.at(-1), asset = call.asset;
+          for (const key of ['title', 'instrument', 'provenance']) {
+            if (asset[key] !== entry[key]) throw Error(id + ': metadata mismatch: ' + key);
+          }
           const bytes = Uint8Array.from(atob(asset.data), c => c.charCodeAt(0));
           const decoder = new OfflineAudioContext(2, 1, 48000);
           const buffer = await decoder.decodeAudioData(bytes.buffer.slice(0));
@@ -82,9 +88,11 @@ async function main() {
         }
         return { results, calls: window.assetCalls.length };
       });
-      assert.deepEqual(errors, []); assert.equal(result.calls, 20);
+      assert.deepEqual(errors, []); assert.equal(result.calls, 30);
+      assert.deepEqual(result.results.map(row => row.id), ids, 'Decode every canonical and generated track, no extras');
       for (const row of result.results) {
         assert.equal(row.id, row.registeredId); assert(row.metadataMatch);
+        if (anpanIds.includes(row.id)) assert.equal(row.channels, 2, row.id + ': generated stereo retained');
         if (row.previewOnly) {
           assert.equal(row.id, 'black'); assert.equal(row.loopable, false); assert.equal(row.beats, null);
           assert.equal(row.frames, 838147); assert.equal(row.duration, 838147 / 48000);
@@ -97,7 +105,8 @@ async function main() {
         assert(row.repeatError441 < 1e-5, `${row.id}: device-rate loop error ${row.repeatError441}`);
       }
       const loops = result.results.filter(r => !r.previewOnly);
-      console.log(`PASS ${new URL(url).protocol}: 20 dynamic classic scripts; Black MP3 preview stops without looping; 19 loops with 230400-frame decode; 48 kHz loop error ${Math.max(...loops.map(r => r.repeatError))}; 44.1 kHz output loop error ${Math.max(...loops.map(r => r.repeatError441))}.`);
+      assert.equal(loops.filter(row => anpanIds.includes(row.id)).length, 10);
+      console.log(`PASS ${new URL(url).protocol}: 30 dynamic classic scripts; Black MP3 preview stops without looping; 29 loops with 230400-frame decode; 48 kHz loop error ${Math.max(...loops.map(r => r.repeatError))}; 44.1 kHz output loop error ${Math.max(...loops.map(r => r.repeatError441))}.`);
       console.log(`Direct device-rate decode lengths: ${[...new Set(loops.map(r => r.frames441))]}; use the documented 48 kHz decode path.`);
       await page.close();
     }

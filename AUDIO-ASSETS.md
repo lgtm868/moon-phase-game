@@ -104,6 +104,27 @@ Black (one-shot only): RMS 0.162238; peak 0.823391; first/last >-60dB 0.332813 /
 | jevin | 9f6df9ed113de03dd719c99ff1fdcd2c3fa048630c9848062d93f9a72cc8eb66 | 80478b9ab50fad1084446dd282c12aecaac9c010972ffc899361759cda1af0e7 |
 | black | 4757e4a2fbbad5a404cbcdcea0d77ceac55c37a2ec947d34b3e474ba79230f4b | 4757e4a2fbbad5a404cbcdcea0d77ceac55c37a2ec947d34b3e474ba79230f4b |
 
+## Anpan10 Game-Original Music
+
+These ten tracks are composed game-original music, NOT official songs, recordings, or arrangements of official songs. Character IDs identify game selections only. The manifest contains 30 tracks: the unchanged canonical 20 plus these ten game-original loops.
+
+`tools/anpanman-score.cjs` exports `renderTracks()`. The builder validates all ten records and encodes their mono or stereo Float32 channels directly with writeWav: exactly 230400 frames at 48000 Hz, 8 beats at 100 BPM (4.8 seconds). No resampling, tail wrapping, endpoint correction, or gain normalization is applied to these compositions. Gain comes from each score record and is metadata only, not baked into the PCM. PCM must be finite and below full scale.
+
+Each generated `sounds/<id>.wav` is the source for the identical WAV bytes embedded in `sounds/packed/<id>.js`. Both manifest and pack carry `provenance:game-original`, `loopable:true`, `beats:8`, `loopStart:0`, `loopEnd:4.8`, title, instrument and score gain. Canonical source SHA-256 pins and canonical pack generation remain unchanged. This report does not claim listening certification.
+
+| ID | Title | Instrument | Gain | Source / packed WAV SHA-256 |
+|---|---|---|---:|---|
+| anpanman | Sunny steps | brass | 0.26 | e5c59197a3f24ed2112868f37d9203fcf93e4c71492a35046cb68bc9d68622f8 |
+| baikinman | Tiptoe bounce | plucked | 0.26 | c59cb0be879fb2caa9cc50ecd688bc3cc94ced5b73d673dcb50e6e7a5c3a1c09 |
+| dokinchan | Little sparkles | bell | 0.26 | 9ba06ec25cdd587870e50f3185810c4595ae531f16a2f0dfa0a61aa5913d9d4a |
+| shokupanman | Soft morning | piano | 0.26 | 419cb2fe3531d8426e5de69f34ef0ea6e334984f1768c7516ee1bf8dbd615531 |
+| currypanman | Round drum dance | drum | 0.26 | fba22352059dd40940d38e7c4720becaedcba5102cd4ac89200eb64c0bfed20a |
+| melonpanna | Floating petals | musicbox | 0.26 | 2c59afed29d5bd940ebc95003db3a9624ad8b88aff3eacc2766cfbd6bfaf8b27 |
+| rollpanna | Ribbon breeze | harp | 0.26 | 5daf6b423909b64b6a4261c221686754cbabaaa6aa2bc032b409e2b6578d0a5b |
+| creampanda | Hop and smile | marimba | 0.26 | e90daf0f789333c7287dcbe17878ca3e2125c13b4f2b19f1f197a7ab3f8e9711 |
+| jamojisan | Warm kitchen | bass | 0.26 | 9545f1606029a3324d25ed68e3ae44b844788a31398a4438fc384096368036dd |
+| batakosan | Busy little hands | wood | 0.26 | f4e3ee69193f712837f035af36ade9bf5886d8fe06212f6bdd1b285ca1596bb9 |
+
 ## Generated Files
 
 - `tools/build-audio-assets.cjs` (build/analysis implementation)
@@ -131,3 +152,29 @@ Black (one-shot only): RMS 0.162238; peak 0.823391; first/last >-60dB 0.332813 /
 - `sounds/packed/black.js` (375333 bytes, original MP3 preview only)
 
 Total pack bytes: 17584116. Each pack is separate for on-demand loading.
+
+### Additional Game-Original Files
+
+- `tools/anpanman-score.cjs` (composition renderer)
+- `sounds/anpanman.wav`
+- `sounds/packed/anpanman.js` (1229174 bytes)
+- `sounds/baikinman.wav`
+- `sounds/packed/baikinman.js` (1229179 bytes)
+- `sounds/dokinchan.wav`
+- `sounds/packed/dokinchan.js` (1229178 bytes)
+- `sounds/shokupanman.wav`
+- `sounds/packed/shokupanman.js` (1229178 bytes)
+- `sounds/currypanman.wav`
+- `sounds/packed/currypanman.js` (1229181 bytes)
+- `sounds/melonpanna.wav`
+- `sounds/packed/melonpanna.js` (1229183 bytes)
+- `sounds/rollpanna.wav`
+- `sounds/packed/rollpanna.js` (1229176 bytes)
+- `sounds/creampanda.wav`
+- `sounds/packed/creampanda.js` (1229180 bytes)
+- `sounds/jamojisan.wav`
+- `sounds/packed/jamojisan.js` (1229175 bytes)
+- `sounds/batakosan.wav`
+- `sounds/packed/batakosan.js` (1229180 bytes)
+
+Game-original pack bytes: 12291784. Total across all 30 packs: 29875900.

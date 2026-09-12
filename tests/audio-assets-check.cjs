@@ -6,6 +6,9 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { execFileSync } = require('node:child_process');
 const { root, ids, hash, readWav, writeWav, normalize, resample, loadOriginal } = require('../tools/build-audio-assets.cjs');
+const originalIds = 'oren raddy clukr funbot vineria gray brud garnold owakcx sky mrsun durple mrtree simon tunner mrfun wenda pinki jevin black'.split(' ');
+const anpanIds = 'anpanman baikinman dokinchan shokupanman currypanman melonpanna rollpanna creampanda jamojisan batakosan'.split(' ');
+const expectedIds = [...originalIds, ...anpanIds];
 
 function readPack(id) {
   const calls = [];
@@ -23,14 +26,25 @@ function main() {
   vm.runInNewContext(fs.readFileSync(path.join(root, 'games-audio-manifest.js'), 'utf8'), context, { timeout: 1000 });
   const manifest = context.window.MoonAudioManifest;
   assert.equal(manifest.bpm, 100); assert.equal(manifest.beatsPerBar, 4);
-  assert.deepEqual(Object.keys(manifest.tracks), ids);
+  assert.deepEqual(ids, originalIds, 'Canonical source hash validation remains scoped to the original twenty');
+  assert.deepEqual(Object.keys(manifest.tracks), expectedIds);
   assert.deepEqual(fs.readdirSync(path.join(root, 'sounds/packed')).sort(), Object.keys(manifest.tracks).map(id => `${id}.js`).sort());
-  for (const id of ids) loadOriginal(id);
+  for (const id of originalIds) loadOriginal(id);
+  const sourceDigests = new Set(originalIds.map(id => hash(loadOriginal(id).bytes)));
   for (const [id, track] of Object.entries(manifest.tracks)) {
     const pack = readPack(id), pcm = Buffer.from(pack.data, 'base64');
     assert.equal(pack.data, pcm.toString('base64'), 'Canonical base64');
-    assert.deepEqual(Object.keys(pack).sort(), ['data', 'type', 'loopable', 'beats', 'loopStart', 'loopEnd', 'gain'].sort());
+    const generated = anpanIds.includes(id);
+    assert.deepEqual(Object.keys(pack).sort(), ['data', 'type', 'loopable', 'beats', 'loopStart', 'loopEnd', 'gain', ...(generated ? ['title', 'instrument', 'provenance'] : [])].sort());
     for (const key of ['loopable', 'beats', 'loopStart', 'loopEnd', 'gain']) assert.equal(pack[key], track[key]);
+    if (generated) {
+      assert.equal(track.provenance, 'game-original');
+      assert.equal(track.gain, .26);
+      for (const key of ['title', 'instrument', 'provenance']) {
+        assert.equal(typeof track[key], 'string'); assert(track[key].trim().length > 0);
+        assert.equal(pack[key], track[key]);
+      }
+    }
     assert.equal(track.file, `sounds/packed/${id}.js`);
     if (id === 'black') {
       assert.equal(pack.type, 'audio/mpeg'); assert.equal(pack.loopable, false);
@@ -47,9 +61,21 @@ function main() {
     assert.equal(track.loopEnd * decoded.rate, decoded.data[0].length);
     assert.equal(track.loopEnd, track.beats * 60 / manifest.bpm);
     assert(track.gain > 0 && track.gain <= 2);
-    const original = readWav(loadOriginal(id).bytes);
+    const sourceBytes = anpanIds.includes(id)
+      ? fs.readFileSync(path.join(root, `sounds/${id}.wav`)) : loadOriginal(id).bytes;
+    if (anpanIds.includes(id)) {
+      const digest = hash(sourceBytes);
+      assert(!sourceDigests.has(digest), `${id}: distinct generated original, not a reused recording`);
+      sourceDigests.add(digest);
+    }
+    const original = readWav(sourceBytes);
     assert.equal(decoded.data.length, original.data.length);
-    assert(pcm.equals(writeWav(normalize(original, 8))), `${id}: reproducible PCM`);
+    if (generated) {
+      assert.equal(original.rate, 48000); assert.equal(original.data.length, 2);
+      assert.equal(original.data[0].length, 230400);
+      assert(pcm.equals(sourceBytes), `${id}: generated source preserved byte-for-byte in pack`);
+      assert(decoded.data.some(channel => channel.some(value => Math.abs(value) > .001)), `${id}: non-silent composition`);
+    } else assert(pcm.equals(writeWav(normalize(original, 8))), `${id}: reproducible PCM`);
     for (const c of decoded.data) {
       assert.equal(c[0], c.at(-1), `${id}: sample-exact endpoint`);
       for (const v of c) { assert(Number.isFinite(v)); assert(Math.abs(v) < 0.999); assert(Math.abs(v * track.gain) <= 0.8001); }
@@ -57,7 +83,7 @@ function main() {
     console.log(`PASS ${id}: ${decoded.data[0].length} frames; channels ${decoded.data.length}; gain ${track.gain}`);
   }
 
-  // Tests use synthetic probes only; generated production packs never do.
+  // Synthetic probes below exercise normalization independently of production sources.
   const silence = new Float32Array(230400 + 1200);
   silence[1000] = .2; silence[230400 + 400] = .3;
   const loop = normalize({ rate: 48000, data: [silence] }, 8);
@@ -92,8 +118,8 @@ function main() {
   const before = generated.map(f => hash(fs.readFileSync(path.join(root, f))));
   execFileSync(process.execPath, [path.join(root, 'tools/build-audio-assets.cjs')], { stdio: 'pipe' });
   assert.deepEqual(generated.map(f => hash(fs.readFileSync(path.join(root, f)))), before, 'Rebuild is byte-deterministic');
-  assert.deepEqual(originals.map(f => hash(fs.readFileSync(path.join(root, 'sounds', f)))), originalHashes, 'All 21 source files unchanged');
-  console.log('PASS: 19 loop packs + original Black preview; preserved rests/stereo/pitch; modulo tails; whole-bar lengths; deterministic rebuild; 21 originals unchanged. Black loop remains explicitly unverified.');
+  assert.deepEqual(originals.map(f => hash(fs.readFileSync(path.join(root, 'sounds', f)))), originalHashes, 'Canonical and generated source files unchanged');
+  console.log('PASS: 19 canonical loops + 10 distinct generated original loops + original Black preview; preserved rests/stereo/pitch; modulo tails; whole-bar lengths; deterministic rebuild; all sources unchanged. Black loop remains explicitly unverified.');
 }
 
 if (require.main === module) main();

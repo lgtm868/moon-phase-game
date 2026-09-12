@@ -3,6 +3,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
+const originalIds = 'oren raddy clukr funbot vineria gray brud garnold owakcx sky mrsun durple mrtree simon tunner mrfun wenda pinki jevin black'.split(' ');
+const anpanIds = 'anpanman baikinman dokinchan shokupanman currypanman melonpanna rollpanna creampanda jamojisan batakosan'.split(' ');
+const musicIds = [...originalIds, ...anpanIds];
 
 function installAudioContract() {
   const empty = () => ({ selected: [], playing: [], pending: [], errors: [] });
@@ -68,23 +71,22 @@ async function checkMoonMusic(browser, url) {
     assert.equal(await music.getAttribute('aria-pressed'), 'true', 'old rejected promise cannot stop retry');
     assert.ok(await page.locator('#audioStatus').isHidden());
     for (let i = 2; i < 35; i++) await page.locator('.sprunki-choice').nth(i).click();
-    assert.deepEqual(await page.evaluate(() => __music.requests.at(-1).ids),
-      ['oren', 'raddy', 'clukr', 'funbot', 'vineria', 'gray', 'brud', 'garnold', 'owakcx', 'sky',
-        'mrsun', 'durple', 'mrtree', 'simon', 'tunner', 'mrfun', 'wenda', 'pinki', 'jevin', 'black']);
+    assert.deepEqual(await page.evaluate(() => __music.requests.at(-1).ids), musicIds);
     await page.evaluate(() => {
       const ids = __music.requests.at(-1).ids;
       __music.emit({ selected: ids, playing: ids, pending: [], errors: [] });
     });
-    assert.equal(await music.getAttribute('aria-pressed'), 'true', '19 healthy peers remain on with Black selected');
+    assert.equal(await music.getAttribute('aria-pressed'), 'true', '29 healthy peers remain on with Black selected');
     assert.match(await page.locator('.sprunki-choice').nth(19).innerText(), /Black 1かい/);
     const requestCount = await page.evaluate(() => __music.requests.length);
     await page.evaluate(() => {
       const ids = __music.requests.at(-1).ids.filter(id => id !== 'black');
       __music.emit({ selected: ids, playing: ids, pending: [], errors: [] });
     });
-    assert.equal(await music.getAttribute('aria-pressed'), 'true', '19 peers continue after Black ends');
+    assert.equal(await music.getAttribute('aria-pressed'), 'true', '29 peers continue after Black ends');
     assert.equal(await page.evaluate(() => __music.requests.length), requestCount, 'end event does not replay Black');
     for (let i = 0; i < 19; i++) await page.locator('.sprunki-choice').nth(i).click();
+    for (let i = 20; i < 30; i++) await page.locator('.sprunki-choice').nth(i).click();
     await page.evaluate(() => __music.emit({ selected: [], playing: [], pending: [], errors: [] }));
     assert.equal(await music.getAttribute('aria-pressed'), 'false', 'Black alone must not claim playback');
     assert.equal(await page.locator('.sprunki-choice').nth(19).getAttribute('aria-pressed'), 'true', 'Black image selection is retained');
@@ -94,7 +96,7 @@ async function checkMoonMusic(browser, url) {
     assert.equal(await music.getAttribute('aria-pressed'), 'false');
     assert.match(await page.locator('#audioStatus').innerText(), /ブラック：おとが よめません/);
     await page.locator('.sprunki-choice').nth(19).click();
-    assert.ok(await music.isDisabled(), 'extras have no fabricated audio');
+    assert.ok(await music.isDisabled(), 'five selected MODs have no fabricated audio');
     assert.equal(await music.getAttribute('aria-pressed'), 'false');
     assert.equal(await page.locator('.is-pending').count(), 0);
     await page.locator('.sprunki-choice').nth(0).click();
@@ -135,7 +137,7 @@ async function checkMoonMusic(browser, url) {
     await page.waitForTimeout(1200);
     assert.equal(await page.locator('#albumButton').evaluate(button => button.classList.contains('is-new')), false);
     assert.deepEqual(errors, []);
-    return { moonMusicContract: true, selectableStemIds: 20, silentExtras: 15, lifecycleStops: 4 };
+    return { moonMusicContract: true, selectableStemIds: 30, silentExtras: 5, lifecycleStops: 4 };
   } finally { await page.close(); }
 }
 module.exports = { checkMoonMusic };
@@ -160,28 +162,30 @@ async function checkLiveMusic(browser, url) {
     await page.locator('.sprunki-choice').nth(1).click();
     await page.waitForFunction(() => MoonAudio.getMusicState().playing.includes('raddy'));
     assert.deepEqual(await page.evaluate(() => [...MoonAudio.getMusicState().playing].sort()), ['oren', 'raddy']);
-    for (let i = 2; i < 20; i++) await page.locator('.sprunki-choice').nth(i).click();
-    await page.waitForFunction(() => MoonAudio.getMusicState().playing.length === 20);
+    for (let i = 2; i < 30; i++) await page.locator('.sprunki-choice').nth(i).click();
+    await page.waitForFunction(() => MoonAudio.getMusicState().playing.length === 30);
+    assert.deepEqual(await page.evaluate(() => [...MoonAudio.getMusicState().playing].sort()), musicIds.slice().sort());
     assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), 'true');
     assert.equal(await page.locator('.sprunki-choice').nth(19).getAttribute('aria-pressed'), 'true');
     assert.deepEqual(await page.evaluate(() => MoonAudio.getMusicState().errors), []);
     assert.match(await page.locator('.sprunki-choice').nth(19).innerText(), /1かい/);
     await page.waitForFunction(() => !MoonAudio.getMusicState().selected.includes('black'), null, { timeout: 90000 });
-    assert.equal(await page.evaluate(() => MoonAudio.getMusicState().playing.length), 19);
+    assert.deepEqual(await page.evaluate(() => [...MoonAudio.getMusicState().playing].sort()), musicIds.filter(id => id !== 'black').sort());
     assert.equal(await page.locator('.sprunki-choice').nth(19).getAttribute('aria-pressed'), 'true');
     await page.locator('.sprunki-choice').nth(19).click();
-    await page.waitForFunction(() => MoonAudio.getMusicState().playing.length === 20);
-    assert.equal(await page.evaluate(() => __stemStarts.filter(source => source.loop).length), 19, 'Black replay must not restart any of the 19 loops');
+    await page.waitForFunction(() => MoonAudio.getMusicState().playing.length === 30);
+    assert.equal(await page.evaluate(() => __stemStarts.filter(source => source.loop).length), 29, 'Black replay must not restart any of the 29 loops');
     assert.equal(await page.evaluate(() => __stemStarts.filter(source => !source.loop).length), 2);
     assert.equal(await page.locator('.sprunki-choice').nth(19).getAttribute('aria-pressed'), 'true', 'selected Black button replays without deselecting');
     for (let i = 0; i < 19; i++) await page.locator('.sprunki-choice').nth(i).click();
+    for (let i = 20; i < 30; i++) await page.locator('.sprunki-choice').nth(i).click();
     await page.waitForFunction(() => document.querySelector('#musicButton').getAttribute('aria-pressed') === 'false');
     assert.deepEqual(await page.evaluate(() => MoonAudio.getMusicState().playing), []);
     await page.locator('.sprunki-choice').nth(0).click();
     await page.locator('#musicButton').click();
     await page.locator('#musicButton').click();
     assert.deepEqual(await page.evaluate(() => MoonAudio.getMusicState()), { selected: [], playing: [], pending: [], errors: [] });
-    return { liveEngineDecodedAndStarted: 20, blackNaturalEnd: true, blackOnlyOff: true };
+    return { liveEngineDecodedAndStarted: 30, blackNaturalEnd: true, blackOnlyOff: true };
   } finally { await page.close(); }
 }
 module.exports.checkLiveMusic = checkLiveMusic;

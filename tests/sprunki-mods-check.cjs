@@ -11,6 +11,8 @@ const http = require('node:http');
 const { createHash } = require('node:crypto');
 const root = path.resolve(__dirname, '..');
 const originalIds = 'oren raddy clukr funbot vineria gray brud garnold owakcx sky mrsun durple mrtree simon tunner mrfun wenda pinki jevin black'.split(' ');
+const anpanIds = 'anpanman baikinman dokinchan shokupanman currypanman melonpanna rollpanna creampanda jamojisan batakosan'.split(' ');
+const musicIds = [...originalIds, ...anpanIds];
 const approved = [
   ['acid', 'ACID', 'Pyramixed'], ['tox', 'Tox', 'Pyramixed'], ['sulfur', 'Sulfur', 'Pyramixed'],
   ['mard', 'Mard', 'Retake'], ['mrbear', 'Mr. Bear', 'Retake']
@@ -47,7 +49,7 @@ function modelChecks() {
   }
   const manifestContext = { window: {} };
   vm.runInNewContext(read('games-audio-manifest.js'), manifestContext);
-  assert.deepEqual(Object.keys(manifestContext.window.MoonAudioManifest.tracks).sort(), originalIds.slice().sort());
+  assert.deepEqual(Object.keys(manifestContext.window.MoonAudioManifest.tracks), musicIds);
   for (const id of modIds) assert(!fs.existsSync(path.join(root, 'sounds/packed', id + '.js')), `${id}: no fabricated music pack`);
   const guess = vm.runInContext(firstModel('sprunki-guess-game.html') + ';GuessGame;', context);
   assert.deepEqual(Array.from(guess.characters, c => c.id), originalIds);
@@ -118,15 +120,15 @@ async function browserChecks(roster) {
       await page.goto(base + '/' + file + '?standalone=1');
       return { page, errors, failedMods };
     }
-    async function verifyClean(test) {
+    async function verifyClean(test, allowedIds = originalIds) {
       const result = await test.page.evaluate(async () => {
         await Promise.all(modProbe.pending);
         return { loads: modProbe.loads, selections: modProbe.selections, errors: modProbe.errors, state: MoonAudio.getMusicState() };
       });
       assert.deepEqual(result.errors, [], 'No unknown-track or other audio errors');
       assert.deepEqual(result.state.errors, []); assert.deepEqual(test.errors, []); assert.deepEqual(test.failedMods, []);
-      assert(result.loads.every(id => originalIds.includes(id)), 'No MOD recording lookup');
-      assert(result.selections.every(ids => ids.every(id => originalIds.includes(id))), 'No MOD reaches music selection');
+      assert(result.loads.every(id => allowedIds.includes(id)), 'Only this game\'s approved audio is loaded');
+      assert(result.selections.every(ids => ids.every(id => allowedIds.includes(id))), 'No MOD reaches music selection');
     }
     async function images(page, selector, count) {
       assert.equal(await page.locator(selector).count(), count);
@@ -143,7 +145,16 @@ async function browserChecks(roster) {
     async function onlyMoon(index) {
       const buttons = moon.page.locator(moonSelector);
       if (await buttons.nth(index).getAttribute('aria-pressed') !== 'true') await buttons.nth(index).click();
-      for (let i = 0; i < 35; i++) if (i !== index && await buttons.nth(i).getAttribute('aria-pressed') === 'true') await buttons.nth(i).click();
+      for (let i = 0; i < 35; i++) {
+        if (i === index || await buttons.nth(i).getAttribute('aria-pressed') !== 'true') continue;
+        // A retained Black image replays on its first click after playback stops.
+        if (i === originalIds.indexOf('black') && !await moon.page.evaluate(() => MoonAudio.getMusicState().selected.includes('black'))) {
+          await buttons.nth(i).click();
+          assert.equal(await buttons.nth(i).getAttribute('aria-pressed'), 'true', 'Stopped Black replays before it can be deselected');
+          await moon.page.waitForFunction(() => MoonAudio.getMusicState().selected.includes('black'));
+        }
+        await buttons.nth(i).click();
+      }
       assert.equal(await moon.page.locator(moonSelector + '[aria-pressed="true"]').count(), 1);
     }
     for (const [i, mod] of roster.modCharacters.entries()) {
@@ -164,8 +175,17 @@ async function browserChecks(roster) {
     for (let i = 0; i < 20; i++) {
       await onlyMoon(i); assert(await moon.page.locator('#musicButton').isEnabled(), originalIds[i] + ': original recording remains available');
     }
-    await verifyClean(moon); await moon.page.close();
-    console.log('PASS Moon: 35 images; mods appended after original 30; named MOD titles; MOD-only disabled; mixed selection only plays original audio.');
+    for (const [i, id] of anpanIds.entries()) {
+      await onlyMoon(20 + i);
+      assert(await moon.page.locator('#musicButton').isEnabled(), id + ': generated original is playable');
+      if (await moon.page.locator('#musicButton').getAttribute('aria-pressed') !== 'true') await moon.page.locator('#musicButton').click();
+      await moon.page.waitForFunction(id => MoonAudio.getMusicState().playing.includes(id), id);
+      assert.deepEqual(await moon.page.evaluate(() => MoonAudio.getMusicState().selected), [id]);
+      await moon.page.locator(moonSelector).nth(30).click();
+      assert.deepEqual(await moon.page.evaluate(() => MoonAudio.getMusicState().selected), [id], 'MOD plus generated audio plays only generated track');
+    }
+    await verifyClean(moon, musicIds); await moon.page.close();
+    console.log('PASS Moon: 35 images; 30 playable choices; all ten generated originals decoded; named MOD titles; MOD-only disabled; MOD mixed with canonical/generated music stays silent.');
 
     const piano = await open('sprunki-piano-game.html');
     // Existing buildCharacters appends to characterStrip; laneHeads is not the picker.

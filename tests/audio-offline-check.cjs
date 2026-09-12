@@ -13,7 +13,9 @@ const games = {
   guess: 'sprunki-guess-game.html', baibain: 'baibain-game.html', food: 'food-quiz-game.html', english: 'english-game.html'
 };
 const trackUsers = new Set(['moon', 'piano', 'addition']);
-const expectedIds = 'oren raddy clukr funbot vineria gray brud garnold owakcx sky mrsun durple mrtree simon tunner mrfun wenda pinki jevin black'.split(' ');
+const originalIds = 'oren raddy clukr funbot vineria gray brud garnold owakcx sky mrsun durple mrtree simon tunner mrfun wenda pinki jevin black'.split(' ');
+const anpanIds = 'anpanman baikinman dokinchan shokupanman currypanman melonpanna rollpanna creampanda jamojisan batakosan'.split(' ');
+const expectedIds = [...originalIds, ...anpanIds];
 
 function observe({ prefixed }) {
   const calls = window.__offlineCalls = { contexts: 0, offlineContexts: 0, resumes: 0, starts: 0, bufferStarts: 0, media: 0, speech: 0, deviceDecodes: 0 };
@@ -120,9 +122,13 @@ async function main() {
           assert.deepEqual(await page.evaluate(() => window.__offlineCalls), before);
         });
         if (trackUsers.has(game)) {
-          await check('all 20 packs decode via real engine at 48000 Hz', async () => {
+          await check('all 30 packs (canonical 20 + generated original 10) decode via real engine at 48000 Hz', async () => {
             const manifest = await page.evaluate(() => window.MoonAudioManifest);
             assert.deepEqual(Object.keys(manifest.tracks), expectedIds);
+            for (const id of anpanIds) {
+              assert.equal(manifest.tracks[id].provenance, 'game-original');
+              assert.equal(manifest.tracks[id].gain, .26);
+            }
             for (const meta of Object.values(manifest.tracks)) verifyFile(new URL(meta.file, page.url()).href);
             const result = await page.evaluate(async () => {
               const tracks = [], failures = [];
@@ -130,17 +136,23 @@ async function main() {
                 try {
                   const { buffer, meta } = await MoonAudio.loadTrack(id);
                   let peak = 0; for (const sample of buffer.getChannelData(0)) peak = Math.max(peak, Math.abs(sample));
-                  tracks.push({ id, rate: buffer.sampleRate, frames: buffer.length, duration: buffer.duration, loopEnd: meta.loopEnd, loopable: meta.loopable, peak });
+                  tracks.push({ id, rate: buffer.sampleRate, channels: buffer.numberOfChannels, frames: buffer.length, duration: buffer.duration, loopEnd: meta.loopEnd, loopable: meta.loopable, peak });
                 } catch (error) { failures.push(id + ': ' + error.message); }
               }
               return { tracks, failures, calls: { ...window.__offlineCalls } };
             });
             entry.decoded = result.tracks;
-            assert.deepEqual(result.failures, []); assert.equal(result.tracks.length, 20);
+            assert.deepEqual(result.failures, []); assert.equal(result.tracks.length, 30);
+            assert.deepEqual(result.tracks.map(track => track.id), expectedIds);
             assert.equal(result.calls.deviceDecodes, 0, 'Must not decode through arbitrary device context');
             for (const track of result.tracks) {
               assert.equal(track.rate, 48000, track.id); assert(track.peak > 0, track.id);
-              if (track.loopable !== false) { assert.equal(track.frames, 230400, track.id); assert.equal(track.loopEnd, 4.8, track.id); }
+              if (track.id === 'black') {
+                assert.equal(track.loopable, false); assert.equal(track.frames, 838147);
+              } else {
+                assert.equal(track.loopable, true); assert.equal(track.frames, 230400, track.id); assert.equal(track.loopEnd, 4.8, track.id);
+              }
+              if (anpanIds.includes(track.id)) assert.equal(track.channels, 2, track.id);
             }
           });
           await check('user-initiated sample playback', async () => {

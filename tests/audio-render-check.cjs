@@ -7,9 +7,16 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const runtime = 'C:/Users/shohe/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright';
 const { chromium } = require(process.env.AUDIO_PLAYWRIGHT || runtime);
+const canonicalIds = ['oren', 'raddy', 'clukr', 'funbot', 'vineria', 'gray', 'brud', 'garnold', 'owakcx', 'sky', 'mrsun', 'durple', 'mrtree', 'simon', 'tunner', 'mrfun', 'wenda', 'pinki', 'jevin'];
+const anpanIds = ['anpanman', 'baikinman', 'dokinchan', 'shokupanman', 'currypanman', 'melonpanna', 'rollpanna', 'creampanda', 'jamojisan', 'batakosan'];
+const loopIds = [...canonicalIds, ...anpanIds];
+const busCounts = [1, 5, 19, 29];
 
 async function main() {
   const browser = await chromium.launch({ headless: true, channel: 'chrome', ...(process.env.AUDIO_BROWSER ? { executablePath: process.env.AUDIO_BROWSER } : {}) });
+  // Sequential renders only; bound the whole suite without allocating long live audio.
+  const deadline = setTimeout(() => { console.error('FAIL: audio QA exceeded 10-minute bound'); void browser.close(); }, 600000);
+  deadline.unref();
   try {
     const page = await browser.newPage();
     const errors = [];
@@ -20,12 +27,16 @@ async function main() {
     });
     await page.addScriptTag({ path: path.join(root, 'games-audio-manifest.js') });
     const entries = await page.evaluate(() => Object.entries(MoonAudioManifest.tracks));
+    assert.equal(entries.length, 30, 'Manifest must contain 29 loops and Black');
+    assert.deepEqual(entries.filter(([, meta]) => meta.loopable === true).map(([id]) => id).sort(), [...loopIds].sort());
+    assert.deepEqual(entries.filter(([, meta]) => meta.loopable !== true).map(([id]) => id), ['black']);
+    assert.equal(entries.find(([id]) => id === 'black')[1].loopable, false);
     for (const [id, meta] of entries) {
       assert(/^[a-z0-9-]+$/.test(id));
       assert(/^sounds\/packed\/[a-z0-9-]+\.js$/.test(meta.file));
       await page.addScriptTag({ path: path.join(root, meta.file) });
     }
-    const report = await page.evaluate(async () => {
+    const report = await page.evaluate(async ({ canonicalIds, anpanIds, loopIds }) => {
       const sampleRate = 48000, manifest = window.MoonAudioManifest;
       const tracks = [];
       const decoder = new OfflineAudioContext(2, 1, sampleRate);
@@ -40,8 +51,11 @@ async function main() {
       const frames = Math.round(period * sampleRate), seconds = period * 2 + .1;
       const length = Math.round(seconds * sampleRate);
       const modulo = (value, modulus) => ((value % modulus) + modulus) % modulus;
-      const groups = tracks.map(track => ({ name: track.id, tracks: [track] }));
-      for (const count of [1, 5, 19]) groups.push({ name: `ensemble-${count}`, tracks: tracks.slice(0, count) });
+      const select = ids => ids.map(id => tracks.find(track => track.id === id));
+      const groups = select(loopIds).map(track => ({ name: track.id, tracks: [track] }));
+      for (const count of [1, 5, 19]) groups.push({ name: `ensemble-${count}`, tracks: select(canonicalIds.slice(0, count)) });
+      groups.push({ name: 'ensemble-anpan-10', tracks: select(anpanIds) });
+      groups.push({ name: 'ensemble-29', tracks: select(loopIds) });
       const rows = [], mixRows = [];
       function scaleFor(selected, strategy) {
         const denominator = strategy === 'L2' ? Math.sqrt(selected.reduce((sum, track) => sum + track.meta.gain ** 2, 0)) : Math.max(1, selected.reduce((sum, track) => sum + track.meta.gain, 0));
@@ -120,13 +134,14 @@ async function main() {
       }
       return {
         method: 'Real packed PCM; bounded OfflineAudioContext segments with integer-frame oracle. No synthetic impulses, no live 30-minute run, no full 30-minute allocation.',
-        scope: '19 candidate music loops, 20 UI characters. Black is not certified for synchronized music. PCM periodicity does not certify musical phrasing or source authenticity.',
+        scope: '30 manifest tracks: 19 canonical + 10 Anpan game-original loops, Black one-shot. Moon roster 35 is outside this PCM test. PCM periodicity does not certify musical phrasing or source authenticity.',
+        groups: groups.map(group => ({ name: group.name, ids: group.tracks.map(track => track.id) })),
         sampleRate, secondsPerRender: seconds, maxFramesPerRender: length,
         epochSeconds: [0, 600, 1800], tracks: tracks.map(t => ({ id: t.id, gain: t.meta.gain, frames: t.buffer.length, channels: t.buffer.numberOfChannels, loopFrames: Math.round((t.meta.loopEnd - t.meta.loopStart) * sampleRate) })),
         blackManifest: manifest.tracks.black ? { loopable: manifest.tracks.black.loopable } : null,
         rows, mixRows
       };
-    });
+    }, { canonicalIds, anpanIds, loopIds });
     report.browser = browser.version();
     report.engineDecode = [];
     for (const deviceRate of [44100, 48000]) {
@@ -152,45 +167,62 @@ async function main() {
       for (const [id, meta] of entries) {
         if (id !== 'black' && meta.loopable !== false) await enginePage.addScriptTag({ path: path.join(root, meta.file) });
       }
-      const decoded = await enginePage.evaluate(async rate => {
+      const decoded = await enginePage.evaluate(async ({ rate, loopIds, busCounts }) => {
         const actualDeviceRate = MoonAudio.getContext().sampleRate, rows = [];
         for (const [id, entry] of Object.entries(MoonAudioManifest.tracks)) {
           if (id === 'black' || entry.loopable === false) continue;
           const { buffer, meta } = await MoonAudio.loadTrack(id);
           const cached = await MoonAudio.loadTrack(id);
           const periodFrames = Math.round(4.8 * rate);
+          const epochRows = [];
+          for (const elapsed of [0, 600, 1800]) {
           const renderer = new qaNativeOffline(2, periodFrames * 3, rate);
           const source = renderer.createBufferSource();
           source.buffer = buffer; source.loop = true;
           source.loopStart = meta.loopStart; source.loopEnd = meta.loopEnd;
-          source.connect(renderer.destination); source.start(0);
+          source.connect(renderer.destination); source.start(0, meta.loopStart + ((elapsed % 4.8) + 4.8) % 4.8);
           const output = await renderer.startRendering();
-          let repeatError = 0;
+          const referenceContext = new qaNativeOffline(2, periodFrames * 3, rate);
+          const rotated = referenceContext.createBuffer(buffer.numberOfChannels, 230400, 48000);
+          const offsetFrames = Math.round(elapsed * 48000) % 230400;
+          for (let c = 0; c < buffer.numberOfChannels; c++) {
+            const input = buffer.getChannelData(c), data = rotated.getChannelData(c);
+            for (let i = 0; i < data.length; i++) data[i] = input[(i + offsetFrames) % 230400];
+          }
+          const referenceSource = referenceContext.createBufferSource();
+          referenceSource.buffer = rotated; referenceSource.loop = true; referenceSource.loopEnd = 4.8;
+          referenceSource.connect(referenceContext.destination); referenceSource.start(0);
+          const reference = await referenceContext.startRendering();
+          let repeatError = 0, maxError = 0;
           // Ignore initial resampler startup: compare complete second and third periods.
           for (let c = 0; c < 2; c++) {
             const data = output.getChannelData(c);
+            const expected = reference.getChannelData(c);
+            for (let i = periodFrames; i < data.length; i++) maxError = Math.max(maxError, Math.abs(data[i] - expected[i]));
             for (let i = 0; i < periodFrames; i++) repeatError = Math.max(repeatError, Math.abs(data[periodFrames + i] - data[2 * periodFrames + i]));
           }
-          rows.push({ id, sampleRate: buffer.sampleRate, frames: buffer.length, duration: buffer.duration, loopStart: meta.loopStart, loopEnd: meta.loopEnd, cachedIdentity: cached.buffer === buffer, repeatError });
+          epochRows.push({ simulatedElapsedSeconds: elapsed, repeatError, maxError });
+          }
+          rows.push({ id, sampleRate: buffer.sampleRate, frames: buffer.length, duration: buffer.duration, loopStart: meta.loopStart, loopEnd: meta.loopEnd, cachedIdentity: cached.buffer === buffer, epochRows, repeatError: Math.max(...epochRows.map(row => row.repeatError)) });
         }
-        const busRows = [], ids = rows.map(row => row.id);
+        const busRows = [], ids = loopIds;
         // Keep the bus in a rendered graph so AudioParam.value advances, with a silent sink.
         const bus = MoonAudio.output('music'), silent = MoonAudio.getContext().createGain();
         silent.gain.value = 0; bus.disconnect(); bus.connect(silent); silent.connect(MoonAudio.getContext().destination);
         MoonAudio.setDucking(false);
-        for (const count of [1, 5, 19]) for (const volume of [.65, 1]) {
+        for (const count of busCounts) for (const volume of [.65, 1]) {
           MoonAudio.stopMusic();
           MoonAudio.setVolumes({ music: volume });
           await MoonAudio.setMusicSelection(ids.slice(0, count));
           const deadline = performance.now() + 5000;
           while (MoonAudio.getMusicState().playing.length !== count && performance.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25));
           await new Promise(resolve => setTimeout(resolve, 250));
-          busRows.push({ count, volume, gain: bus.gain.value, state: MoonAudio.getMusicState() });
+          busRows.push({ count, ids: ids.slice(0, count), volume, gain: bus.gain.value, state: MoonAudio.getMusicState() });
         }
         const contexts = structuredClone(qaContexts);
         MoonAudio.dispose();
         return { actualDeviceRate, contexts, rows, busRows };
-      }, deviceRate);
+      }, { rate: deviceRate, loopIds, busCounts });
       report.engineDecode.push({ requestedDeviceRate: deviceRate, before, ...decoded });
       await enginePage.close();
     }
@@ -234,7 +266,8 @@ async function main() {
       assert.deepEqual(device.before, { realtime: 0, offline: [] }, 'Contexts must be lazy');
       assert.equal(device.contexts.realtime, 1, 'Only one real output context');
       assert.deepEqual(device.contexts.offline, [{ sampleRate: 48000, length: 1 }], 'One lazy shared 48 kHz decoder');
-      assert.equal(device.rows.length, 19);
+      assert.equal(device.rows.length, loopIds.length);
+      assert.deepEqual(device.rows.map(row => row.id).sort(), [...loopIds].sort());
       for (const row of device.rows) {
         assert.equal(row.sampleRate, 48000, `${device.requestedDeviceRate}/${row.id}: decoded buffer rate`);
         assert.equal(row.frames, 230400, `${device.requestedDeviceRate}/${row.id}: no frame truncation`);
@@ -242,19 +275,27 @@ async function main() {
         assert.equal(row.loopStart, 0, row.id);
         assert.equal(row.loopEnd, 4.8, `${row.id}: preserve exact metadata end, do not clamp`);
         assert(row.cachedIdentity, `${row.id}: cache decoded buffer`);
+        assert.deepEqual(row.epochRows.map(epoch => epoch.simulatedElapsedSeconds), [0, 600, 1800]);
+        for (const epoch of row.epochRows) {
+          assert(epoch.maxError < 1e-5, `${device.requestedDeviceRate}/${row.id}/${epoch.simulatedElapsedSeconds}: epoch PCM error ${epoch.maxError}`);
+          assert(epoch.repeatError < 1e-5, `${device.requestedDeviceRate}/${row.id}/${epoch.simulatedElapsedSeconds}: repeat error ${epoch.repeatError}`);
+        }
         assert(row.repeatError < 1e-5, `${device.requestedDeviceRate}/${row.id}: resampled loop period error ${row.repeatError}`);
       }
+      assert.deepEqual(device.busRows.map(row => [row.count, row.volume]), busCounts.flatMap(count => [[count, .65], [count, 1]]));
       for (const row of device.busRows) {
-        const power = report.tracks.slice(0, row.count).reduce((sum, track) => sum + track.gain ** 2, 0);
+        assert.deepEqual(row.ids, loopIds.slice(0, row.count));
+        const power = row.ids.reduce((sum, id) => sum + report.tracks.find(track => track.id === id).gain ** 2, 0);
         row.expectedL2 = row.volume * Math.min(.8, .9 / Math.sqrt(Math.max(1, power)));
         row.absoluteError = Math.abs(row.gain - row.expectedL2);
         assert.equal(row.state.playing.length, row.count);
+        assert.deepEqual([...row.state.playing].sort(), [...row.ids].sort());
         assert.deepEqual(row.state.errors, []);
         assert.deepEqual(row.state.pending, []);
         assert(row.absoluteError < 1e-6, `Actual engine music bus ${device.actualDeviceRate}/${row.count}/${row.volume}: ${row.gain} expected L2 ${row.expectedL2}`);
       }
-      console.log(`PASS real engine loadTrack: output=${device.actualDeviceRate} Hz, all 19 buffers=48000 Hz/230400 frames, loopEnd=4.8 exactly; output-rate repeat error <= ${Math.max(...device.rows.map(row => row.repeatError))}.`);
-      console.log(`PASS actual engine L2 music bus: ${device.busRows.length} cases at ${device.actualDeviceRate} Hz; 1/5/19 stems, nominal/maximum; settled AudioParam error <= ${Math.max(...device.busRows.map(row => row.absoluteError))}.`);
+      console.log(`PASS real engine loadTrack: output=${device.actualDeviceRate} Hz, all ${loopIds.length} buffers=48000 Hz/230400 frames, duration/loopEnd=4.8 exactly; epochs 0/600/1800 PCM error <= ${Math.max(...device.rows.flatMap(row => row.epochRows.map(epoch => epoch.maxError)))}; output-rate repeat error <= ${Math.max(...device.rows.map(row => row.repeatError))}.`);
+      console.log(`PASS actual engine L2 music bus: ${device.busRows.length} cases at ${device.actualDeviceRate} Hz; ${busCounts.join('/')} stems, nominal/maximum; settled AudioParam error <= ${Math.max(...device.busRows.map(row => row.absoluteError))}.`);
     }
     if (report.live) {
       assert.equal(report.live.starts.length, 2, 'Joining must not restart the existing stem');
@@ -268,20 +309,35 @@ async function main() {
       console.log(`PASS real-clock join: observed ${report.live.time.toFixed(2)} s; ${report.live.starts.length} starts, epoch-preserving bar offset ${joined.offset.toFixed(6)} s. Scheduling history only, muted output.`);
     }
     assert.deepEqual(errors, []);
-    assert.equal(report.tracks.length, 19);
+    assert.equal(report.tracks.length, loopIds.length);
+    assert.deepEqual(report.tracks.map(track => track.id).sort(), [...loopIds].sort());
+    const ensembleGroups = [
+      ...[1, 5, 19].map(count => ({ name: `ensemble-${count}`, ids: canonicalIds.slice(0, count) })),
+      { name: 'ensemble-anpan-10', ids: anpanIds },
+      { name: 'ensemble-29', ids: loopIds }
+    ];
+    assert.deepEqual(report.groups, [...loopIds.map(id => ({ name: id, ids: [id] })), ...ensembleGroups]);
+    assert.deepEqual(report.rows.map(row => [row.group, row.epochSeconds, row.phaseSeconds]),
+      report.groups.flatMap(group => [0, 600, 1800].flatMap(epoch => [0, 2.4].map(phase => [group.name, epoch, phase]))));
+    assert.deepEqual(report.mixRows.map(row => [row.group, row.ids, row.strategy, row.mode]),
+      ensembleGroups.flatMap(group => ['L1', 'L2'].flatMap(strategy => ['nominal', 'maximum'].map(mode => [group.name, group.ids, strategy, mode]))));
     for (const track of report.tracks) assert.equal(track.loopFrames, 230400, track.id);
+    for (const row of [...report.rows, ...report.mixRows]) {
+      for (const key of ['maxError', 'repeatError', 'peak', 'rms', 'rmsDbfs', 'headroomDb']) assert(Number.isFinite(row[key]), `${row.group}: finite ${key}`);
+      assert(row.rms > 0, `${row.group}: non-silent PCM`);
+    }
     const failures = report.rows.filter(row => row.maxError > 1e-5 || row.bestLagSamples !== 0 || row.repeatError > 1e-5);
     for (const row of report.mixRows) {
       console.log(`${row.group}/${row.strategy}/${row.mode}: peak=${row.peak.toFixed(6)}, RMS=${row.rms.toFixed(6)} (${row.rmsDbfs.toFixed(2)} dBFS), headroom=${row.headroomDb.toFixed(2)} dB, lag=${row.bestLagSamples}, PCM error=${row.maxError}`);
       if (row.clippedSamples || row.maxError > 1e-5 || row.bestLagSamples !== 0) failures.push(row);
     }
-    console.log(`Raw 19-stem peak: ${Math.max(...report.rows.filter(r => r.group === 'ensemble-19').map(r => r.peak)).toFixed(6)} (before gain-chain headroom control)`);
+    for (const group of ensembleGroups) console.log(`Raw ${group.name} peak: ${Math.max(...report.rows.filter(r => r.group === group.name).map(r => r.peak)).toFixed(6)} (before gain-chain headroom control)`);
     assert.deepEqual(failures, [], 'PCM phase/repeat/headroom failures; report retained. Do not infer musical certification.');
     report.status = 'passed';
     report.currentEngineScaling = 'L2: volume * min(.8, .9 / sqrt(max(1, sum(gain ** 2)))); actual settled music-bus AudioParam verified, not full engine PCM.';
     report.scalingComparison = ['nominal', 'maximum'].map(mode => {
       const find = (count, strategy) => report.mixRows.find(row => row.group === `ensemble-${count}` && row.mode === mode && row.strategy === strategy);
-      return { mode, ensembles: [1, 5, 19].map(count => {
+      return { mode, ensembles: busCounts.map(count => {
         const l1 = find(count, 'L1'), l2 = find(count, 'L2');
         return { count, rmsImprovementDb: l2.rmsDbfs - l1.rmsDbfs, l1RmsRelativeToSoloDb: l1.rmsDbfs - find(1, 'L1').rmsDbfs, l2RmsRelativeToSoloDb: l2.rmsDbfs - find(1, 'L2').rmsDbfs, l2Peak: l2.peak, l2HeadroomDb: l2.headroomDb };
       }) };
@@ -290,17 +346,18 @@ async function main() {
       realPcmEpochPhaseCases: report.rows.length,
       independentlyModeledGainChainCases: report.mixRows.length,
       actualEngineDecodeAndOutputRepeatCases: report.engineDecode.reduce((sum, device) => sum + device.rows.length, 0),
+      actualEngineOutputEpochComparisons: report.engineDecode.reduce((sum, device) => sum + device.rows.reduce((total, row) => total + row.epochRows.length, 0), 0),
       actualEngineL2BusCases: report.engineDecode.reduce((sum, device) => sum + device.busRows.length, 0),
       realClockJoinCases: report.live ? 1 : 0,
       uncaughtBrowserErrors: errors.length
     };
     report.limits = [
-      '19 candidate synchronized music loops; 20 UI characters. Black remains preview-only, not loop-certified.',
+      '29 candidate synchronized music loops: preserved 19 canonical and 10 Anpan game-original loops, checked individually and in canonical 1/5/19, Anpan-only 10 and combined 29 groups. Black remains preview-only, not loop-certified; the Moon UI roster is outside this PCM test.',
       'Epoch comparisons use bounded real-PCM OfflineAudioContext renders at 48 kHz for 0, 600 and 1800 seconds plus half-period phase.',
       'Gain-chain PCM is independently modeled, NOT captured from the actual engine mixed-output graph.',
-      'Actual engine L2 bus checks read settled music-bus AudioParam values for 1/5/19 stems at .65/1 volume on 44.1/48 kHz contexts; the real bus feeds a zero-gain sink so browser processing continues silently. Not a transition or full-output PCM measurement.',
-      'L1 versus L2 gain comparison uses the first 1/5/19 roster stems at shared phase and music volume .65/1, the same compressor and master .8. Not every subset, transition, or simultaneous sound-effect case is tested; low peak alone is not quality evidence.',
-      'Actual engine coverage is loadTrack decoding/cache/lazy contexts at requested 44.1/48 kHz output rates; decoded buffers are independently rendered for output-rate repeat checks.',
+      'Actual engine L2 bus checks read settled music-bus AudioParam values for 1/5/19/29 stems at .65/1 volume on 44.1/48 kHz contexts; the real bus feeds a zero-gain sink so browser processing continues silently. Not a transition or full-output PCM measurement.',
+      'L1 versus L2 gain comparison uses canonical 1/5/19, Anpan-only 10 and combined 29 stems at shared phase and music volume .65/1, the same compressor and master .8. Not every subset, transition, or simultaneous sound-effect case is tested; low peak alone is not quality evidence.',
+      'Actual engine coverage is all 29 loadTrack buffers decoding/cache/lazy contexts at requested 44.1/48 kHz output rates, with exact 4.8-second duration and loop end; decoded buffers are independently rendered for output-rate repeat and integer-frame oracle comparisons at simulated epochs 0/600/1800. Initial resampler startup is excluded from device-rate comparisons.',
       'Optional real-clock join verifies source scheduling history with muted output, not actual engine full PCM.',
       'No 30-minute live run, full 30-minute RAM render, synthetic-impulse clock test, audible assessment, musical-phrase certification, or source authentication.',
       'Peak is sampled PCM peak, not oversampled true peak or LUFS. Seven-game/84-combination UI QA is outside this report.'
@@ -310,12 +367,12 @@ async function main() {
       '# Independent Audio Render QA', '',
       `Status: PASS. Generated: ${report.generatedAt}. Browser: ${report.browser}.`,
       `Current engine scaling: ${report.currentEngineScaling}`,
-      'Command: `node tests/audio-render-check.cjs --live` (live case is optional).',
+      `Command: \`node tests/audio-render-check.cjs${report.live ? ' --live' : ''}\` (real-clock join is optional).`,
       '[Machine-readable measurements](audio-render-report.json)', '',
       '## Passed Cases', '',
       ...Object.entries(report.passCounts).map(([name, count]) => `- ${name}: ${count}`), '',
       `Maximum epoch PCM error: ${Math.max(...report.rows.map(row => row.maxError))}. Best phase lag: 0 samples in all epoch cases.`,
-      `Raw 19-stem sum peak: ${Math.max(...report.rows.filter(row => row.group === 'ensemble-19').map(row => row.peak))}; raw summation exceeds full scale before modeled headroom control.`, '',
+      ...ensembleGroups.map(group => `Raw ${group.name} sum peak: ${Math.max(...report.rows.filter(row => row.group === group.name).map(row => row.peak))} (before modeled headroom control).`), '',
       '## Independently Modeled Gain Chain', '',
       'These are NOT actual-engine mixed-output PCM measurements.', '',
       'L1 historical comparison: `min(.8, .9 / max(1, sum(gain)))`. Current L2: `min(.8, .9 / sqrt(max(1, sum(gain ** 2))))`; equivalent to the tested proposal under the .8 cap.', '',
@@ -336,7 +393,7 @@ async function main() {
     ].join('\n');
     fs.writeFileSync(path.join(outputDirectory, 'audio-render-summary.md'), summary);
     console.log(`PASS ${report.rows.length} real-PCM epoch/phase checks; ${report.mixRows.length} independently modeled gain-chain renders; max PCM error=${Math.max(...report.rows.map(r => r.maxError))}.`);
-    console.log('LIMIT: 19 candidate music loops, 20 UI characters. Black excluded. Epoch PCM comparisons at 48 kHz; actual engine decode and output-loop repeat checks at 44.1/48 kHz. No audible, live 30-minute or synthetic-clock verification. Optional live check covers scheduling history, not engine mixed-output PCM.');
+    console.log('LIMIT: 29 candidate music loops (19 canonical + 10 Anpan), including Anpan-only and combined groups. Black excluded. Epoch PCM comparisons at 0/600/1800 simulated seconds; actual engine decode and independent output-loop checks at 44.1/48 kHz. No audible, live 30-minute or synthetic-clock verification. Optional live check covers scheduling history, not engine mixed-output PCM.');
   } finally { await browser.close(); }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

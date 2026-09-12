@@ -29,7 +29,8 @@ function extractCharacters(source, rosterSource = fs.readFileSync(path.join(root
   const characters = JSON.parse(result);
   assert(Array.isArray(characters) && characters.length <= 64, 'Invalid roster size');
   assert(characters.every(c => c && !Array.isArray(c) && typeof c === 'object' &&
-    Object.values(c).every(value => typeof value === 'string')), 'Roster records must have string values');
+    Object.entries(c).every(([key, value]) => typeof value === 'string' ||
+      (key === 'originalMusic' && anpanIds.includes(c.id) && value === true))), 'Roster records must have string values except approved generated-original marker');
   return characters;
 }
 
@@ -45,9 +46,13 @@ function classifyCharacters(characters) {
   for (const c of extras) {
     const anpan = anpanIds.includes(c.id);
     assert.equal(c.file, `assets/${anpan ? 'anpanman' : 'sprunki-mods'}/${c.id}.png`);
-    assert(!Object.hasOwn(c, 'audio'), c.id + ': no invented recording');
-    if (anpan) assert.equal(c.sprite, c.id);
+    if (anpan) {
+      assert.equal(c.sprite, c.id);
+      assert.equal(c.audio, `sounds/${c.id}.wav`, c.id + ': generated original audio path');
+      assert.equal(c.originalMusic, true, c.id + ': game-original provenance marker');
+    }
     else {
+      assert(!Object.hasOwn(c, 'audio'), c.id + ': no invented MOD recording');
       assert.equal(c.sourceGroup, ['acid', 'tox', 'sulfur'].includes(c.id) ? 'Pyramixed' : 'Retake');
       assert(!Object.hasOwn(c, 'music'), c.id + ': no invented MOD music');
     }
@@ -66,7 +71,8 @@ function parserChecks(source, rosterSource) {
   assert.throws(() => extractCharacters(fixture('') + fixture(''), rosterSource), /exactly one/);
   assert.throws(() => extractCharacters('x'.repeat(2 * 1024 * 1024 + 1), rosterSource), /size limit/);
   for (const mutate of [cs => cs[0].id = 'invented', cs => delete cs[0].audio,
-    cs => cs[0].file = 'wrong.png', cs => cs[20].audio = 'fake.wav',
+    cs => cs[0].file = 'wrong.png', cs => cs[20].audio = 'fake.wav', cs => delete cs[20].audio,
+    cs => delete cs[20].originalMusic, cs => cs[20].originalMusic = false,
     cs => cs[30].audio = 'fake.wav', cs => cs.pop()]) {
     const copy = structuredClone(characters); mutate(copy);
     assert.throws(() => classifyCharacters(copy));
@@ -213,9 +219,25 @@ async function main() {
     console.log(`${character.id}: ${row.dimensions || 'IMAGE FAIL'}; ${row.audioSignature || 'AUDIO FAIL'}`);
   }
   for (const character of extras) {
-    const row = { id: character.id, image: character.file, audio: null };
+    const row = { id: character.id, image: character.file, audio: character.audio || null };
     try {
-      assert(!fs.existsSync(path.join(root, 'sounds/packed', character.id + '.js')), character.id + ': unexpected audio pack');
+      if (anpanIds.includes(character.id)) {
+        const audio = readAsset(character.audio);
+        row.audioSignature = checkAudio(audio, '.wav');
+        row.audioSha256 = createHash('sha256').update(audio).digest('hex');
+        row.audioBytes = audio.length;
+        assert(!hashes.has(`audio:${row.audioSha256}`), character.id + ': generated audio must be distinct');
+        hashes.set(`audio:${row.audioSha256}`, character.id);
+        const { readPack } = require('./audio-assets-check.cjs');
+        const { readWav } = require('../tools/build-audio-assets.cjs');
+        const pack = readPack(character.id);
+        assert.equal(pack.type, 'audio/wav'); assert.equal(pack.loopable, true);
+        assert.equal(pack.provenance, 'game-original'); assert.equal(pack.gain, .26);
+        const decoded = readWav(audio);
+        assert.equal(decoded.rate, 48000); assert.equal(decoded.data.length, 2);
+        assert(decoded.data.every(channel => channel.length === 230400));
+        assert(Buffer.from(pack.data, 'base64').equals(audio), character.id + ': pack preserves generated source bytes');
+      } else assert(!fs.existsSync(path.join(root, 'sounds/packed', character.id + '.js')), character.id + ': unexpected MOD audio pack');
       const data = readAsset(character.file);
       row.dimensions = checkPng(data);
       row.fileSha256 = createHash('sha256').update(data).digest('hex');
@@ -233,7 +255,7 @@ async function main() {
       row.bounds = { left, top, right, bottom };
       assert(row.transparent > .15 && visible / (info.width * info.height) > .08, 'Expected nonempty sprite with real alpha');
       assert(left > 1 && top > 1 && right < info.width - 2 && bottom < info.height - 2, 'Sprite touches image edge');
-      console.log(`${character.id}: ${row.dimensions}; image-only alpha verified`);
+      console.log(`${character.id}: ${row.dimensions}; alpha verified; ${row.audioSignature || 'silent MOD'}`);
     } catch (error) { failures.push(`${character.id} file: ${error.message}`); }
     extraRows.push(row);
   }
@@ -256,7 +278,7 @@ async function main() {
   }, null, 2) + '\n');
   warnings.forEach(message => console.warn(`WARN: ${message}`));
   failures.forEach(message => console.error(`FAIL: ${message}`));
-  console.log(`${failures.length ? 'FAIL' : 'PASS'}: 20 canonical image/audio pairs + 15 additional images; ${failures.length} failures; ${warnings.length} warnings.`);
+  console.log(`${failures.length ? 'FAIL' : 'PASS'}: 20 canonical image/audio pairs + 10 generated original audio/image pairs + 5 silent MOD images; ${failures.length} failures; ${warnings.length} warnings.`);
   process.exitCode = failures.length ? 1 : 0;
 }
 

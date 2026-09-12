@@ -8,6 +8,7 @@
 - Arithmetic and guessing: their original twenty-character question banks remain unchanged.
 - Black uses the existing full recording as a one-shot, not a repeating stem. Other looping stems retain their shared clock.
 - The five new MOD characters have no music recordings assigned. Piano notes are instrument synthesis, not claimed to be their original songs.
+- The ten Anpanman selections have distinct game-original instrumental loops, not official songs or extracted recordings. Their scores live in `tools/anpanman-score.cjs`; all ten share the existing 100 BPM, eight-beat transport.
 
 ## References
 

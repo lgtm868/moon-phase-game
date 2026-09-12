@@ -210,12 +210,12 @@
     @media (max-width: 400px) { .album-grid button { font-size: 10px; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
   </style>
-  <link rel="stylesheet" href="games-theme.css?v=20260912-characters">
-  <script src="games-theme.js?v=20260912-characters"></script>
-  <script src="game-navigation.js?v=20260912-characters" defer></script>
-  <script src="games-audio-manifest.js?v=20260912-characters"></script>
-  <script src="games-audio.js?v=20260912-characters"></script>
-  <script src="sprunki-roster.js?v=20260912-characters"></script>
+  <link rel="stylesheet" href="games-theme.css?v=20260912-anpan-music">
+  <script src="games-theme.js?v=20260912-anpan-music"></script>
+  <script src="game-navigation.js?v=20260912-anpan-music" defer></script>
+  <script src="games-audio-manifest.js?v=20260912-anpan-music"></script>
+  <script src="games-audio.js?v=20260912-anpan-music"></script>
+  <script src="sprunki-roster.js?v=20260912-anpan-music"></script>
 </head>
 <body class="game-page" data-game="moon">
   <main aria-label="月の満ち欠けをみるゲーム">
@@ -310,6 +310,9 @@
       const WEEK_STEP = TAU * 7 / SYNODIC_DAYS;
       const phaseAges = [0, 1, 2, 5, SYNODIC_DAYS / 4, 9, 12, 13, SYNODIC_DAYS / 2, 15.5, 16.5, 17.5, SYNODIC_DAYS * 3 / 4, 24, 26, 28];
       const phaseAngles = phaseAges.map(age => age / SYNODIC_DAYS * TAU);
+      const phaseSteps = Array.from(new Set([...phaseAngles,
+        ...Array.from({ length: Math.ceil(SYNODIC_DAYS) }, (_, day) => day / SYNODIC_DAYS * TAU)
+      ])).sort((a, b) => a - b);
       const moonSurfaces = new Map();
       const moonFrames = new Map();
       let lunarMap = null;
@@ -352,16 +355,16 @@
         { id: "pinki", name: "Pinki", spokenName: "ピンキー", file: "sprunki-pinki.png", color: "#ff9ed5", music: "treeChord", audio: "sounds/pinki.wav" },
         { id: "jevin", name: "Jevin", spokenName: "ジェヴィン", file: "sprunki-jevin.png", color: "#2867c8", music: "hornPulse", audio: "sounds/jevin.wav" },
         { id: "black", name: "Black", spokenName: "ブラック", file: "sprunki-black.png", color: "#111111", music: "bassPulse", audio: "sounds/black.mp3" },
-        { id: "anpanman", name: "Anpanman", displayName: "アンパン", spokenName: "アンパンマン", sprite: "anpanman", file: "assets/anpanman/anpanman.png", color: "#d9412e", music: "kick" },
-        { id: "baikinman", name: "Baikinman", displayName: "ばいきん", spokenName: "ばいきんまん", sprite: "baikinman", file: "assets/anpanman/baikinman.png", color: "#6c55a3", music: "snare" },
-        { id: "dokinchan", name: "Dokin-chan", displayName: "ドキン", spokenName: "ドキンちゃん", sprite: "dokinchan", file: "assets/anpanman/dokinchan.png", color: "#ff7f2a", music: "tinyArp" },
-        { id: "shokupanman", name: "Shokupanman", displayName: "しょくぱん", spokenName: "しょくぱんまん", sprite: "shokupanman", file: "assets/anpanman/shokupanman.png", color: "#f6f1dd", music: "sunPiano" },
-        { id: "currypanman", name: "Currypanman", displayName: "カレー", spokenName: "カレーパンマン", sprite: "currypanman", file: "assets/anpanman/currypanman.png", color: "#d88823", music: "hornPulse" },
-        { id: "melonpanna", name: "Melonpanna", displayName: "メロン", spokenName: "メロンパンナ", sprite: "melonpanna", file: "assets/anpanman/melonpanna.png", color: "#8fd05a", music: "treeChord" },
-        { id: "rollpanna", name: "Rollpanna", displayName: "ロール", spokenName: "ロールパンナ", sprite: "rollpanna", file: "assets/anpanman/rollpanna.png", color: "#f0f0f0", music: "whistle" },
-        { id: "creampanda", name: "Creampanda", displayName: "クリーム", spokenName: "クリームパンダ", sprite: "creampanda", file: "assets/anpanman/creampanda.png", color: "#fff1a8", music: "softClave" },
-        { id: "jamojisan", name: "Jam Ojisan", displayName: "ジャム", spokenName: "ジャムおじさん", sprite: "jamojisan", file: "assets/anpanman/jamojisan.png", color: "#f6f1dd", music: "sunPiano" },
-        { id: "batakosan", name: "Batako-san", displayName: "バタコ", spokenName: "バタコさん", sprite: "batakosan", file: "assets/anpanman/batakosan.png", color: "#f18f3b", music: "tinyArp" },
+        { id: "anpanman", name: "Anpanman", displayName: "アンパン", spokenName: "アンパンマン", sprite: "anpanman", file: "assets/anpanman/anpanman.png", color: "#d9412e", music: "kick", audio: "sounds/anpanman.wav", originalMusic: true },
+        { id: "baikinman", name: "Baikinman", displayName: "ばいきん", spokenName: "ばいきんまん", sprite: "baikinman", file: "assets/anpanman/baikinman.png", color: "#6c55a3", music: "snare", audio: "sounds/baikinman.wav", originalMusic: true },
+        { id: "dokinchan", name: "Dokin-chan", displayName: "ドキン", spokenName: "ドキンちゃん", sprite: "dokinchan", file: "assets/anpanman/dokinchan.png", color: "#ff7f2a", music: "tinyArp", audio: "sounds/dokinchan.wav", originalMusic: true },
+        { id: "shokupanman", name: "Shokupanman", displayName: "しょくぱん", spokenName: "しょくぱんまん", sprite: "shokupanman", file: "assets/anpanman/shokupanman.png", color: "#f6f1dd", music: "sunPiano", audio: "sounds/shokupanman.wav", originalMusic: true },
+        { id: "currypanman", name: "Currypanman", displayName: "カレー", spokenName: "カレーパンマン", sprite: "currypanman", file: "assets/anpanman/currypanman.png", color: "#d88823", music: "hornPulse", audio: "sounds/currypanman.wav", originalMusic: true },
+        { id: "melonpanna", name: "Melonpanna", displayName: "メロン", spokenName: "メロンパンナ", sprite: "melonpanna", file: "assets/anpanman/melonpanna.png", color: "#8fd05a", music: "treeChord", audio: "sounds/melonpanna.wav", originalMusic: true },
+        { id: "rollpanna", name: "Rollpanna", displayName: "ロール", spokenName: "ロールパンナ", sprite: "rollpanna", file: "assets/anpanman/rollpanna.png", color: "#f0f0f0", music: "whistle", audio: "sounds/rollpanna.wav", originalMusic: true },
+        { id: "creampanda", name: "Creampanda", displayName: "クリーム", spokenName: "クリームパンダ", sprite: "creampanda", file: "assets/anpanman/creampanda.png", color: "#fff1a8", music: "softClave", audio: "sounds/creampanda.wav", originalMusic: true },
+        { id: "jamojisan", name: "Jam Ojisan", displayName: "ジャム", spokenName: "ジャムおじさん", sprite: "jamojisan", file: "assets/anpanman/jamojisan.png", color: "#f6f1dd", music: "sunPiano", audio: "sounds/jamojisan.wav", originalMusic: true },
+        { id: "batakosan", name: "Batako-san", displayName: "バタコ", spokenName: "バタコさん", sprite: "batakosan", file: "assets/anpanman/batakosan.png", color: "#f18f3b", music: "tinyArp", audio: "sounds/batakosan.wav", originalMusic: true },
         ...globalThis.SprunkiRoster.modCharacters.map(character => ({ ...character }))
       ];
       let selectedSprunkiIndexes = [0];
@@ -673,6 +676,7 @@
       }
 
       let phase = Math.PI / 2;
+      let phaseMove = null;
       let playing = false;
       let lastTime = 0;
       let animationId = 0;
@@ -743,16 +747,15 @@
         return phaseAngles.findIndex(angle => Math.abs(Math.atan2(Math.sin(p - angle), Math.cos(p - angle))) < 1e-9);
       }
 
-      function nextPhaseIndex(direction = 1) {
-        const p = normalizedPhase();
+      function nextPhaseAngle(direction = 1, value = normalizedPhase()) {
+        const p = ((value % TAU) + TAU) % TAU;
         if (direction > 0) {
-          const index = phaseAngles.findIndex(angle => angle > p + 1e-9);
-          return index < 0 ? 0 : index;
+          return phaseSteps.find(angle => angle > p + 1e-9) ?? phaseSteps[0];
         }
-        for (let index = phaseAngles.length - 1; index >= 0; index--) {
-          if (phaseAngles[index] < p - 1e-9) return index;
+        for (let index = phaseSteps.length - 1; index >= 0; index--) {
+          if (phaseSteps[index] < p - 1e-9) return phaseSteps[index];
         }
-        return phaseAngles.length - 1;
+        return phaseSteps[phaseSteps.length - 1];
       }
 
       function explorationShape() {
@@ -1521,6 +1524,10 @@
           button.className = "sprunki-choice";
           button.setAttribute("aria-label", character.id === "black" ? "Blackにする（おとは1回再生）" : `${character.name}にする`);
           if (character.id === "black") button.title = "1回再生。おわったら おして もう1かい";
+          if (character.originalMusic) {
+            button.title = "ゲーム専用オリジナル曲（公式曲ではありません）";
+            button.setAttribute("aria-label", `${character.spokenName}にする（${button.title}）`);
+          }
           if (character.sourceGroup) {
             button.dataset.mod = "true";
             button.dataset.sourceGroup = character.sourceGroup;
@@ -1577,6 +1584,7 @@
       }
 
       function setPlaying(next) {
+        cancelPhaseMove();
         cancelAnimationFrame(animationId);
         playing = next;
         playButton.innerHTML = playing
@@ -1602,7 +1610,41 @@
       }
 
       function snapPhase(value) {
+        cancelPhaseMove();
         phase = ((value % TAU) + TAU) % TAU;
+      }
+
+      function cancelPhaseMove() {
+        if (phaseMove) cancelAnimationFrame(phaseMove.frame);
+        phaseMove = null;
+      }
+
+      function advancePhase(direction = 1) {
+        // Queue from the intended destination so rapid taps do not lose steps.
+        const target = nextPhaseAngle(direction, phaseMove?.target ?? normalizedPhase());
+        setPlaying(false);
+        cancelSpeech();
+        const start = normalizedPhase();
+        const distance = Math.atan2(Math.sin(target - start), Math.cos(target - start));
+        const move = { target, frame: 0, started: performance.now() };
+        phaseMove = move;
+        const finish = () => {
+          phase = target;
+          phaseMove = null;
+          collectObservedMoon();
+          draw();
+          if (!document.hidden) speakJapanese(explorationShape().name);
+        };
+        if (reducedMotion.matches) { finish(); return; }
+        const animate = time => {
+          if (phaseMove !== move || document.hidden) return;
+          const progress = Math.min(1, (time - move.started) / 280);
+          phase = start + distance * (progress * progress * (3 - 2 * progress));
+          draw();
+          if (progress < 1) move.frame = requestAnimationFrame(animate);
+          else finish();
+        };
+        move.frame = requestAnimationFrame(animate);
       }
 
       const effectAnimations = new Map();
@@ -1637,10 +1679,7 @@
         if (!hit) return;
         playTone();
         if (hit === "moon" && !isQuizActive()) {
-          setPlaying(false);
-          snapPhase(phaseAngles[nextPhaseIndex()]);
-          collectObservedMoon();
-          speakJapanese(phaseLabels[currentIndex()].name);
+          advancePhase();
         } else if (hit === "earth" && musicEnabled) {
           restartSelectedSprunkiMusic();
         }
@@ -1655,11 +1694,7 @@
 
       stepButton.addEventListener("click", () => {
         playTone();
-        setPlaying(false);
-        snapPhase(phaseAngles[nextPhaseIndex()]);
-        collectObservedMoon();
-        speakJapanese(phaseLabels[currentIndex()].name);
-        draw();
+        advancePhase();
       });
 
       resetButton.addEventListener("click", () => {
@@ -1720,7 +1755,7 @@
         drag = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
         suppressClick = false;
         space.setPointerCapture(event.pointerId);
-        setPlaying(false);
+        if (playing) setPlaying(false);
       });
       space.addEventListener("pointermove", event => {
         if (!drag || event.pointerId !== drag.id) return;
@@ -1745,8 +1780,10 @@
         const direction = event.key === "ArrowRight" || event.key === "ArrowUp" ? 1
           : event.key === "ArrowLeft" || event.key === "ArrowDown" ? -1 : 0;
         if (!direction && event.key !== "Home" && event.key !== "End") return;
-        event.preventDefault(); setPlaying(false);
-        const index = event.key === "Home" ? 0 : event.key === "End" ? 15 : nextPhaseIndex(direction);
+        event.preventDefault();
+        if (direction) { advancePhase(direction); return; }
+        setPlaying(false);
+        const index = event.key === "Home" ? 0 : phaseAngles.length - 1;
         snapPhase(phaseAngles[index]); collectObservedMoon(); draw(); speakJapanese(phaseLabels[index].name);
       });
 

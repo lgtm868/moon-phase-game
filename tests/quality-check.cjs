@@ -295,7 +295,8 @@ const server = http.createServer((req, res) => {
       await page.mouse.up();
       assert.equal(await page.locator('#space').getAttribute('aria-valuenow'), '90', 'north-side view: bottom drag is first quarter');
       await page.locator('#tabFriends').click();
-      assert.equal(await page.locator('.sprunki-choice').count(), 30);
+      assert.equal(await page.locator('.sprunki-choice').count(),
+        30 + await page.evaluate(() => SprunkiRoster.modCharacters.length), 'base cast plus shared mod roster');
       await page.locator('.sprunki-choice').nth(1).click();
       assert.equal(await page.locator('.sprunki-choice.is-active').count(), 2);
       await page.screenshot({ path: path.join(artifacts, `friends-${width}x${height}.png`) });

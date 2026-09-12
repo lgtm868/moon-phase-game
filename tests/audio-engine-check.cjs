@@ -237,13 +237,15 @@ async function lifecycleChecks() {
     assert.equal(t.sources[1].loop, true);
   });
 
-  await check('All 19 production loops retain 100 BPM eight-beat playback alongside Black', async t => {
+  await check('All 29 production loops retain 100 BPM eight-beat playback alongside Black', async t => {
     const manifestContext = { window: {} };
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'games-audio-manifest.js'), 'utf8'), manifestContext);
     const manifest = manifestContext.window.MoonAudioManifest;
     assert.equal(manifest.bpm, 100);
     const loops = Object.entries(manifest.tracks).filter(([, meta]) => meta.loopable !== false);
-    assert.equal(loops.length, 19);
+    assert.equal(loops.length, 29);
+    assert.equal(loops.filter(([,meta]) => meta.provenance === 'game-original').length, 10);
+    assert.equal(loops.filter(([,meta]) => meta.provenance !== 'game-original').length, 19);
     for (const [id, meta] of loops) {
       assert.equal(meta.beats, 8);
       const asset = t.add(id, meta.beats, false, meta.loopEnd);
@@ -254,15 +256,15 @@ async function lifecycleChecks() {
     await t.api.setMusicSelection(ids);
     t.contexts[0].currentTime = .5;
     await t.api.setMusicSelection([...ids, 'black']);
-    for (const node of t.sources.slice(0, 19)) {
+    for (const node of t.sources.slice(0, loops.length)) {
       assert.equal(node.loop, true);
       assert.deepEqual(node.started, [.1, 0]);
       assert.equal(node.loopEnd - node.loopStart, 4.8);
       assert.equal(node.stopped, undefined);
     }
-    t.contexts[0].currentTime = 19.96; t.sources[19].onended();
+    t.contexts[0].currentTime = 19.96; t.sources[loops.length].onended();
     assert.deepEqual(Array.from(t.api.getMusicState().playing), ids);
-    assert.equal(t.sources.length, 20);
+    assert.equal(t.sources.length, loops.length + 1);
   });
 
   await check('Black alone finishes once and explicit stop resets selection intent', async t => {

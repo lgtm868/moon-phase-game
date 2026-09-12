@@ -159,16 +159,21 @@ async function dragTo(page, g, from, target) {
 async function checkProgression(page, g) {
   await page.locator('#resetButton').click();
   let previous = await rasterMoon(page, g), previousAngle = 0;
-  for (let step = 1; step <= 16; step++) {
+  const days = 29.53059;
+  const ages = [...new Set([...Array.from({ length: 30 }, (_, i) => i),
+    0, 1, 2, 5, days / 4, 9, 12, 13, days / 2, 15.5, 16.5, 17.5, days * 3 / 4, 24, 26, 28])].sort((a, b) => a - b);
+  for (let step = 1; step <= ages.length; step++) {
     await page.locator('#stepButton').click();
     const angle = Number(await page.locator('#space').getAttribute('aria-valuenow'));
     const delta = (angle - previousAngle + 360) % 360;
-    assert.ok(delta > 0 && delta < 90, `step ${step}: positive phase progression, including wrap (${previousAngle} -> ${angle})`);
+    assert.ok(delta > 0 && delta <= Math.ceil(360 / days), `step ${step}: at most one day, including wrap (${previousAngle} -> ${angle})`);
+    near(angle, Math.round(ages[step % ages.length] / days * 360), 0, `step ${step}: daily/named destination`);
     const actual = await rasterMoon(page, g);
     const cross = (previous.x - g.cx) * (actual.y - g.cy) - (previous.y - g.cy) * (actual.x - g.cx);
-    assert.ok(cross < -g.radius * g.radius * .1, `step ${step}: observed motion is counterclockwise in screen coordinates`);
+    assert.ok(cross < 0, `step ${step}: observed motion is counterclockwise in screen coordinates`);
     near(Math.hypot(actual.x - g.cx, actual.y - g.cy), g.radius, 3, `step ${step}: fixed orbit radius`);
-    if (step % 4 === 0) await checkPosition(page, g, directions[(step / 2) % 8], `step ${step}`);
+    const cardinal = directions.find(direction => direction.degrees === angle && angle % 90 === 0);
+    if (cardinal) await checkPosition(page, g, cardinal, `step ${step}`);
     previous = actual; previousAngle = angle;
   }
   await page.locator('#resetButton').click();
@@ -272,7 +277,7 @@ async function checkQuizCardinals(page) {
         }
         await checkProgression(page, g);
         const quizCardinals = width === 1280 ? await checkQuizCardinals(page) : 0;
-        report.push({ width, height, deviceScaleFactor, cardinals, dragChecks: 9, forwardSteps: 16, quizCardinals });
+        report.push({ width, height, deviceScaleFactor, cardinals, dragChecks: 9, forwardSteps: 36, quizCardinals });
       } finally { await page.close(); }
     }
     assert.deepEqual(errors, [], 'no uncaught browser errors');

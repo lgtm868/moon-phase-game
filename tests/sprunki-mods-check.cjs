@@ -139,13 +139,13 @@ async function browserChecks(roster) {
     const moon = await open('moon-phase-game.html');
     await moon.page.locator('#tabFriends').click();
     const moonSelector = '#sprunkiList .sprunki-choice';
-    await images(moon.page, moonSelector, 35);
+    await images(moon.page, moonSelector, 100);
     assert.deepEqual(await moon.page.locator(moonSelector + ' img').evaluateAll(imgs => imgs.slice(0, 20).map(img => img.src)), roster.characters.map(c => new URL(c.file, base + '/').href));
-    assert.deepEqual(await moon.page.locator(moonSelector + ' img').evaluateAll(imgs => imgs.slice(30).map(img => img.src)), roster.modCharacters.map(c => new URL(c.file, base + '/').href));
+    assert.deepEqual(await moon.page.locator(moonSelector + ' img').evaluateAll(imgs => imgs.slice(30, 35).map(img => img.src)), roster.modCharacters.map(c => new URL(c.file, base + '/').href));
     async function onlyMoon(index) {
       const buttons = moon.page.locator(moonSelector);
       if (await buttons.nth(index).getAttribute('aria-pressed') !== 'true') await buttons.nth(index).click();
-      for (let i = 0; i < 35; i++) {
+      for (let i = 0; i < 100; i++) {
         if (i === index || await buttons.nth(i).getAttribute('aria-pressed') !== 'true') continue;
         // A retained Black image replays on its first click after playback stops.
         if (i === originalIds.indexOf('black') && !await moon.page.evaluate(() => MoonAudio.getMusicState().selected.includes('black'))) {
@@ -185,7 +185,7 @@ async function browserChecks(roster) {
       assert.deepEqual(await moon.page.evaluate(() => MoonAudio.getMusicState().selected), [id], 'MOD plus generated audio plays only generated track');
     }
     await verifyClean(moon, musicIds); await moon.page.close();
-    console.log('PASS Moon: 35 images; 30 playable choices; all ten generated originals decoded; named MOD titles; MOD-only disabled; MOD mixed with canonical/generated music stays silent.');
+    console.log('PASS Moon: 100 images; 30 playable choices; all ten generated originals decoded; named MOD titles; MOD-only disabled; MOD mixed with canonical/generated music stays silent.');
 
     const piano = await open('sprunki-piano-game.html');
     // Existing buildCharacters appends to characterStrip; laneHeads is not the picker.

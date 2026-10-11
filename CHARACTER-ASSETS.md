@@ -3,7 +3,7 @@
 ## Scope
 
 - Original Sprunki: the existing twenty records and assets are retained.
-- Moon: ten Anpanman illustrations are replaced, and five named MOD characters are added (35 choices).
+- Moon: ten Anpanman illustrations are replaced, and five named MOD characters are added; the expansion below adds 65 more (100 choices).
 - Piano: all twenty original characters plus the five MOD characters (25 choices).
 - Arithmetic and guessing: their original twenty-character question banks remain unchanged.
 - Black uses the existing full recording as a one-shot, not a repeating stem. Other looping stems retain their shared clock.
@@ -39,3 +39,23 @@ Destinations:
 - `assets/sprunki-mods/`: acid, tox, sulfur, mard, mrbear.
 
 Detailed prompts, reference observations and generation failures are retained in the local `output/anpanman-reference-audit/` and `output/sprunki-mod-audit/` reports. Pixel/alpha tests establish rendering integrity, not exact likeness or authorization.
+
+## Moon's 100-friend expansion (2026-10-11)
+
+The existing 35 choices are followed by 65 Moon-only choices from `moon-friends.js`:
+20 Sanrio characters, Doraemon, Dorami, Totoro, Kirby, Snoopy, and 40 Pokémon.
+The added entries do not contain audio or music IDs and use Japanese speech.
+Piano, arithmetic, and guessing retain their existing rosters.
+
+- `assets/friends/*.svg`: simplified vector fan portraits drawn for this game,
+  not official character artwork. The portraits retain distinguishing colors and
+  features; they are not exact reproductions of official model sheets.
+- `assets/friends/pokemon-<number>.png`: downloaded from the public
+  [PokeAPI sprites collection](https://github.com/PokeAPI/sprites), path
+  `sprites/pokemon/other/official-artwork/<number>.png`. The numbers are National
+  Pokédex identifiers. The collection credits Pokémon/Nintendo/Game Freak;
+  availability in that collection does not make those characters public domain.
+- All images are stored locally; playing does not depend on an image host.
+
+Validate the roster, image loading, scrolling and selection with
+`CHROME_EXECUTABLE=/usr/bin/chromium node tests/moon-friends-check.cjs`.

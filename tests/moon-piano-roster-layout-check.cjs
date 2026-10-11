@@ -44,7 +44,7 @@ function drawProbe() {
   window.__rosterDraws = {};
   const draw = CanvasRenderingContext2D.prototype.drawImage;
   CanvasRenderingContext2D.prototype.drawImage = function(source, ...args) {
-    if (this.canvas.id === 'space' && source instanceof HTMLImageElement && /(?:sprunki-|assets\/anpanman\/|assets\/sprunki-mods\/)/.test(source.src)) {
+    if (this.canvas.id === 'space' && source instanceof HTMLImageElement && /(?:sprunki-|assets\/anpanman\/|assets\/sprunki-mods\/|assets\/friends\/)/.test(source.src)) {
       const box = this.canvas.getBoundingClientRect();
       window.__rosterDraws[source.src.split('/').pop()] = { args, width: box.width, height: box.height };
     }
@@ -92,13 +92,13 @@ async function geometry(frame, selector) {
         if (embedded) { await page.waitForFunction(() => document.querySelector('#gameFrame')?.contentDocument?.readyState === 'complete'); frame = await (await page.$('#gameFrame')).contentFrame(); await frame.waitForSelector(game === 'moon' ? '#tabFriends' : '#menuButton'); }
         await frame.locator(game === 'moon' ? '#tabFriends' : '#menuButton').click();
         const selector = game === 'moon' ? '.sprunki-choice' : '.character-button', buttons = frame.locator(selector);
-        assert.equal(await buttons.count(), game === 'moon' ? 35 : 25);
+        assert.equal(await buttons.count(), game === 'moon' ? 100 : 25);
         await frame.locator(selector + ' img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
         if (game === 'moon') {
           await frame.locator('#voiceButton').click();
-          for (let i = 1; i < 35; i++) await buttons.nth(i).click();
-          assert.equal(await frame.locator('.sprunki-choice[aria-pressed="true"]').count(), 35);
-          await frame.waitForFunction(() => Object.keys(__rosterDraws).length === 35);
+          for (let i = 1; i < 100; i++) await buttons.nth(i).click();
+          assert.equal(await frame.locator('.sprunki-choice[aria-pressed="true"]').count(), 100);
+          await frame.waitForFunction(() => Object.keys(__rosterDraws).length === 100);
         } else {
           for (let i = 0; i < 25; i++) { await buttons.nth(i).click(); assert.equal(await buttons.nth(i).getAttribute('aria-pressed'), 'true'); }
           await buttons.last().scrollIntoViewIfNeeded();

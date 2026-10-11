@@ -8,6 +8,9 @@ const root = path.resolve(__dirname, '..');
 const expectedIds = 'oren raddy clukr funbot vineria gray brud garnold owakcx sky mrsun durple mrtree simon tunner mrfun wenda pinki jevin black'.split(' ');
 const anpanIds = 'anpanman baikinman dokinchan shokupanman currypanman melonpanna rollpanna creampanda jamojisan batakosan'.split(' ');
 const modIds = ['acid', 'tox', 'sulfur', 'mard', 'mrbear'];
+const friendsContext = {};
+vm.runInNewContext(fs.readFileSync(path.join(root, 'moon-friends.js'), 'utf8'), friendsContext);
+const addedFriends = JSON.parse(JSON.stringify(friendsContext.MoonFriends));
 const runtime = process.env.CODEX_NODE_RUNTIME || 'C:/Users/shohe/.cache/codex-runtimes/codex-primary-runtime/dependencies/node';
 
 function extractCharacters(source, rosterSource = fs.readFileSync(path.join(root, 'sprunki-roster.js'), 'utf8')) {
@@ -24,10 +27,11 @@ function extractCharacters(source, rosterSource = fs.readFileSync(path.join(root
     codeGeneration: { strings: false, wasm: false }, microtaskMode: 'afterEvaluate'
   });
   vm.runInContext(rosterSource, context, { timeout: 250, filename: 'sprunki-roster.js' });
+  vm.runInContext(fs.readFileSync(path.join(root, 'moon-friends.js'), 'utf8'), context, { timeout: 250 });
   // Serialization stays inside the timeout too, including any getters/toJSON.
   const result = vm.runInContext(`JSON.stringify((${literal}))`, context, { timeout: 250 });
   const characters = JSON.parse(result);
-  assert(Array.isArray(characters) && characters.length <= 64, 'Invalid roster size');
+  assert(Array.isArray(characters) && characters.length <= 100, 'Invalid roster size');
   assert(characters.every(c => c && !Array.isArray(c) && typeof c === 'object' &&
     Object.entries(c).every(([key, value]) => typeof value === 'string' ||
       (key === 'originalMusic' && anpanIds.includes(c.id) && value === true))), 'Roster records must have string values except approved generated-original marker');
@@ -37,8 +41,9 @@ function extractCharacters(source, rosterSource = fs.readFileSync(path.join(root
 function classifyCharacters(characters) {
   const ids = characters.map(c => c.id);
   assert.equal(new Set(ids).size, ids.length, 'Duplicate roster IDs');
-  assert.deepEqual(ids, [...expectedIds, ...anpanIds, ...modIds], 'Expected canonical twenty, ten Anpanman and five MOD entries in order');
-  const canonical = characters.slice(0, expectedIds.length), extras = characters.slice(expectedIds.length);
+  assert.deepEqual(ids, [...expectedIds, ...anpanIds, ...modIds, ...addedFriends.map(c => c.id)], 'Expected original 35 and 65 additional friends in order');
+  const canonical = characters.slice(0, expectedIds.length), extras = characters.slice(expectedIds.length, 35);
+  assert.deepEqual(characters.slice(35), addedFriends);
   for (const c of canonical) {
     assert.equal(c.file, `sprunki-${c.id}.png`, c.id + ': canonical image path');
     assert.equal(c.audio, `sounds/${c.id}.${c.id === 'black' ? 'mp3' : 'wav'}`, c.id + ': canonical audio path');
@@ -179,7 +184,7 @@ async function main() {
   parserChecks(source, rosterSource);
   const characters = extractCharacters(source, rosterSource);
   const { canonical: rasterCharacters, extras } = classifyCharacters(characters);
-  console.log(`Roster: ${characters.length} unique IDs; 20 canonical image/audio pairs; 15 additional images.`);
+  console.log(`Roster: ${characters.length} unique IDs; 20 canonical image/audio pairs; 15 existing bonus images and 65 new friends (browser validation in moon-friends-check.cjs).`);
   const sharedRoster = checkSharedRoster(rosterSource, rasterCharacters);
   console.log(`Shared roster: ${sharedRoster.count} entries match moon in order and ${sharedRoster.fields.join('/')}.`);
 

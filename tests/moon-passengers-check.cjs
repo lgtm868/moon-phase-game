@@ -10,7 +10,7 @@ const server = http.createServer((req, res) => {
   if (!target.startsWith(root + path.sep)) return res.writeHead(403).end();
   fs.readFile(target, (error, data) => {
     if (error) return res.writeHead(404).end();
-    const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
+    const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' };
     res.writeHead(200, { 'Content-Type': mime[path.extname(target)] || 'application/octet-stream' }).end(data);
   });
 });
@@ -65,9 +65,28 @@ const server = http.createServer((req, res) => {
       await page.waitForFunction(() => __sprites.length === 2);
       assert.equal(await page.locator('.sprunki-choice[aria-pressed="true"]').count(), 2, 'placement preserves selection');
       assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), 'false', 'placement does not start music');
+      await page.waitForFunction(() => [...document.querySelectorAll('.sprunki-choice img')].every(image => image.complete && image.naturalWidth));
+      await page.locator('.sprunki-choice').evaluateAll(buttons => buttons.forEach(button => {
+        if (button.getAttribute('aria-pressed') !== 'true') button.click();
+      }));
+      await toggle.click();
+      const seen = new Set();
+      for (let group = 0; group < 17; group++) {
+        const sprites = await page.evaluate(() => __sprites);
+        assert(sprites.length > 0 && sprites.length <= 12, 'at most six characters per body');
+        for (const sprite of sprites) {
+          seen.add(sprite.src);
+          assert(Math.max(sprite.w, sprite.h) >= 36, 'large roster keeps each character at least 36 CSS pixels');
+          assert(sprite.x >= 0 && sprite.y >= 0, 'characters stay within the canvas');
+        }
+        await page.locator('#nextPassengersButton').click();
+      }
+      assert.equal(seen.size, 100, 'paging shows all 100 selected characters');
+      assert.equal(await page.locator('.sprunki-choice[aria-pressed="true"]').count(), 100, 'paging preserves every selection');
+      assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), 'false', 'paging does not autoplay');
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal overflow');
       assert.deepEqual(errors, []);
-      console.log(`PASS ${viewport.width}x${viewport.height}: keyboard toggle, both bodies, orbital movement, multiple characters, tabs, disable, no autoplay or script errors`);
+      console.log(`PASS ${viewport.width}x${viewport.height}: moon placement, orbital movement, all 100 characters in readable groups, no autoplay or script errors`);
       await page.close();
     }
   } finally {

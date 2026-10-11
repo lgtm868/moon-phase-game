@@ -58,7 +58,9 @@
     .phase-choice { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 2px; font-size: 11px; line-height: 1.25; }
     .phase-choice canvas { width: 26px; height: 26px; }
     .phase-choice.is-active { background: var(--button); color: var(--button-ink); border-color: var(--button); }
-    .sprunki-picker { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: minmax(64px, auto); gap: 4px; min-height: 0; overflow-y: auto; align-content: start; overscroll-behavior: contain; }
+    .sprunki-picker { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: 44px; grid-auto-rows: minmax(64px, auto); gap: 4px; min-height: 0; overflow-y: auto; align-content: start; overscroll-behavior: contain; }
+    .moon-passengers { grid-column: 1 / -1; min-height: 44px; font-size: 14px; }
+    .moon-passengers[aria-pressed="true"] { border-color: var(--button); background: #284338; }
     .sprunki-choice { position: relative; min-height: 0; padding: 2px; font-size: 9px; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .sprunki-choice img { width: 28px; height: 29px; min-height: 0; flex: 0 1 auto; object-fit: contain; }
     .sprunki-choice span { max-width: 100%; flex: 0 0 auto; overflow-wrap: anywhere; }
@@ -185,7 +187,7 @@
       html.is-embedded .library { grid-template-rows: 28px minmax(0, 1fr); gap: 4px; }
       html.is-embedded .phase-choice { padding: 1px; gap: 1px; line-height: 1.2; }
       html.is-embedded .phase-choice canvas { width: 18px; height: 18px; }
-      html.is-embedded .sprunki-picker { overflow-y: auto; grid-template-rows: none; grid-auto-rows: minmax(64px, auto); align-content: start; }
+      html.is-embedded .sprunki-picker { overflow-y: auto; grid-template-rows: 44px; grid-auto-rows: minmax(64px, auto); align-content: start; }
       html.is-embedded .sprunki-choice img { width: 25px; height: 25px; }
       html.is-embedded .quiz { grid-template-rows: 32px minmax(72px, 1fr) 40px; }
       html.is-embedded .quiz-prompt { font-size: 12px; }
@@ -372,6 +374,7 @@
         ...globalThis.MoonFriends.map(character => ({ ...character }))
       ];
       let selectedSprunkiIndexes = [0];
+      let moonPassengersEnabled = false;
       let musicEnabled = false;
       sprunkiCharacters.forEach((character) => {
         character.image = new Image();
@@ -1094,15 +1097,15 @@
         drawLitMoon(ctx, cx, cy, radius, -1, 0, 0, phaseValue);
       }
 
-      function drawSprunkiSpriteOnEarth(ctx, earthX, earthY, earthRadius) {
-        const dance = tapEffects.earth;
+      function drawSprunkiSpriteOnEarth(ctx, earthX, earthY, earthRadius, body = "earth") {
+        const dance = tapEffects[body];
         const bob = dance > 0 ? Math.sin(performance.now() * 0.026) * earthRadius * 0.08 * dance : 0;
         const selected = selectedSprunkiIndexes
           .map((index) => sprunkiCharacters[index])
           .filter((character) => character.image.complete && character.image.naturalWidth);
 
         if (!selected.length) {
-          drawSprunkiOnEarth(ctx, earthX, earthY, earthRadius);
+          drawSprunkiOnEarth(ctx, earthX, earthY, earthRadius, body);
           return;
         }
 
@@ -1146,8 +1149,8 @@
         ctx.restore();
       }
 
-      function drawSprunkiOnEarth(ctx, earthX, earthY, earthRadius) {
-        const dance = tapEffects.earth;
+      function drawSprunkiOnEarth(ctx, earthX, earthY, earthRadius, body = "earth") {
+        const dance = tapEffects[body];
         const bob = dance > 0 ? Math.sin(performance.now() * 0.026) * earthRadius * 0.07 * dance : 0;
         const headX = earthX;
         const headY = earthY - earthRadius * 0.26 + bob;
@@ -1462,6 +1465,9 @@
           ctx.restore();
         }
         drawMoonFromAbove(ctx, moonX, moonY, moonDrawRadius, p);
+        if (moonPassengersEnabled) {
+          drawSprunkiSpriteOnEarth(ctx, moonX, moonY, moonRadius, "moon");
+        }
         ctx.beginPath();
         ctx.arc(moonX, moonY, moonDrawRadius + 6, 0, TAU);
         ctx.strokeStyle = "rgba(255, 248, 223, 0.18)";
@@ -1533,6 +1539,18 @@
 
       function buildSprunkiPicker() {
         sprunkiList.innerHTML = "";
+        const moonPassengers = document.createElement("button");
+        moonPassengers.id = "moonPassengersButton";
+        moonPassengers.type = "button";
+        moonPassengers.className = "moon-passengers";
+        moonPassengers.textContent = "つきにも のせる";
+        moonPassengers.setAttribute("aria-pressed", String(moonPassengersEnabled));
+        moonPassengers.addEventListener("click", () => {
+          moonPassengersEnabled = !moonPassengersEnabled;
+          moonPassengers.setAttribute("aria-pressed", String(moonPassengersEnabled));
+          draw();
+        });
+        sprunkiList.appendChild(moonPassengers);
         sprunkiCharacters.forEach((character, index) => {
           const button = document.createElement("button");
           const dot = document.createElement("img");

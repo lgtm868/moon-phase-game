@@ -20,7 +20,7 @@ const server = http.createServer((req, res) => {
   try {
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE });
-    for (const viewport of [{ width: 1024, height: 768 }, { width: 375, height: 667 }]) {
+    for (const viewport of [{ width: 1024, height: 768 }, { width: 375, height: 667 }, { width: 844, height: 390 }]) {
       const page = await browser.newPage({ viewport, reducedMotion: 'reduce' });
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
@@ -70,23 +70,36 @@ const server = http.createServer((req, res) => {
         if (button.getAttribute('aria-pressed') !== 'true') button.click();
       }));
       await toggle.click();
-      const seen = new Set();
-      for (let group = 0; group < 17; group++) {
-        const sprites = await page.evaluate(() => __sprites);
-        assert(sprites.length > 0 && sprites.length <= 12, 'at most six characters per body');
-        for (const sprite of sprites) {
-          seen.add(sprite.src);
-          assert(Math.max(sprite.w, sprite.h) >= 36, 'large roster keeps each character at least 36 CSS pixels');
-          assert(sprite.x >= 0 && sprite.y >= 0, 'characters stay within the canvas');
+      assert.equal(await page.locator('#nextPassengersButton').count(), 0, 'no paging needed');
+      const checkCrowd = async expected => {
+        const { sprites, width, height } = await page.evaluate(() => ({ sprites: __sprites,
+          width: document.querySelector('#space').clientWidth, height: document.querySelector('#space').clientHeight }));
+        assert.equal(sprites.length, expected, 'every selected character is painted on each enabled body');
+        assert.equal(new Set(sprites.map(sprite => sprite.src)).size, 100, 'all 100 distinct characters appear in the same frame');
+        for (let i = 0; i < sprites.length; i++) {
+          const sprite = sprites[i];
+          assert(sprite.w > 0 && sprite.h > 0);
+          assert(sprite.x >= 0 && sprite.y >= 0 && sprite.x + sprite.w <= width + 0.01 && sprite.y + sprite.h <= height + 0.01, 'entire sprite stays inside canvas');
+          for (const other of sprites.slice(i + 1)) {
+            const overlapX = Math.min(sprite.x + sprite.w, other.x + other.w) - Math.max(sprite.x, other.x);
+            const overlapY = Math.min(sprite.y + sprite.h, other.y + other.h) - Math.max(sprite.y, other.y);
+            assert(overlapX <= 0.01 || overlapY <= 0.01, 'no character obscures another');
+          }
         }
-        await page.locator('#nextPassengersButton').click();
+      };
+      // Exercise the complete orbit, including switches between horizontal and vertical partitions.
+      for (let step = 0; step < 36; step++) {
+        await checkCrowd(200);
+        await page.locator('#stepButton').click();
       }
-      assert.equal(seen.size, 100, 'paging shows all 100 selected characters');
-      assert.equal(await page.locator('.sprunki-choice[aria-pressed="true"]').count(), 100, 'paging preserves every selection');
-      assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), 'false', 'paging does not autoplay');
+      await page.screenshot({ path: `/tmp/moon-all-passengers-${viewport.width}.png` });
+      await toggle.click();
+      await checkCrowd(100);
+      assert.equal(await page.locator('.sprunki-choice[aria-pressed="true"]').count(), 100, 'all selections stay active');
+      assert.equal(await page.locator('#musicButton').getAttribute('aria-pressed'), 'false', 'display changes do not autoplay');
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal overflow');
       assert.deepEqual(errors, []);
-      console.log(`PASS ${viewport.width}x${viewport.height}: moon placement, orbital movement, all 100 characters in readable groups, no autoplay or script errors`);
+      console.log(`PASS ${viewport.width}x${viewport.height}: moon placement, orbital movement, all 100 characters simultaneously, no overlap or clipping throughout the orbit, no autoplay or script errors`);
       await page.close();
     }
   } finally {

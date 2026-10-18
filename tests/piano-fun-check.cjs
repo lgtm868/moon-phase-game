@@ -9,6 +9,9 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE ||
   "C:/Users/shohe/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
 
 const root = path.resolve(__dirname, "..");
+const gameUrl = file => process.env.PIANO_TEST_BASE
+  ? new URL(file + (file === "sprunki-piano-game.html" ? "?standalone=1" : ""), process.env.PIANO_TEST_BASE.replace(/\/?$/, "/"))
+  : pathToFileURL(path.join(root, file));
 const html = fs.readFileSync(path.join(root, "sprunki-piano-game.html"), "utf8");
 const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(match => match[1]).filter(Boolean);
 for (const script of scripts) new vm.Script(script, { filename: "sprunki-piano-game.html" });
@@ -74,7 +77,7 @@ async function runViewport(browser, viewport, embedded) {
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
-  const url = pathToFileURL(path.join(root, embedded ? "index.html" : "sprunki-piano-game.html"));
+  const url = gameUrl(embedded ? "index.html" : "sprunki-piano-game.html");
   if (embedded) url.search = "?game=piano";
   await page.goto(url.href);
   let frame = page.mainFrame();
@@ -125,6 +128,12 @@ async function runViewport(browser, viewport, embedded) {
   await $("#melodyRecord").click();
   await $("#melodyStop").click();
   assert(await $("#melodyPlay").isDisabled(), "Empty recording is safe");
+  await $("#melodyRecord").click();
+  await $('.piano-key[data-note="C4"]').focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Space");
+  assert.match(await status(), /2おん/, "Focused piano keys play and record via Enter and Space");
+  await $("#melodyStop").click();
   await $("#melodyRecord").click();
   await clearLog();
   await page.waitForTimeout(180);
@@ -296,7 +305,7 @@ async function runViewport(browser, viewport, embedded) {
   assert.notEqual(again[0].runId, again[1].runId, "New round has a new stable ID");
   assert.deepEqual(errors, [], "No uncaught runtime errors");
   await context.close();
-  console.log(`PASS ${base}: real file:// Chrome, recording/replay timing, chords, limits, cleanup, layout, ranking`);
+  console.log(`PASS ${base}: real browser, recording/replay timing, chords, limits, cleanup, layout, ranking`);
 }
 
 (async () => {

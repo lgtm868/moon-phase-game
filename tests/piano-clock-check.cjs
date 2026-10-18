@@ -6,6 +6,9 @@ const { pathToFileURL } = require("node:url");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE ||
   "C:/Users/shohe/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
 const root = path.resolve(__dirname, "..");
+const gameUrl = file => process.env.PIANO_TEST_BASE
+  ? new URL(file + (file === "sprunki-piano-game.html" ? "?standalone=1" : ""), process.env.PIANO_TEST_BASE.replace(/\/?$/, "/"))
+  : pathToFileURL(path.join(root, file));
 const original = fs.readFileSync(path.join(root, "sprunki-piano-game.html"), "utf8");
 assert(!/new\s+(?:\([^\n]*AudioContext|AudioContext)/.test(original), "Piano never owns a second context");
 assert(original.indexOf('src="games-audio-manifest.js') < original.indexOf('src="games-audio.js'));
@@ -25,8 +28,8 @@ const html = original.replace("      buildKeyboard();", `
     page.setDefaultTimeout(7000);
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
-    await page.route("**/sprunki-piano-game.html", route => route.fulfill({ body: html, contentType: "text/html; charset=utf-8" }));
-    await page.goto(pathToFileURL(path.join(root, "sprunki-piano-game.html")).href);
+    await page.route("**/sprunki-piano-game.html*", route => route.fulfill({ body: html, contentType: "text/html; charset=utf-8" }));
+    await page.goto(gameUrl("sprunki-piano-game.html").href);
     assert.deepEqual(await page.evaluate(() => window.__pianoTest.windows), [28, 55, 90, 135, 150]);
     const failure = await page.evaluate(async () => {
       const t = window.__pianoTest, engine = window.MoonAudio;

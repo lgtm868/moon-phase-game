@@ -2860,6 +2860,13 @@
         piano.addEventListener("touchend", handleTouchEnd, { passive: false });
         piano.addEventListener("touchcancel", handleTouchEnd, { passive: false });
       }
+      // Native button activation (keyboard or assistive technology) has no
+      // pointerdown. Physical taps already play there, so do not play them twice.
+      piano.addEventListener("click", (event) => {
+        if (event.detail !== 0) return;
+        const key = event.target.closest(".piano-key");
+        if (key) playInput(key.dataset.note);
+      });
       soundButton.addEventListener("click", async () => {
         stopMelody();
         soundEnabled = !soundEnabled;
